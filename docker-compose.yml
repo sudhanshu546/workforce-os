@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: workforce_os
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/workforce_os
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - db
