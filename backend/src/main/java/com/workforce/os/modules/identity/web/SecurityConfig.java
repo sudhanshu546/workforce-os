@@ -45,8 +45,8 @@ public class SecurityConfig {
                                         "/*.css"
                                 ).permitAll()
                                 .requestMatchers("/api/v1/leads/customer/**").hasAnyRole("CUSTOMER", "OWNER", "MANAGER")
-                                .anyRequest()
-                                .authenticated()
+                                .requestMatchers("/api/v1/**").authenticated()
+                                .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
