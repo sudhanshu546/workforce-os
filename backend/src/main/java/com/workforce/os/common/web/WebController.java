@@ -4,9 +4,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
-public class SpaController {
+public class WebController {
 
-    @RequestMapping("/{path:^(?!api|swagger-ui|v3).*$}/**")
+    @RequestMapping(value = {
+            "/{path:[^\\.]*}",
+            "/{path:[^\\.]*}/{subpath:[^\\.]*}",
+            "/{path:[^\\.]*}/{subpath:[^\\.]*}/{third:[^\\.]*}"
+    })
     public String forward() {
         return "forward:/index.html";
     }
