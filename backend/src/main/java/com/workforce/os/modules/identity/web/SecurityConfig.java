@@ -36,6 +36,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(req ->
                         req.requestMatchers("/api/v1/auth/**", "/api/v1/customers/auth/**", "/api/v1/public/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                 .permitAll()
+                                .requestMatchers(
+                                        "/",
+                                        "/index.html",
+                                        "/assets/**",
+                                        "/favicon.ico",
+                                        "/*.js",
+                                        "/*.css"
+                                ).permitAll()
                                 .requestMatchers("/api/v1/leads/customer/**").hasAnyRole("CUSTOMER", "OWNER", "MANAGER")
                                 .anyRequest()
                                 .authenticated()
@@ -50,7 +58,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of("https://workforce-os-u19x.onrender.com/","http://localhost:5173"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
         configuration.setAllowCredentials(true);
