@@ -36,14 +36,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(req ->
                         req.requestMatchers("/api/v1/auth/**", "/api/v1/customers/auth/**", "/api/v1/public/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                 .permitAll()
-                                .requestMatchers(
-                                        "/",
-                                        "/index.html",
-                                        "/assets/**",
-                                        "/favicon.ico",
-                                        "/*.js",
-                                        "/*.css"
-                                ).permitAll()
                                 .requestMatchers("/api/v1/leads/customer/**").hasAnyRole("CUSTOMER", "OWNER", "MANAGER")
                                 .requestMatchers("/api/v1/**").authenticated()
                                 .anyRequest().permitAll()
