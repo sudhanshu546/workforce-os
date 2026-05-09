@@ -37,20 +37,24 @@ public class LeadService {
         lead.setCustomer(customer);
         
         // Find organization
-        var organization = organizationId != null 
-                ? organizationRepository.findById(organizationId).orElseThrow()
-                : organizationRepository.findAll().stream().findFirst().orElseThrow();
+        var organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new RuntimeException("Organization not found with ID: " + organizationId));
         lead.setOrganization(organization);
         
         // Find service item
         if (serviceItemId != null) {
-            lead.setRequestedService(serviceItemRepository.findById(serviceItemId).orElseThrow());
+            var serviceItem = serviceItemRepository.findById(serviceItemId)
+                    .orElseThrow(() -> new RuntimeException("Service not found with ID: " + serviceItemId));
+            lead.setRequestedService(serviceItem);
         }
         
         lead.setDescription(description);
         lead.setPriority(priority != null ? priority : "MEDIUM");
         lead.setStatus(Lead.LeadStatus.NEW);
-        lead.setTenantId(TenantContext.getCurrentTenant());
+        
+        // Ensure the lead belongs to the organization's tenant
+        lead.setTenantId(organization.getTenantId());
+        
         return leadRepository.save(lead);
     }
 

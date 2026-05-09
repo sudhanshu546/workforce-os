@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, LogIn, HardHat, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '../redux/authSlice';
 import api from '../services/api';
 
 const Login: React.FC = () => {
@@ -9,6 +11,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   useEffect(() => {
     // Redirect if already logged in
@@ -24,9 +27,15 @@ const Login: React.FC = () => {
     
     try {
       const response = await api.post('/auth/login', { email, password });
-      localStorage.setItem('accessToken', response.data.access_token);
-      localStorage.setItem('refreshToken', response.data.refresh_token);
-      localStorage.setItem('role', response.data.role);
+      
+      dispatch(setCredentials({
+          accessToken: response.data.access_token,
+          refreshToken: response.data.refresh_token,
+          role: response.data.role,
+          user: response.data.user || { name: 'User', phone: '', email: email },
+          customerId: response.data.customerId
+      }));
+
       if (response.data.workerId) {
         localStorage.setItem('worker_id', response.data.workerId);
       }

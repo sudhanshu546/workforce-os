@@ -40,6 +40,9 @@ public class WorkOrder extends BaseEntity {
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkOrderEvidence> evidence = new ArrayList<>();
 
+    @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkOrderMaterial> materials = new ArrayList<>();
+
     private LocalDate scheduledDate;
     private LocalTime startTime;
     private LocalTime endTime;
@@ -48,6 +51,6 @@ public class WorkOrder extends BaseEntity {
     private WorkOrderStatus status;
 
     public enum WorkOrderStatus {
-        PENDING_ASSIGNMENT, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
+        PENDING_ASSIGNMENT, ASSIGNED, IN_PROGRESS, AWAITING_VERIFICATION, COMPLETED, CANCELLED
     }
 }

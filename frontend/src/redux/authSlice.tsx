@@ -5,6 +5,7 @@ interface AuthState {
   refreshToken: string | null;
   role: string | null;
   customerId: number | null;
+  user: { name: string; email: string; role: string; number: string } | null;
   isAuthenticated: boolean;
 }
 
@@ -12,6 +13,7 @@ interface CredentialsPayload {
   accessToken: string;
   refreshToken: string;
   role: string;
+  user: any;
   customerId?: number;
 }
 
@@ -19,6 +21,7 @@ const storedAccessToken = localStorage.getItem('accessToken');
 const storedRefreshToken = localStorage.getItem('refreshToken');
 const storedRole = localStorage.getItem('role');
 const storedCustomerId = localStorage.getItem('customerId');
+const storedUser = localStorage.getItem('user');
 
 const isValidToken = (token: string | null) => token && token !== 'undefined' && token !== 'null';
 
@@ -27,6 +30,7 @@ const initialState: AuthState = {
   refreshToken: isValidToken(storedRefreshToken) ? storedRefreshToken : null,
   role: storedRole && storedRole !== 'undefined' ? storedRole : null,
   customerId: storedCustomerId && storedCustomerId !== 'undefined' ? Number(storedCustomerId) : null,
+  user: (storedUser && storedUser !== 'undefined') ? JSON.parse(storedUser) : null,
   isAuthenticated: !!isValidToken(storedAccessToken),
 };
 
@@ -56,17 +60,27 @@ const authSlice = createSlice({
       }
     },
 
+    setUserProfile: (
+      state,
+      action: PayloadAction<{ name: string; email: string; role: string; number: string }>
+    ) => {
+      state.user = action.payload;
+      localStorage.setItem('user', JSON.stringify(action.payload));
+    },
+
     logout: (state) => {
       state.accessToken = null;
       state.refreshToken = null;
       state.role = null;
       state.customerId = null;
+      state.user = null;
       state.isAuthenticated = false;
 
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('role');
       localStorage.removeItem('customerId');
+      localStorage.removeItem('user');
     },
 
     updateToken: (
@@ -93,6 +107,7 @@ const authSlice = createSlice({
 
 export const {
   setCredentials,
+  setUserProfile,
   logout,
   updateToken,
 } = authSlice.actions;

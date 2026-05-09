@@ -12,4 +12,5 @@ import java.util.List;
 public interface LeadRepository extends JpaRepository<Lead, Long> {
     List<Lead> findAllByTenantId(String tenantId);
     Page<Lead> findByTenantId(String tenantId, Pageable pageable);
+    long countByTenantId(String tenantId);
 }

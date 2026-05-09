@@ -8,8 +8,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+import java.util.Optional;
+
 @Repository
 public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     List<Quotation> findAllByTenantId(String tenantId);
     Page<Quotation> findByTenantId(String tenantId, Pageable pageable);
+    Optional<Quotation> findByLeadId(Long leadId);
 }

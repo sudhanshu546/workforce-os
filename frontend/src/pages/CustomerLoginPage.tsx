@@ -40,12 +40,12 @@ const CustomerLoginPage: React.FC = () => {
       // Use the dedicated customer auth endpoint
       const response = await api.post('/customers/auth/login', data); 
       
-      // The backend returns access_token and refresh_token
       dispatch(setCredentials({ 
         accessToken: response.data.access_token, 
         refreshToken: response.data.refresh_token, 
         role: response.data.role,
-        customerId: response.data.customerId 
+        customerId: response.data.customerId,
+        user: response.data.user || { name: response.data.name, phone: '', email: data.email }
       }));
       
       // Redirect to a customer-specific dashboard or default page

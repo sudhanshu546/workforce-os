@@ -1,0 +1,30 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <changeSet author="system" id="001-init-worker-services">
+        <createTable tableName="worker_supported_services">
+            <column name="worker_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="service_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        
+        <addForeignKeyConstraint baseColumnNames="worker_id"
+                                 baseTableName="worker_supported_services"
+                                 constraintName="fk_wss_worker"
+                                 referencedColumnNames="id"
+                                 referencedTableName="worker_profiles"/>
+                                 
+        <addForeignKeyConstraint baseColumnNames="service_id"
+                                 baseTableName="worker_supported_services"
+                                 constraintName="fk_wss_service"
+                                 referencedColumnNames="id"
+                                 referencedTableName="service_items"/>
+    </changeSet>
+
+</databaseChangeLog>

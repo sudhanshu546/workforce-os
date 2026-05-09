@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   UserPlus, Search, ShieldCheck, Mail, Phone, Briefcase, Plus, Star, X, 
   Loader2, Edit3, Trash2, Filter, CheckCircle, AlertCircle, Award,
-  Calendar, DollarSign, User
+  Calendar, IndianRupee, User
 } from 'lucide-react';
 import api from '../services/api';
 import Modal from '../components/Modal';
@@ -39,13 +39,39 @@ const Workers: React.FC = () => {
   const navigate = useNavigate();
   const role = localStorage.getItem('role');
 
+  const [services, setServices] = useState<any[]>([]);
+
   useEffect(() => {
     if (role !== 'OWNER' && role !== 'MANAGER') {
       navigate('/dashboard');
       return;
     }
     fetchWorkers(currentPage);
+    fetchServices();
   }, [role, navigate, currentPage, statusFilter]);
+
+  const fetchServices = async () => {
+    try {
+        const response = await api.get('/services'); // Assumed endpoint
+        setServices(response.data);
+    } catch (err) {
+        console.error('Error fetching services:', err);
+    }
+  };
+
+  const handleToggleService = async (workerId: number, service: any) => {
+    try {
+        const isAssigned = selectedWorker.supportedServices.some((s: any) => s.id === service.id);
+        if (isAssigned) {
+            await api.delete(`/workers/${workerId}/services/${service.id}`);
+        } else {
+            await api.post(`/workers/${workerId}/services/${service.id}`);
+        }
+        fetchWorkers(currentPage);
+    } catch (err) {
+        console.error('Service assignment failed:', err);
+    }
+  };
 
   const fetchWorkers = async (page: number) => {
     try {
@@ -232,25 +258,27 @@ const Workers: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="worker-skills-section">
+                            <div className="worker-services-section">
                                 <div className="section-header">
-                                    <span>Skills & Proficiency</span>
-                                    <button onClick={() => { setSelectedWorker(worker); setIsSkillModalOpen(true); }} className="add-skill-btn">
-                                        <Plus size={14} /> Add
-                                    </button>
+                                    <span>Supported Services</span>
                                 </div>
-                                <div className="skills-container">
-                                    {worker.skills?.length > 0 ? worker.skills.map((skill: any) => (
-                                        <div key={skill.id} className="skill-chip">
-                                            <Star size={10} fill="var(--accent)" color="var(--accent)" />
-                                            <span>{skill.skillName}</span>
-                                            <button onClick={() => handleRemoveSkill(skill.id)} className="remove-skill-btn">
-                                                <X size={10} />
-                                            </button>
-                                        </div>
-                                    )) : (
-                                        <span className="no-skills">No skills added yet</span>
-                                    )}
+                                <div className="services-container" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>
+                                    {services.map(service => {
+                                        const isChecked = worker.supportedServices?.some((s: any) => s.id === service.id);
+                                        return (
+                                            <label key={service.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isChecked}
+                                                    onChange={() => {
+                                                        setSelectedWorker(worker);
+                                                        handleToggleService(worker.id, service);
+                                                    }}
+                                                />
+                                                {service.name}
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -287,50 +315,50 @@ const Workers: React.FC = () => {
       </div>
 
       {/* Onboarding Modal */}
-      <Modal isOpen={isOnboardModalOpen} onClose={() => setIsOnboardModalOpen(false)} title="Onboard New Team Member">
-        <form onSubmit={handleOnboard}>
+      <Modal isOpen={isOnboardModalOpen} onClose={() => setIsOnboardModalOpen(false)} title="Onboard New Team Member" width="900px">
+        <form onSubmit={handleOnboard} className="premium-form-layout">
           <div className="form-grid">
             <div className="form-group">
-              <label>Full Name</label>
+              <label className="form-label">Full Name</label>
               <div className="input-with-icon">
                   <User size={18} className="input-icon" />
                   <input type="text" className="input-field pl-10" placeholder="John Doe" value={onboardData.name} onChange={e => setOnboardData({...onboardData, name: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
-              <label>Email Address</label>
+              <label className="form-label">Email Address</label>
               <div className="input-with-icon">
                   <Mail size={18} className="input-icon" />
                   <input type="email" className="input-field pl-10" placeholder="john@example.com" value={onboardData.email} onChange={e => setOnboardData({...onboardData, email: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
-              <label>Phone Number</label>
+              <label className="form-label">Phone Number</label>
               <div className="input-with-icon">
                   <Phone size={18} className="input-icon" />
-                  <input type="tel" className="input-field pl-10" placeholder="+1 (555) 000-0000" value={onboardData.phone} onChange={e => setOnboardData({...onboardData, phone: e.target.value})} required />
+                  <input type="tel" className="input-field pl-10" placeholder="+91 00000 00000" value={onboardData.phone} onChange={e => setOnboardData({...onboardData, phone: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
-              <label>Designation</label>
+              <label className="form-label">Designation</label>
               <div className="input-with-icon">
                   <Briefcase size={18} className="input-icon" />
                   <input type="text" className="input-field pl-10" placeholder="AC Technician" value={onboardData.designation} onChange={e => setOnboardData({...onboardData, designation: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
-              <label>Access Password</label>
+              <label className="form-label">Access Password</label>
               <input type="password" className="input-field" placeholder="••••••••" value={onboardData.password} onChange={e => setOnboardData({...onboardData, password: e.target.value})} required />
             </div>
             <div className="form-group">
-              <label>Joining Date</label>
+              <label className="form-label">Joining Date</label>
               <div className="input-with-icon">
                   <Calendar size={18} className="input-icon" />
                   <input type="date" className="input-field pl-10" value={onboardData.joiningDate} onChange={e => setOnboardData({...onboardData, joiningDate: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
-              <label>Salary Type</label>
+              <label className="form-label">Salary Type</label>
               <select className="input-field" value={onboardData.salaryType} onChange={e => setOnboardData({...onboardData, salaryType: e.target.value})}>
                 <option value="MONTHLY">Monthly</option>
                 <option value="WEEKLY">Weekly</option>
@@ -338,16 +366,16 @@ const Workers: React.FC = () => {
               </select>
             </div>
             <div className="form-group">
-              <label>Salary Amount ($)</label>
+              <label className="form-label">Salary Amount (₹)</label>
               <div className="input-with-icon">
-                  <DollarSign size={18} className="input-icon" />
+                  <IndianRupee size={18} className="input-icon" />
                   <input type="number" className="input-field pl-10" placeholder="0.00" value={onboardData.salaryAmount} onChange={e => setOnboardData({...onboardData, salaryAmount: Number(e.target.value)})} required />
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-            <button type="button" onClick={() => setIsOnboardModalOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={submitting} style={{ flex: 2 }}>
+          <div className="modal-footer-actions">
+            <button type="button" onClick={() => setIsOnboardModalOpen(false)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting} style={{ minWidth: '200px' }}>
                 {submitting ? <Loader2 className="animate-spin" /> : 'Complete Onboarding'}
             </button>
           </div>
@@ -355,30 +383,35 @@ const Workers: React.FC = () => {
       </Modal>
 
       {/* Edit Worker Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Update Team Member Info">
-          <form onSubmit={handleUpdateWorker}>
-            <div className="form-group">
-                <label>Full Name</label>
-                <input type="text" className="input-field" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} />
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Update Team Member Info" width="900px">
+          <form onSubmit={handleUpdateWorker} className="premium-form-layout">
+            <div className="form-grid">
+                <div className="form-group">
+                    <label className="form-label">Full Name</label>
+                    <input type="text" className="input-field" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} />
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Designation</label>
+                    <input type="text" className="input-field" value={editData.designation} onChange={e => setEditData({...editData, designation: e.target.value})} />
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Salary Amount (₹)</label>
+                    <div className="input-with-icon">
+                        <IndianRupee size={18} className="input-icon" />
+                        <input type="number" className="input-field pl-10" value={editData.salaryAmount} onChange={e => setEditData({...editData, salaryAmount: Number(e.target.value)})} />
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Status</label>
+                    <select className="input-field" value={editData.status} onChange={e => setEditData({...editData, status: e.target.value})}>
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                    </select>
+                </div>
             </div>
-            <div className="form-group">
-                <label>Designation</label>
-                <input type="text" className="input-field" value={editData.designation} onChange={e => setEditData({...editData, designation: e.target.value})} />
-            </div>
-            <div className="form-group">
-                <label>Salary Amount ($)</label>
-                <input type="number" className="input-field" value={editData.salaryAmount} onChange={e => setEditData({...editData, salaryAmount: Number(e.target.value)})} />
-            </div>
-            <div className="form-group">
-                <label>Status</label>
-                <select className="input-field" value={editData.status} onChange={e => setEditData({...editData, status: e.target.value})}>
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                </select>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={submitting} style={{ flex: 2 }}>
+            <div className="modal-footer-actions">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn btn-secondary">Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={submitting} style={{ minWidth: '200px' }}>
                     {submitting ? <Loader2 className="animate-spin" /> : 'Update Member'}
                 </button>
             </div>
@@ -386,26 +419,28 @@ const Workers: React.FC = () => {
       </Modal>
 
       {/* Skill Modal */}
-      <Modal isOpen={isSkillModalOpen} onClose={() => setIsSkillModalOpen(false)} title={`Manage Skills for ${selectedWorker?.user?.name}`}>
-        <form onSubmit={handleAddSkill}>
-          <div className="form-group">
-            <label>Skill Name</label>
-            <div className="input-with-icon">
-                <Award size={18} className="input-icon" />
-                <input type="text" className="input-field pl-10" placeholder="e.g. AC Repair, Plumbing" value={newSkill.skillName} onChange={e => setNewSkill({...newSkill, skillName: e.target.value})} required />
+      <Modal isOpen={isSkillModalOpen} onClose={() => setIsSkillModalOpen(false)} title={`Manage Skills for ${selectedWorker?.user?.name}`} width="900px">
+        <form onSubmit={handleAddSkill} className="premium-form-layout">
+          <div className="form-grid">
+            <div className="form-group">
+                <label className="form-label">Skill Name</label>
+                <div className="input-with-icon">
+                    <Award size={18} className="input-icon" />
+                    <input type="text" className="input-field pl-10" placeholder="e.g. AC Repair, Plumbing" value={newSkill.skillName} onChange={e => setNewSkill({...newSkill, skillName: e.target.value})} required />
+                </div>
+            </div>
+            <div className="form-group">
+                <label className="form-label">Proficiency Level</label>
+                <select className="input-field" value={newSkill.proficiencyLevel} onChange={e => setNewSkill({...newSkill, proficiencyLevel: e.target.value})}>
+                <option value="BEGINNER">Beginner</option>
+                <option value="INTERMEDIATE">Intermediate</option>
+                <option value="EXPERT">Expert</option>
+                </select>
             </div>
           </div>
-          <div className="form-group">
-            <label>Proficiency Level</label>
-            <select className="input-field" value={newSkill.proficiencyLevel} onChange={e => setNewSkill({...newSkill, proficiencyLevel: e.target.value})}>
-              <option value="BEGINNER">Beginner</option>
-              <option value="INTERMEDIATE">Intermediate</option>
-              <option value="EXPERT">Expert</option>
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-              <button type="button" onClick={() => setIsSkillModalOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-              <button type="submit" className="btn btn-primary" style={{ flex: 2 }}>Add Skill & Endorse</button>
+          <div className="modal-footer-actions">
+              <button type="button" onClick={() => setIsSkillModalOpen(false)} className="btn btn-secondary">Cancel</button>
+              <button type="submit" className="btn btn-primary" style={{ minWidth: '200px' }}>Add Skill & Endorse</button>
           </div>
         </form>
       </Modal>
@@ -414,6 +449,32 @@ const Workers: React.FC = () => {
         .workforce-container {
             max-width: 1400px;
             margin: 0 auto;
+        }
+
+        .premium-form-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            padding: 8px 4px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .modal-footer-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
         }
 
         .worker-grid {

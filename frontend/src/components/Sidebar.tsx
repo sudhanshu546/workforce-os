@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Users, Briefcase, Clock, LayoutDashboard, 
   UserCircle, FileText, Settings, LogOut, HardHat, CheckSquare,
-  MapPin, Tag, X, Receipt
+  MapPin, Tag, X, Receipt, Package, TrendingUp
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -45,6 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <Link to="/quotations" className={`nav-item ${isActive('/quotations') ? 'active' : ''}`}><FileText size={20} /> Quotations</Link>
             <Link to="/work-orders" className={`nav-item ${isActive('/work-orders') ? 'active' : ''}`}><Briefcase size={20} /> Work Orders</Link>
             <Link to="/services" className={`nav-item ${isActive('/services') ? 'active' : ''}`}><Tag size={20} /> Services</Link>
+            <Link to="/inventory" className={`nav-item ${isActive('/inventory') ? 'active' : ''}`}><Package size={20} /> Inventory</Link>
+            <Link to="/analytics" className={`nav-item ${isActive('/analytics') ? 'active' : ''}`}><TrendingUp size={20} /> Analytics</Link>
             
             <div className="sidebar-section-title">WORKFORCE</div>
             <Link to="/workers" className={`nav-item ${isActive('/workers') ? 'active' : ''}`}><Users size={20} /> Team</Link>

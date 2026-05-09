@@ -6,9 +6,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  width?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, width }) => {
   if (!isOpen) return null;
 
   return (
@@ -18,28 +19,58 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start', // Align to top for "below navbar" feel
       justifyContent: 'center',
-      zIndex: 1000
+      zIndex: 1000,
+      padding: '80px 20px 20px 20px', // Top padding to push below navbar
+      overflowY: 'auto' // Handle scroll at backdrop level
     }}>
       <div style={{
         backgroundColor: 'var(--surface)',
         padding: '24px',
-        borderRadius: 'var(--radius)',
+        borderRadius: '20px', // More premium radius
         width: '100%',
-        maxWidth: '500px',
-        boxShadow: 'var(--shadow-lg)',
-        position: 'relative'
+        maxWidth: width || '500px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        position: 'relative',
+        maxHeight: 'calc(100vh - 120px)', // Ensure content fits in viewport
+        display: 'flex',
+        flexDirection: 'column'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '700' }}>{title}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <X size={20} />
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '20px',
+          paddingBottom: '16px',
+          borderBottom: '1px solid var(--border)'
+        }}>
+          <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-h)' }}>{title}</h2>
+          <button onClick={onClose} style={{ 
+            background: '#f1f5f9', 
+            border: 'none', 
+            cursor: 'pointer',
+            width: '32px',
+            height: '32px',
+            borderRadius: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-muted)',
+            transition: 'all 0.2s'
+          }}>
+            <X size={18} />
           </button>
         </div>
-        {children}
+        <div style={{ 
+            overflowY: 'auto', // Scrollable content area
+            flex: 1,
+            paddingRight: '4px' // Space for scrollbar
+        }}>
+          {children}
+        </div>
       </div>
     </div>
   );

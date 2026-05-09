@@ -46,9 +46,14 @@ public class WorkOrderController {
         return ResponseEntity.ok(workOrderService.startWorkOrder(id));
     }
 
-    @PatchMapping("/{id}/complete")
-    public ResponseEntity<WorkOrder> completeWorkOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(workOrderService.completeWorkOrder(id));
+    @PatchMapping("/{id}/submit-verification")
+    public ResponseEntity<WorkOrder> submitForVerification(@PathVariable Long id) {
+        return ResponseEntity.ok(workOrderService.submitForVerification(id));
+    }
+
+    @PatchMapping("/{id}/verify")
+    public ResponseEntity<WorkOrder> verifyWorkOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(workOrderService.verifyWorkOrder(id));
     }
 
     @PatchMapping("/tasks/{taskId}")
@@ -68,6 +73,7 @@ public class WorkOrderController {
 
     @Data
     public static class TaskStatusRequest {
+        @com.fasterxml.jackson.annotation.JsonProperty("isCompleted")
         private boolean isCompleted;
     }
 

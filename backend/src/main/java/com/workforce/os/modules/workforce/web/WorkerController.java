@@ -7,6 +7,7 @@ import com.workforce.os.modules.workforce.service.WorkforceService;
 import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,13 +22,13 @@ public class WorkerController {
     private final WorkerProfileRepository workerProfileRepository;
 
     @GetMapping
-    public ResponseEntity<org.springframework.data.domain.Page<WorkerProfile>> getWorkers(org.springframework.data.domain.Pageable pageable) {
-        return ResponseEntity.ok(workerProfileRepository.findByTenantId(com.workforce.os.common.context.TenantContext.getCurrentTenant(), pageable));
+    public ResponseEntity<Page<WorkerProfile>> getWorkers(org.springframework.data.domain.Pageable pageable) {
+        return ResponseEntity.ok(workerProfileRepository.findByTenantId(TenantContext.getCurrentTenant(), pageable));
     }
 
     @GetMapping("/all")
     public ResponseEntity<List<WorkerProfile>> getAllWorkers() {
-        return ResponseEntity.ok(workerProfileRepository.findAllByTenantId(com.workforce.os.common.context.TenantContext.getCurrentTenant()));
+        return ResponseEntity.ok(workerProfileRepository.findAllByTenantId(TenantContext.getCurrentTenant()));
     }
 
     @PostMapping("/onboard")

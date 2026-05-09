@@ -15,6 +15,8 @@ import CustomerProfilePage from './pages/CustomerProfilePage';
 import CustomerAddressPage from './pages/CustomerAddressPage';
 import ServicesPage from './pages/ServicesPage';
 import InvoicesPage from './pages/InvoicesPage';
+import Inventory from './pages/Inventory';
+import AnalyticsPage from './pages/AnalyticsPage';
 
 function App() {
   return (
@@ -29,6 +31,7 @@ function App() {
         
         {/* Protected Routes */}
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/analytics" element={<PrivateRoute roles={['OWNER']}><AnalyticsPage /></PrivateRoute>} />
         
         {/* Customer Protected Routes */}
         <Route path="/customer/profile" element={<PrivateRoute roles={['CUSTOMER']}><CustomerProfilePage /></PrivateRoute>} />
@@ -38,6 +41,7 @@ function App() {
         <Route path="/leads" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Leads /></PrivateRoute>} />
         <Route path="/quotations" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Quotations /></PrivateRoute>} />
         <Route path="/services" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><ServicesPage /></PrivateRoute>} />
+        <Route path="/inventory" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Inventory /></PrivateRoute>} />
         <Route path="/work-orders" element={<PrivateRoute roles={['OWNER', 'MANAGER', 'WORKER']}><WorkOrders /></PrivateRoute>} />
         <Route path="/workers" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Workers /></PrivateRoute>} />
         <Route path="/invoices" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><InvoicesPage /></PrivateRoute>} />

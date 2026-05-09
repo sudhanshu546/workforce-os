@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long> {
@@ -14,4 +15,9 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long> {
     Page<WorkOrder> findByTenantId(String tenantId, Pageable pageable);
     List<WorkOrder> findByAssignedWorkerId(Long workerId);
     Page<WorkOrder> findByAssignedWorkerId(Long workerId, Pageable pageable);
+    long countByTenantId(String tenantId);
+    long countByAssignedWorkerIdAndStatusNot(Long workerId, String status);
+    long countByAssignedWorkerIdAndStatus(Long workerId, String status);
+
+    Optional<WorkOrder> findByQuotationId(Long id);
 }

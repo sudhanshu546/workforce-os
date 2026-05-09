@@ -31,6 +31,12 @@ public class QuotationController {
         return ResponseEntity.ok(quotationService.getQuotationById(id));
     }
 
+    @GetMapping("/lead/{leadId}")
+    public ResponseEntity<Quotation> getQuotationByLead(@PathVariable Long leadId) {
+        return ResponseEntity.ok(quotationRepository.findByLeadId(leadId)
+                .orElseThrow(() -> new RuntimeException("Quotation not found for lead: " + leadId)));
+    }
+
     @PostMapping
     public ResponseEntity<Quotation> createQuotation(@RequestBody CreateQuotationRequest request) {
         return ResponseEntity.ok(quotationService.createQuotation(

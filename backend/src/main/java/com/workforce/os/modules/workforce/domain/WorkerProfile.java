@@ -4,11 +4,14 @@ import com.workforce.os.common.domain.BaseEntity;
 import com.workforce.os.modules.identity.domain.User;
 import com.workforce.os.modules.organization.domain.Branch;
 import com.workforce.os.modules.organization.domain.Organization;
+import com.workforce.os.modules.service.domain.ServiceItem;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -41,6 +44,14 @@ public class WorkerProfile extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private WorkerStatus status;
+
+    @ManyToMany
+    @JoinTable(
+        name = "worker_supported_services",
+        joinColumns = @JoinColumn(name = "worker_id"),
+        inverseJoinColumns = @JoinColumn(name = "service_id")
+    )
+    private Set<ServiceItem> supportedServices = new HashSet<>();
 
     public enum WorkerStatus {
         ACTIVE, INACTIVE, ON_LEAVE

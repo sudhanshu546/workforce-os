@@ -26,6 +26,8 @@ public class Material extends BaseEntity {
 
     private Double quantity;
 
+    private Double minThreshold = 0.0;
+
     private String unit;
 
     private Double price;

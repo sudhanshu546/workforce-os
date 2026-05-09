@@ -202,47 +202,50 @@ const WorkOrders: React.FC = () => {
       </div>
 
       {/* Assign Worker Modal */}
-      <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Select Technician for Dispatch">
-        <div style={{ marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>WORK ORDER</div>
-                <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-h)' }}>#WO-{selectedWO?.id + 1000}</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>CUSTOMER</div>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--primary)' }}>{selectedWO?.customer?.name}</div>
-            </div>
-        </div>
-
-        <div style={{ display: 'grid', gap: '12px', maxHeight: '400px', overflowY: 'auto', paddingRight: '4px' }}>
-          {workers.map(worker => (
-            <button 
-              key={worker.id}
-              onClick={() => handleAssign(worker.id)}
-              disabled={assigning}
-              className="worker-assign-card"
-            >
-              <div className="avatar-large">
-                {worker.user?.name.charAt(0)}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: '700', color: 'var(--text-h)', fontSize: '15px' }}>{worker.user?.name}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '8px', marginTop: '2px' }}>
-                    <span>{worker.designation}</span>
-                    <span>•</span>
-                    <span className="text-success">Available</span>
+      <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Select Technician for Dispatch" width="900px">
+        <div className="premium-form-layout">
+            <div style={{ marginBottom: '8px', padding: '20px', background: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
+                <div>
+                    <div className="stat-label" style={{ marginBottom: '4px' }}>WORK ORDER</div>
+                    <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-h)' }}>#WO-{selectedWO?.id + 1000}</div>
                 </div>
-              </div>
-              <div className="assign-action">
-                {assigning && selectedWO?.id === worker.id ? <Loader2 className="animate-spin" size={20} /> : <ArrowUpRight size={20} />}
-              </div>
-            </button>
-          ))}
-          {workers.length === 0 && (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  No available workers found in your organization.
-              </div>
-          )}
+                <div style={{ textAlign: 'right' }}>
+                    <div className="stat-label" style={{ marginBottom: '4px' }}>CUSTOMER</div>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--primary)' }}>{selectedWO?.customer?.name}</div>
+                </div>
+            </div>
+
+            <div className="worker-selection-grid-standard">
+            {workers.map(worker => (
+                <button 
+                key={worker.id}
+                onClick={() => handleAssign(worker.id)}
+                disabled={assigning}
+                className="worker-assign-card-standard"
+                >
+                <div className="avatar-box-standard">
+                    {worker.user?.name.charAt(0)}
+                </div>
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', color: 'var(--text-h)', fontSize: '15px' }}>{worker.user?.name}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '8px', marginTop: '2px' }}>
+                        <span>{worker.designation}</span>
+                        <span>•</span>
+                        <span className="text-success">Ready for Dispatch</span>
+                    </div>
+                </div>
+                <div className="assign-action-standard">
+                    {assigning && selectedWO?.id === worker.id ? <Loader2 className="animate-spin" size={20} /> : <ChevronRight size={20} />}
+                </div>
+                </button>
+            ))}
+            {workers.length === 0 && (
+                <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', gridColumn: '1 / -1' }}>
+                    <UserPlus size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                    <p>No available workers found in your organization.</p>
+                </div>
+            )}
+            </div>
         </div>
       </Modal>
 
@@ -252,49 +255,44 @@ const WorkOrders: React.FC = () => {
             margin: 0 auto;
         }
 
-        .mini-stat {
+        .premium-form-layout {
             display: flex;
             flex-direction: column;
-            align-items: flex-end;
+            gap: 24px;
+            padding: 8px 4px;
         }
 
-        .stat-label {
-            font-size: 11px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .worker-selection-grid-standard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
         }
 
-        .stat-value {
-            font-size: 24px;
-            font-weight: 900;
-        }
-
-        .worker-assign-card {
+        .worker-assign-card-standard {
             display: flex; 
             align-items: center; 
             gap: 16px; 
-            padding: 16px; 
+            padding: 20px; 
             border: 1px solid var(--border); 
-            border-radius: 12px; 
+            border-radius: 16px; 
             background: white;
             cursor: pointer;
             text-align: left;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
         }
 
-        .worker-assign-card:hover {
+        .worker-assign-card-standard:hover:not(:disabled) {
             border-color: var(--primary);
             background: #f8faff;
-            transform: translateX(4px);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
-        .avatar-large {
-            width: 48px; 
-            height: 48px; 
-            border-radius: 12px; 
+        .avatar-box-standard {
+            width: 52px; 
+            height: 52px; 
+            border-radius: 14px; 
             background: #eef2ff; 
             color: var(--primary); 
             display: flex; 
@@ -304,13 +302,14 @@ const WorkOrders: React.FC = () => {
             font-size: 20px;
         }
 
-        .assign-action {
+        .assign-action-standard {
             color: var(--border);
-            transition: color 0.2s;
+            transition: all 0.2s;
         }
 
-        .worker-assign-card:hover .assign-action {
+        .worker-assign-card-standard:hover .assign-action-standard {
             color: var(--primary);
+            transform: translateX(4px);
         }
 
         @media (max-width: 768px) {

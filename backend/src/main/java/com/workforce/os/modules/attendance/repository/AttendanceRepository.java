@@ -16,4 +16,6 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findAllByTenantId(String tenantId);
     List<Attendance> findByTenantIdOrderByClockInDesc(String tenantId);
     Page<Attendance> findByTenantIdOrderByClockInDesc(String tenantId, Pageable pageable);
+
+    List<Attendance> findByWorkerIdAndStatusIn(Long workerId, List<com.workforce.os.modules.attendance.domain.Attendance.AttendanceStatus> statuses);
 }

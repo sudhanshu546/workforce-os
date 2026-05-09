@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Filter, Briefcase, FileText, Trash2, CheckCircle2, 
   User, Phone, Calendar, AlertCircle, Loader2, ArrowRight,
-  ChevronDown, X, DollarSign, Percent, Tag, Clock, ChevronRight
+  ChevronDown, X, IndianRupee, Percent, Tag, Clock, ChevronRight
 } from 'lucide-react';
 import api from '../services/api';
 import Modal from '../components/Modal';
@@ -343,7 +343,7 @@ const Leads: React.FC = () => {
                 <select className="input-field pl-10" value={newLeadData.serviceItemId} onChange={e => setNewLeadData({...newLeadData, serviceItemId: e.target.value})}>
                     <option value="">Select from catalog (optional)</option>
                     {services.map(s => (
-                        <option key={s.id} value={s.id}>{s.name} - ${s.basePrice}</option>
+                        <option key={s.id} value={s.id}>{s.name} - ₹{s.basePrice}</option>
                     ))}
                 </select>
             </div>
@@ -372,133 +372,168 @@ const Leads: React.FC = () => {
         </form>
       </Modal>
 
-      {/* Smart Quotation Modal */}
-      <Modal isOpen={isQuotationModalOpen} onClose={() => setIsQuotationModalOpen(false)} title="Smart Quotation Builder">
-        <div style={{ marginBottom: '24px', padding: '20px', background: '#f8fafc', borderRadius: '12px', borderLeft: '4px solid var(--primary)' }}>
-            <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', marginBottom: '8px', letterSpacing: '0.05em' }}>CLIENT INFORMATION</div>
-            <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-h)' }}>{selectedLead?.customer?.name}</div>
-            <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>{selectedLead?.description}</div>
-        </div>
-
-        <form onSubmit={handleCreateQuotation}>
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-h)' }}>BILLABLE ITEMS</h4>
-                <button type="button" onClick={addItem} className="add-skill-btn" style={{ fontSize: '12px' }}>
-                    <Plus size={14} /> Add Line Item
-                </button>
+      {/* Smart Quotation Builder */}
+      <Modal isOpen={isQuotationModalOpen} onClose={() => setIsQuotationModalOpen(false)} title="Issue Professional Quotation" width="900px">
+        <div className="quotation-builder-layout">
+            <div className="quote-header-info">
+                <div className="client-badge-card">
+                    <div className="card-icon"><User size={20} /></div>
+                    <div className="card-data">
+                        <span className="data-label">Client Name</span>
+                        <span className="data-value">{selectedLead?.customer?.name}</span>
+                    </div>
+                </div>
+                <div className="client-badge-card">
+                    <div className="card-icon"><Briefcase size={20} /></div>
+                    <div className="card-data">
+                        <span className="data-label">Service Request</span>
+                        <span className="data-value">{selectedLead?.requestedService?.name || 'General Inquiry'}</span>
+                    </div>
+                </div>
             </div>
 
-            <div className="quote-items-list" style={{ paddingRight: '4px' }}>
-                {quoteData.items.map((item, index) => (
-                    <div key={index} className="card" style={{ padding: '16px', marginBottom: '12px', background: '#fff', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }}>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label>Service Catalog</label>
-                                <select 
-                                    className="input-field" 
-                                    value={item.serviceId} 
-                                    onChange={e => handleServiceSelect(index, e.target.value)}
-                                >
-                                    <option value="">Choose a service...</option>
-                                    {services.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} (${s.basePrice})</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label>Line Item Description</label>
-                                <input 
-                                    type="text" 
-                                    className="input-field" 
-                                    placeholder="Brief description..."
-                                    value={item.description} 
-                                    onChange={e => updateItem(index, 'description', e.target.value)}
-                                    required 
-                                />
-                            </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 140px 40px', gap: '16px', alignItems: 'flex-end' }}>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label>Qty</label>
+            <form onSubmit={handleCreateQuotation} className="quote-form-body">
+                <div className="line-items-section">
+                    <div className="section-title-bar">
+                        <h4>BILLABLE LINE ITEMS</h4>
+                        <button type="button" onClick={addItem} className="btn-add-item">
+                            <Plus size={14} /> Add Line
+                        </button>
+                    </div>
+
+                    <div className="quote-table-wrapper">
+                        <table className="compact-quote-table">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '220px' }}>Service Catalog</th>
+                                    <th>Description</th>
+                                    <th style={{ width: '80px' }}>Qty</th>
+                                    <th style={{ width: '130px' }}>Unit Price</th>
+                                    <th style={{ width: '120px', textAlign: 'right' }}>Total</th>
+                                    <th style={{ width: '50px' }}></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {quoteData.items.map((item, index) => (
+                                    <tr key={index}>
+                                        <td>
+                                            <select 
+                                                className="table-input" 
+                                                value={item.serviceId} 
+                                                onChange={e => handleServiceSelect(index, e.target.value)}
+                                            >
+                                                <option value="">Select Service...</option>
+                                                {services.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                className="table-input" 
+                                                placeholder="Custom description..."
+                                                value={item.description} 
+                                                onChange={e => updateItem(index, 'description', e.target.value)}
+                                                required 
+                                            />
+                                        </td>
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                className="table-input" 
+                                                min="1"
+                                                value={item.quantity} 
+                                                onChange={e => updateItem(index, 'quantity', Number(e.target.value))}
+                                                required 
+                                            />
+                                        </td>
+                                        <td>
+                                            <div className="price-input-box">
+                                                <span className="currency">₹</span>
+                                                <input 
+                                                    type="number" 
+                                                    className="table-input" 
+                                                    step="0.01"
+                                                    value={item.unitPrice} 
+                                                    onChange={e => updateItem(index, 'unitPrice', Number(e.target.value))}
+                                                    required 
+                                                />
+                                            </div>
+                                        </td>
+                                        <td className="row-total">
+                                            ₹{(item.quantity * item.unitPrice).toFixed(2)}
+                                        </td>
+                                        <td>
+                                            <button type="button" onClick={() => removeItem(index)} className="btn-remove-row">
+                                                <X size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div className="quote-footer-summary">
+                    <div className="adjustments-panel">
+                        <div className="adj-group">
+                            <label>Tax Rate (%)</label>
+                            <div className="adj-input-wrapper">
+                                <Percent size={14} />
                                 <input 
                                     type="number" 
-                                    className="input-field" 
-                                    min="1"
-                                    value={item.quantity} 
-                                    onChange={e => updateItem(index, 'quantity', Number(e.target.value))}
-                                    required 
+                                    min="0"
+                                    value={quoteData.tax} 
+                                    onChange={e => setQuoteData({...quoteData, tax: Math.max(0, Number(e.target.value))})} 
                                 />
                             </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label>Unit Price ($)</label>
-                                <div className="input-with-icon">
-                                    <DollarSign size={14} className="input-icon" />
-                                    <input 
-                                        type="number" 
-                                        className="input-field pl-10" 
-                                        step="0.01"
-                                        value={item.unitPrice} 
-                                        onChange={e => updateItem(index, 'unitPrice', Number(e.target.value))}
-                                        required 
-                                    />
-                                </div>
+                        </div>
+                        <div className="adj-group">
+                            <label>Flat Discount (₹)</label>
+                            <div className="adj-input-wrapper">
+                                <Tag size={14} />
+                                <input 
+                                    type="number" 
+                                    min="0"
+                                    value={quoteData.discount} 
+                                    onChange={e => setQuoteData({...quoteData, discount: Math.max(0, Number(e.target.value))})} 
+                                />
                             </div>
-                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                <label>Line Total</label>
-                                <div className="input-field" style={{ background: '#f8fafc', fontWeight: '800', color: 'var(--primary)', textAlign: 'right' }}>
-                                    ${(item.quantity * item.unitPrice).toFixed(2)}
-                                </div>
-                            </div>
-                            <button type="button" onClick={() => removeItem(index)} className="btn-icon text-error" style={{ marginBottom: '6px' }}>
-                                <Trash2 size={18} />
-                            </button>
                         </div>
                     </div>
-                ))}
-            </div>
-          </div>
 
-          <div className="quote-summary-grid">
-            <div className="form-group">
-                <label>Tax (%)</label>
-                <div className="input-with-icon">
-                    <Percent size={16} className="input-icon" />
-                    <input type="number" className="input-field pl-10" value={quoteData.tax} onChange={e => setQuoteData({...quoteData, tax: Number(e.target.value)})} />
+                    <div className="totals-display-box">
+                        <div className="summary-line">
+                            <span>Subtotal</span>
+                            <span>₹{getSubtotal().toFixed(2)}</span>
+                        </div>
+                        <div className="summary-line">
+                            <span>Tax ({quoteData.tax}%)</span>
+                            <span>+ ₹{(getSubtotal() * (quoteData.tax / 100)).toFixed(2)}</span>
+                        </div>
+                        {quoteData.discount > 0 && (
+                            <div className="summary-line discount">
+                                <span>Discount</span>
+                                <span>- ₹{quoteData.discount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="summary-line grand-total">
+                            <span>Grand Total</span>
+                            <span>₹{getTotal().toFixed(2)}</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div className="form-group">
-                <label>Discount ($)</label>
-                <div className="input-with-icon">
-                    <DollarSign size={16} className="input-icon" />
-                    <input type="number" className="input-field pl-10" value={quoteData.discount} onChange={e => setQuoteData({...quoteData, discount: Number(e.target.value)})} />
+
+                <div className="quote-actions">
+                    <button type="button" onClick={() => setIsQuotationModalOpen(false)} className="btn btn-secondary">Discard</button>
+                    <button type="submit" className="btn btn-primary" disabled={submitting}>
+                        {submitting ? <Loader2 className="animate-spin" /> : 'Finalize & Send Quote'}
+                    </button>
                 </div>
-            </div>
-          </div>
-
-          <div className="final-total-box" style={{ background: 'var(--text-h)', color: '#fff' }}>
-             <div className="total-row" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                <span>Subtotal</span>
-                <span style={{ color: '#fff' }}>${getSubtotal().toFixed(2)}</span>
-             </div>
-             <div className="total-row" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                <span>Tax Breakdown ({quoteData.tax}%)</span>
-                <span style={{ color: '#fff' }}>+ ${(getSubtotal() * (quoteData.tax / 100)).toFixed(2)}</span>
-             </div>
-             <div className="total-row" style={{ color: '#ef4444' }}>
-                <span>Applied Discount</span>
-                <span>- ${quoteData.discount.toFixed(2)}</span>
-             </div>
-             <div className="total-row grand-total" style={{ borderTopColor: 'rgba(255,255,255,0.1)', color: '#fff' }}>
-                <span>Final Total Amount</span>
-                <span style={{ color: '#818cf8' }}>${getTotal().toFixed(2)}</span>
-             </div>
-          </div>
-
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '32px', height: '56px', fontSize: '16px', fontWeight: '800' }} disabled={submitting}>
-            {submitting ? <Loader2 className="animate-spin" /> : 'Finalize & Issue Quotation'}
-          </button>
-        </form>
+            </form>
+        </div>
       </Modal>
 
       <style>{`
@@ -511,45 +546,275 @@ const Leads: React.FC = () => {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
         }
 
-        .quote-items-list {
-            max-height: 380px;
-            overflow-y: auto;
-            padding-right: 8px;
+        /* Quotation Builder Styles */
+        .quotation-builder-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
         }
 
-        .quote-summary-grid {
+        .quote-header-info {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 24px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border);
+            gap: 16px;
         }
 
-        .final-total-box {
-            margin-top: 24px;
-            border-radius: 16px;
-            padding: 24px;
+        .client-badge-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
         }
 
-        .total-row {
+        .client-badge-card .card-icon {
+            width: 40px;
+            height: 40px;
+            background: #e0e7ff;
+            color: var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-data {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .data-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .data-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-h);
+        }
+
+        .section-title-bar {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 14px;
-            font-weight: 500;
+            align-items: center;
+            margin-bottom: 16px;
         }
 
-        .total-row.grand-total {
+        .section-title-bar h4 {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-h);
+            letter-spacing: 0.02em;
+        }
+
+        .btn-add-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bcf0da;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-add-item:hover {
+            background: #dcfce7;
+            transform: translateY(-1px);
+        }
+
+        .quote-table-wrapper {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .compact-quote-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .compact-quote-table th {
+            background: #f8fafc;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .compact-quote-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .table-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.2s;
+            background: transparent;
+        }
+
+        .table-input:hover {
+            border-color: #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .table-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .price-input-box {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 0 8px;
+        }
+
+        .price-input-box .currency {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .row-total {
+            text-align: right;
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .btn-remove-row {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ef4444;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-remove-row:hover {
+            background: #fef2f2;
+        }
+
+        .quote-footer-summary {
+            display: flex;
+            justify-content: space-between;
+            gap: 32px;
+            padding-top: 24px;
+            border-top: 2px dashed var(--border);
+            flex-wrap: wrap;
+        }
+
+        .adjustments-panel {
+            display: flex;
+            gap: 24px;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .adj-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .adj-group label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .adj-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            width: 140px;
+        }
+
+        .adj-input-wrapper input {
+            background: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+            font-weight: 700;
+            color: var(--text-h);
+        }
+
+        .totals-display-box {
+            background: #1e293b;
+            padding: 24px;
+            border-radius: 16px;
+            color: white;
+            width: 340px;
+            flex-shrink: 0;
+        }
+
+        .summary-line {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #94a3b8;
+        }
+
+        .summary-line.discount {
+            color: #f87171;
+        }
+
+        .summary-line.grand-total {
             margin-top: 16px;
             padding-top: 16px;
-            border-top: 1px solid var(--border);
+            border-top: 1px solid #334155;
             font-size: 24px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 0;
+        }
+
+        .quote-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .quote-actions button {
+            height: 52px;
             font-weight: 800;
         }
 
         @media (max-width: 1024px) {
-            .form-grid, .quote-summary-grid {
+            .quote-header-info, .quote-footer-summary {
                 grid-template-columns: 1fr;
             }
         }

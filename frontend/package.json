@@ -12,13 +12,20 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "^2.11.2",
+    "@types/sockjs-client": "^1.5.4",
+    "@types/stompjs": "^2.3.10",
     "axios": "^1.16.0",
+    "chart.js": "^4.5.1",
+    "idb": "^8.0.3",
     "lucide-react": "^1.14.0",
     "react": "^19.2.5",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.5",
     "react-hook-form": "^7.75.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.14.2",
+    "sockjs-client": "^1.6.1",
+    "stompjs": "^2.3.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

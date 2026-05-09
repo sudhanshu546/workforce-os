@@ -52,7 +52,8 @@ const CustomerRegisterPage: React.FC = () => {
         accessToken: response.data.access_token, 
         refreshToken: response.data.refresh_token, 
         role: response.data.role, // e.g., "CUSTOMER"
-        customerId: response.data.customerId 
+        user: response.data.user || { name: response.data.name, phone: '', email: data.email },
+        customerId: response.data.customerId ,
       }));
       
       // Redirect to dashboard or a confirmation page

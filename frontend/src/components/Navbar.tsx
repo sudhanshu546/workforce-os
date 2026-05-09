@@ -1,25 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Search, User, Menu } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Bell, Search, Menu } from 'lucide-react';
 import api from '../services/api';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUserProfile } from '../redux/authSlice';
 
 interface NavbarProps {
   onMenuClick: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
-  const [user, setUser] = useState({ name: 'Loading...', role: '' });
+  const dispatch = useDispatch();
+  const user = useSelector((state: any) => state.auth.user);
   
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const response = await api.get('/auth/profile');
-        setUser(response.data);
+        dispatch(setUserProfile(response.data));
       } catch (err) {
         console.error('Failed to fetch profile', err);
       }
     };
-    fetchProfile();
-  }, []);
+    if (!user) {
+        fetchProfile();
+    }
+  }, [dispatch, user]);
+  
+  const displayName = user?.name || 'Loading...';
+  const displayRole = user?.role || '';
   
   return (
     <header className="navbar">
@@ -40,12 +48,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
         </button>
         <div className="user-profile-nav">
           <div className="user-info">
-            <span className="user-name">{user.name}</span>
-            <span className="user-role">{user.role}</span>
+            <span className="user-name">{displayName}</span>
+            <span className="user-role">{displayRole}</span>
           </div>
           <div className="user-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', borderRadius: '50%', width: '40px', height: '40px' }}>
             <span style={{ fontSize: '14px', fontWeight: '700', color: '#4338ca' }}>
-              {user.name.split(' ').map((n: string) => n[0]).join('')}
+              {user?.name && user.name.split(' ').map((n: string) => n[0]).join('')}
             </span>
           </div>
         </div>

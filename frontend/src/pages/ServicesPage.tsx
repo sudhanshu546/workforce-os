@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Trash2, Loader2, Tag, Layers, 
   Search, Edit3, Package, AlertCircle, Filter, 
-  ArrowRight, Info
+  ArrowRight, Info, IndianRupee
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import Modal from '../components/Modal';
@@ -226,7 +226,7 @@ const ServicesPage: React.FC = () => {
                             <span className="badge badge-primary" style={{ marginBottom: '8px' }}>{item.category?.name}</span>
                             <h4 className="service-title">{item.name}</h4>
                           </div>
-                          <span className="service-price">${item.basePrice.toFixed(2)}</span>
+                          <span className="service-price">₹{item.basePrice.toFixed(2)}</span>
                         </div>
                         <p className="service-desc">{item.description}</p>
                       </div>
@@ -300,154 +300,240 @@ const ServicesPage: React.FC = () => {
       </div>
 
       {/* Category Modal */}
-      <Modal isOpen={isCategoryModalOpen} onClose={resetCategoryForm} title={editingCategory ? "Edit Category" : "Create New Category"}>
-        <form onSubmit={handleCreateOrUpdateCategory}>
-          <div className="form-group">
-            <label>Category Name</label>
-            <input 
-                type="text" 
-                className="input-field" 
-                placeholder="e.g., Plumbing, Electrical, Cleaning" 
-                value={categoryName} 
-                onChange={e => setCategoryName(e.target.value)} 
-                required 
-            />
+      <Modal isOpen={isCategoryModalOpen} onClose={resetCategoryForm} title={editingCategory ? "Edit Category" : "Create New Category"} width="900px">
+        <form onSubmit={handleCreateOrUpdateCategory} className="premium-form-layout">
+          <div className="form-grid-2">
+            <div className="form-group">
+                <label className="form-label">Category Name</label>
+                <div className="input-with-icon">
+                    <Tag size={18} className="input-icon" />
+                    <input 
+                        type="text" 
+                        className="input-field pl-10" 
+                        placeholder="e.g., Plumbing, Electrical" 
+                        value={categoryName} 
+                        onChange={e => setCategoryName(e.target.value)} 
+                        required 
+                    />
+                </div>
+            </div>
+            <div className="form-group">
+                <label className="form-label">Internal Identifier</label>
+                <input type="text" className="input-field" disabled value={editingCategory ? `CAT-${editingCategory.id+100}` : 'Auto-generated'} />
+            </div>
           </div>
+          
           <div className="form-group">
-            <label>Description</label>
+            <label className="form-label">Professional Description</label>
             <textarea 
                 className="input-field textarea-field" 
                 placeholder="Briefly describe what this category covers..." 
                 value={categoryDescription} 
                 onChange={e => setCategoryDescription(e.target.value)}
+                rows={4}
             />
           </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-            <button type="button" onClick={resetCategoryForm} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 2 }}>{editingCategory ? "Update Category" : "Create Category"}</button>
+
+          <div className="modal-footer-actions">
+            <button type="button" onClick={resetCategoryForm} className="btn btn-secondary">Discard Changes</button>
+            <button type="submit" className="btn btn-primary" style={{ minWidth: '200px' }}>
+                {editingCategory ? "Update Category Details" : "Create Master Category"}
+            </button>
           </div>
         </form>
       </Modal>
 
       {/* Service Modal */}
-      <Modal isOpen={isItemModalOpen} onClose={resetItemForm} title={editingItem ? "Edit Service" : "Add New Service"}>
-        <form onSubmit={handleCreateOrUpdateItem}>
-          {!editingItem && (
+      <Modal isOpen={isItemModalOpen} onClose={resetItemForm} title={editingItem ? "Refine Service Details" : "Add Catalog Service"} width="900px">
+        <form onSubmit={handleCreateOrUpdateItem} className="premium-form-layout">
+          <div className="form-grid-2">
+              {!editingItem && (
+                <div className="form-group">
+                    <label className="form-label">Target Category</label>
+                    <div className="input-with-icon">
+                        <Layers size={18} className="input-icon" />
+                        <select 
+                            className="input-field pl-10" 
+                            value={newItem.categoryId} 
+                            onChange={e => setNewItem({...newItem, categoryId: e.target.value})}
+                            required
+                        >
+                            <option value="">Select a category...</option>
+                            {categories.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+              )}
               <div className="form-group">
-                <label>Category</label>
-                <select 
-                    className="input-field" 
-                    value={newItem.categoryId} 
-                    onChange={e => setNewItem({...newItem, categoryId: e.target.value})}
-                    required
-                >
-                    <option value="">Select a category</option>
-                    {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                </select>
+                <label className="form-label">Service Name</label>
+                <div className="input-with-icon">
+                    <Package size={18} className="input-icon" />
+                    <input 
+                        type="text" 
+                        className="input-field pl-10" 
+                        placeholder="e.g., Industrial Pipe Repair" 
+                        value={newItem.name} 
+                        onChange={e => setNewItem({...newItem, name: e.target.value})} 
+                        required 
+                    />
+                </div>
               </div>
-          )}
-          <div className="form-group">
-            <label>Service Name</label>
-            <input 
-                type="text" 
-                className="input-field" 
-                placeholder="e.g., Drain Unclogging, Leak Repair" 
-                value={newItem.name} 
-                onChange={e => setNewItem({...newItem, name: e.target.value})} 
-                required 
-            />
           </div>
+
           <div className="form-group">
-            <label>Description</label>
+            <label className="form-label">Service Scope & Description</label>
             <textarea 
                 className="input-field textarea-field" 
-                placeholder="Detailed description of the service..." 
+                placeholder="Detail what is included in this service..." 
                 value={newItem.description} 
                 onChange={e => setNewItem({...newItem, description: e.target.value})} 
                 required 
+                rows={4}
             />
           </div>
-          <div className="form-group">
-            <label>Base Price ($)</label>
-            <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontWeight: '600' }}>$</span>
+
+          <div className="form-group" style={{ maxWidth: '300px' }}>
+            <label className="form-label">Base Rate (₹)</label>
+            <div className="input-with-icon">
+                <IndianRupee size={18} className="input-icon" />
                 <input 
                     type="number" 
                     step="0.01"
-                    className="input-field" 
-                    style={{ paddingLeft: '30px' }}
+                    min="0"
+                    className="input-field pl-10" 
                     placeholder="0.00" 
                     value={newItem.basePrice} 
-                    onChange={e => setNewItem({...newItem, basePrice: Number(e.target.value)})} 
+                    onChange={e => setNewItem({...newItem, basePrice: Math.max(0, Number(e.target.value))})} 
                     required 
                 />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-            <button type="button" onClick={resetItemForm} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 2 }}>{editingItem ? "Update Service" : "Save Service"}</button>
+
+          <div className="modal-footer-actions">
+            <button type="button" onClick={resetItemForm} className="btn btn-secondary">Cancel</button>
+            <button type="submit" className="btn btn-primary" style={{ minWidth: '200px' }}>
+                {editingItem ? "Save Modifications" : "Add to Catalog"}
+            </button>
           </div>
         </form>
       </Modal>
 
       <style>{`
         .services-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+        }
+
+        .premium-form-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            padding: 8px 4px;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .modal-footer-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .service-card {
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            background: white;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .service-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-h);
+            line-height: 1.2;
+        }
+
+        .service-price {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--primary);
+        }
+
+        .service-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 24px;
         }
 
         .tab-navigation {
             display: flex;
-            gap: 8px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 24px;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: 14px;
+            width: fit-content;
+            margin-bottom: 32px;
         }
 
         .tab-btn {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 12px 20px;
-            background: none;
+            padding: 10px 24px;
             border: none;
-            border-bottom: 2px solid transparent;
+            border-radius: 10px;
             cursor: pointer;
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 15px;
+            color: #64748b;
+            font-weight: 700;
+            font-size: 14px;
             transition: all 0.2s;
+            background: transparent;
         }
 
         .tab-btn:hover {
-            color: var(--primary);
-            background: #f8fafc;
+            color: var(--text-h);
         }
 
         .tab-btn.active {
+            background: white;
             color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        .filter-bar {
-            padding: 16px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-        }
-
-        .filter-select-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .filter-icon {
-            position: absolute;
-            left: 14px;
-            color: var(--text-muted);
-            pointer-events: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .admin-table {
@@ -458,38 +544,52 @@ const ServicesPage: React.FC = () => {
 
         .admin-table th {
             background: #f8fafc;
-            padding: 14px 20px;
+            padding: 16px 24px;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
             color: var(--text-muted);
+            letter-spacing: 0.05em;
             border-bottom: 1px solid var(--border);
         }
 
         .admin-table td {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
+            padding: 20px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
         }
 
         .cat-icon-thumb {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             background: #eef2ff;
             color: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 12px;
+        }
+
+        .badge-success {
+            background: #ecfdf5;
+            color: #059669;
+            padding: 6px 12px;
             border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
         }
 
         .btn-icon {
             background: none;
             border: none;
             cursor: pointer;
-            padding: 8px;
-            color: var(--text-muted);
-            border-radius: 6px;
+            padding: 10px;
+            color: #64748b;
+            border-radius: 10px;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .btn-icon:hover {
@@ -498,22 +598,18 @@ const ServicesPage: React.FC = () => {
         }
 
         .btn-icon.text-error:hover {
-            color: var(--error);
+            color: #ef4444;
             background: #fef2f2;
-        }
-
-        .badge-success {
-            background: #ecfdf5;
-            color: #059669;
         }
 
         .animate-in {
             animation: fadeIn 0.3s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
+        @media (max-width: 768px) {
+            .form-grid-2 {
+                grid-template-columns: 1fr;
+            }
         }
       `}</style>
     </Layout>

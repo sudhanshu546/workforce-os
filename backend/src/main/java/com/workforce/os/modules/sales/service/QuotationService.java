@@ -22,6 +22,9 @@ public class QuotationService {
     private final LeadRepository leadRepository;
     private final WorkOrderService workOrderService;
 
+    @org.springframework.beans.factory.annotation.Value("${application.finance.tax.default-rate:18.0}")
+    private Double defaultTaxRate;
+
     @Transactional
     public Quotation createQuotation(Long leadId, List<QuotationItemRequest> itemRequests, Double taxPercentage, Double discount) {
         Lead lead = leadRepository.findById(leadId).orElseThrow();
@@ -43,7 +46,7 @@ public class QuotationService {
 
         quotation.setItems(items);
         
-        // Calculate subtotal and tax percentage
+        // Calculate subtotal
         double subtotal = items.stream()
                 .mapToDouble(item -> {
                     item.setTotalAmount(item.getQuantity() * item.getUnitPrice());
@@ -51,8 +54,10 @@ public class QuotationService {
                 })
                 .sum();
         
+        double rate = (taxPercentage != null && taxPercentage > 0) ? taxPercentage : defaultTaxRate;
+
         quotation.setSubtotal(subtotal);
-        quotation.setTax(subtotal * (taxPercentage / 100.0));
+        quotation.setTax(subtotal * (rate / 100.0));
         quotation.setTotalAmount(subtotal + quotation.getTax() - discount);
         
         lead.setStatus(Lead.LeadStatus.QUOTED);
