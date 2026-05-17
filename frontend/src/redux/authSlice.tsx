@@ -5,7 +5,7 @@ interface AuthState {
   refreshToken: string | null;
   role: string | null;
   customerId: number | null;
-  user: { name: string; email: string; role: string; number: string } | null;
+  user: { id: number; name: string; email: string; role: string; number: string } | null;
   isAuthenticated: boolean;
 }
 
@@ -42,18 +42,20 @@ const authSlice = createSlice({
       state,
       action: PayloadAction<CredentialsPayload>
     ) => {
-      const { accessToken, refreshToken, role, customerId } =
+      const { accessToken, refreshToken, role, customerId, user } =
         action.payload;
 
       state.accessToken = accessToken;
       state.refreshToken = refreshToken;
       state.role = role;
       state.customerId = customerId ?? null;
+      state.user = user;
       state.isAuthenticated = true;
 
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('role', role);
+      localStorage.setItem('user', JSON.stringify(user));
 
       if (customerId) {
         localStorage.setItem('customerId', customerId.toString());
@@ -62,7 +64,7 @@ const authSlice = createSlice({
 
     setUserProfile: (
       state,
-      action: PayloadAction<{ name: string; email: string; role: string; number: string }>
+      action: PayloadAction<{ id: number; name: string; email: string; role: string; number: string }>
     ) => {
       state.user = action.payload;
       localStorage.setItem('user', JSON.stringify(action.payload));

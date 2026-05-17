@@ -9,6 +9,7 @@ import com.workforce.os.modules.identity.web.AuthenticationRequest;
 import com.workforce.os.modules.identity.web.AuthenticationResponse;
 import com.workforce.os.modules.identity.web.RegisterRequest;
 import com.workforce.os.modules.organization.service.OrganizationService;
+import com.workforce.os.modules.customer.repository.CustomerRepository;
 import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -31,11 +34,16 @@ public class AuthService {
 
     private final OrganizationService organizationService;
     private final WorkerProfileRepository workerProfileRepository;
+    private final CustomerRepository customerRepository;
 
     private final RoleRepository roleRepository;
 
     @Transactional
     public AuthenticationResponse registerOrganization(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new com.workforce.os.common.exception.BusinessException(EMAIL_EXISTS);
+        }
+
         var user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
@@ -45,7 +53,7 @@ public class AuthService {
         
         // Assign OWNER role
         var ownerRole = roleRepository.findByName("OWNER")
-                .orElseThrow(() -> new RuntimeException("Default role OWNER not found"));
+                .orElseThrow(() -> new RuntimeException(DEFAULT_ROLE_NOT_FOUND));
         user.setRole(ownerRole);
         
         var savedUser = userRepository.save(user);
@@ -85,9 +93,14 @@ public class AuthService {
         var refreshToken = jwtService.generateRefreshToken(user);
         
         Long workerId = null;
+        Long customerId = null;
         if ("WORKER".equals(user.getRole().getName())) {
             workerId = workerProfileRepository.findByUserEmail(user.getEmail())
                     .map(profile -> profile.getId())
+                    .orElse(null);
+        } else if ("CUSTOMER".equals(user.getRole().getName())) {
+            customerId = customerRepository.findByEmail(user.getEmail())
+                    .map(c -> c.getId())
                     .orElse(null);
         }
 
@@ -96,6 +109,7 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .role(user.getRole().getName())
                 .workerId(workerId)
+                .customerId(customerId)
                 .build();
     }
 
@@ -109,7 +123,7 @@ public class AuthService {
         final String userEmail = jwtService.extractUsername(token);
         if (userEmail != null) {
             var user = userRepository.findByEmail(userEmail)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException(USER_NOT_FOUND));
             
             if (jwtService.isTokenValid(token, user)) {
                 String accessToken = jwtService.generateToken(user);
@@ -129,6 +143,6 @@ public class AuthService {
                         .build();
             }
         }
-        throw new RuntimeException("Invalid refresh token");
+        throw new RuntimeException(INVALID_REFRESH_TOKEN);
     }
 }

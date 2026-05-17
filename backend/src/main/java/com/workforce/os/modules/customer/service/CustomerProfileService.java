@@ -34,9 +34,7 @@ public class CustomerProfileService {
         CustomerProfile profile = customerProfileRepository.findByCustomerId(customer.getId())
                 .orElseThrow(() -> new RuntimeException("Customer profile not found"));
 
-        if (request.getName() != null) {
-            profile.setName(request.getName());
-        }
+        customerProfileMapper.updateProfileFromRequest(request, profile);
         
         if (request.getPhone() != null) {
             customer.setPhone(request.getPhone());

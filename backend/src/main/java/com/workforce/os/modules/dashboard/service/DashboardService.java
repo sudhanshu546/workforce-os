@@ -5,6 +5,7 @@ import com.workforce.os.modules.attendance.service.AttendanceService;
 import com.workforce.os.modules.dashboard.dto.OwnerStatsResponse;
 import com.workforce.os.modules.dashboard.dto.WorkerStatsResponse;
 import com.workforce.os.modules.finance.repository.InvoiceRepository;
+import com.workforce.os.modules.operations.domain.WorkOrder;
 import com.workforce.os.modules.operations.repository.WorkOrderRepository;
 import com.workforce.os.modules.sales.repository.LeadRepository;
 import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
@@ -51,8 +52,8 @@ public class DashboardService {
 
     public WorkerStatsResponse getWorkerStats(Long workerId) {
         // Pending tasks are work orders assigned to worker that are not COMPLETED
-        long pendingTasks = workOrderRepository.countByAssignedWorkerIdAndStatusNot(workerId, "COMPLETED");
-        long completedToday = workOrderRepository.countByAssignedWorkerIdAndStatus(workerId, "COMPLETED"); // Simplified for today
+        long pendingTasks = workOrderRepository.countByAssignedWorkerIdAndStatusNot(workerId, WorkOrder.WorkOrderStatus.COMPLETED);
+        long completedToday = workOrderRepository.countByAssignedWorkerIdAndStatus(workerId, WorkOrder.WorkOrderStatus.COMPLETED); // Simplified for today
         boolean clockedIn = attendanceService.isWorkerClockedIn(workerId);
 
         return WorkerStatsResponse.builder()

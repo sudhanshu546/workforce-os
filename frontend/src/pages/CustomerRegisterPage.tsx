@@ -38,7 +38,7 @@ const CustomerRegisterPage: React.FC = () => {
     
     try {
       // Use the dedicated customer registration endpoint
-      const response = await api.post('/customers/auth/register', {
+      const responseData: any = await api.post('/customers/auth/register', {
         name: data.name,
         email: data.email,
         phone: data.phone,
@@ -49,11 +49,11 @@ const CustomerRegisterPage: React.FC = () => {
       
       // The backend returns access_token and refresh_token
       dispatch(setCredentials({ 
-        accessToken: response.data.access_token, 
-        refreshToken: response.data.refresh_token, 
-        role: response.data.role, // e.g., "CUSTOMER"
-        user: response.data.user || { name: response.data.name, phone: '', email: data.email },
-        customerId: response.data.customerId ,
+        accessToken: responseData.access_token, 
+        refreshToken: responseData.refresh_token, 
+        role: responseData.role, // e.g., "CUSTOMER"
+        user: responseData.user || { name: responseData.name, phone: '', email: data.email },
+        customerId: responseData.customerId ,
       }));
       
       // Redirect to dashboard or a confirmation page

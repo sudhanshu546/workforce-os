@@ -24,6 +24,9 @@ public class CustomerAddress extends BaseEntity { // Extends BaseEntity for tena
     private String state;
     private String zipCode;
     private String country;
+
+    private Double latitude;
+    private Double longitude;
     
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
     private boolean isDefault;

@@ -1,5 +1,6 @@
 package com.workforce.os.modules.identity.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.workforce.os.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -8,7 +9,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Getter
@@ -32,6 +35,7 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private String password;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
     private Role role;
@@ -45,9 +49,11 @@ public class User extends BaseEntity implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return role.getPermissions().stream()
+        List<GrantedAuthority> authorities = role.getPermissions().stream()
                 .map(permission -> new SimpleGrantedAuthority(permission.getName()))
-                .collect(Collectors.toList());
+                .collect(Collectors.toCollection(ArrayList::new));
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+        return authorities;
     }
 
     @Override

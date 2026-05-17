@@ -24,7 +24,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, recipient
         api.get(`/chat/history/${conversationId}`).then(res => setMessages(res.data));
 
         // Setup WebSocket
-        const socket = new SockJS('http://localhost:8080/ws-workforce');
+        const socket = new SockJS(import.meta.env.VITE_WS_BASE_URL);
         stompClient.current = Stomp.over(socket);
         stompClient.current.connect({}, () => {
             stompClient.current?.subscribe(`/user/${senderId}/queue/messages`, (msg) => {

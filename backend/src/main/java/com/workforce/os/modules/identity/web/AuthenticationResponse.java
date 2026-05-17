@@ -17,4 +17,5 @@ public class AuthenticationResponse {
     private String refreshToken;
     private String role;
     private Long workerId;
+    private Long customerId;
 }

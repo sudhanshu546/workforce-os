@@ -8,9 +8,12 @@ import api from '../services/api';
 import Modal from '../components/Modal';
 import { Pagination } from '../components/Pagination';
 import { Layout } from '../components/Layout';
+import { useToast } from '../components/ToastProvider';
 import { useNavigate } from 'react-router-dom';
+import { ExpandableRowTable } from '../components/ExpandableRowTable';
 
 const Leads: React.FC = () => {
+  const showToast = useToast();
   const [leads, setLeads] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,9 +61,9 @@ const Leads: React.FC = () => {
   const fetchLeads = async (page: number) => {
     try {
       setLoading(true);
-      const response = await api.get(`/leads?page=${page}&size=${pageSize}`);
-      setLeads(response.data.content || []);
-      setTotalPages(response.data.totalPages || 0);
+      const data: any = await api.get(`/leads?page=${page}&size=${pageSize}`);
+      setLeads(data.content || []);
+      setTotalPages(data.totalPages || 0);
     } catch (err) {
       console.error('Error fetching leads:', err);
     } finally {
@@ -70,8 +73,8 @@ const Leads: React.FC = () => {
 
   const fetchServices = async () => {
     try {
-      const res = await api.get('/services/items');
-      setServices(res.data);
+      const data: any = await api.get('/services/items');
+      setServices(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch services', err);
     }
@@ -190,182 +193,175 @@ const Leads: React.FC = () => {
       }
   };
 
+  const columns = [
+    { header: 'Opportunity Source', accessor: (lead: any) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="avatar" style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>{lead.customer?.name[0]}</div>
+            <div>
+                <div style={{ fontWeight: '700', color: 'var(--text-h)' }}>{lead.customer?.name}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>{lead.customer?.phone}</div>
+            </div>
+        </div>
+    )},
+    { header: 'Interest Area', accessor: (lead: any) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Briefcase size={14} className="text-muted" />
+            <span style={{ fontWeight: '600', color: 'var(--text-main)' }}>{lead.requestedService?.name || 'General Inquiry'}</span>
+        </div>
+    )},
+    { header: 'Priority', accessor: (lead: any) => <span className={`badge ${getPriorityBadge(lead.priority)}`}>{lead.priority}</span> },
+    { header: 'Stage', accessor: (lead: any) => <span className={`badge ${getStatusBadge(lead.status)}`}>{lead.status.replace('_', ' ')}</span> }
+  ];
+
   return (
     <Layout>
-      <div className="leads-container">
-        <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
+      <div className="leads-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-h)', marginBottom: '8px' }}>Sales Pipeline</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Manage incoming requests and convert them into successful work orders.</p>
+            <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Revenue Pipeline</h1>
+            <p className="text-muted">Qualified opportunities waiting for service estimation and dispatch.</p>
           </div>
-          <button 
-            onClick={() => setIsLeadModalOpen(true)}
-            className="btn btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}
-          >
-            <Plus size={18} /> New Opportunity
+          <button onClick={() => setIsLeadModalOpen(true)} className="btn btn-primary">
+            <Plus size={20} /> Capture Opportunity
           </button>
         </header>
 
-        <div className="filter-bar card" style={{ padding: '16px', marginBottom: '32px', display: 'flex', gap: '16px' }}>
-          <div className="search-bar" style={{ flex: 1 }}>
-            <Search size={18} />
+        <div className="filter-bar" style={{ marginBottom: '24px' }}>
+          <div className="search-bar">
+            <Search size={18} className="text-muted" />
             <input 
                 type="text" 
-                placeholder="Search by customer name or service..." 
+                placeholder="Search pipeline..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="filter-select-wrapper">
-            <Filter size={18} className="filter-icon" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <Filter size={18} className="text-muted" />
             <select 
-                className="input-field" 
-                style={{ paddingLeft: '40px', width: '220px' }}
+                style={{ border: 'none', background: 'transparent', height: '44px', fontWeight: '600', color: 'var(--text-h)', outline: 'none' }}
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
             >
-                <option value="ALL">All Priorities</option>
+                <option value="ALL">All Levels</option>
                 <option value="HIGH">High Priority</option>
-                <option value="MEDIUM">Medium</option>
+                <option value="MEDIUM">Standard</option>
                 <option value="LOW">Low</option>
             </select>
           </div>
         </div>
 
-        <div className="premium-table-container">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Requested Service</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th className="actions-cell">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={32} style={{ margin: '0 auto', color: 'var(--primary)' }} /></td></tr>
-              ) : filteredLeads.length === 0 ? (
-                <tr>
-                    <td colSpan={5}>
-                        <div className="empty-state" style={{ padding: '80px 0' }}>
-                            <AlertCircle size={48} className="empty-state-icon" />
-                            <h3>No leads found</h3>
-                            <p>Try refining your search or add a new customer request.</p>
-                        </div>
-                    </td>
-                </tr>
-              ) : (
-                filteredLeads.map((lead) => (
-                  <tr key={lead.id}>
-                    <td>
-                      <div className="avatar-cell">
-                        <div className="avatar">{lead.customer?.name.charAt(0)}</div>
-                        <div>
-                            <div className="text-main">{lead.customer?.name}</div>
-                            <div className="text-sub">{lead.customer?.phone}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ padding: '6px', background: '#f8fafc', borderRadius: '8px' }}>
-                            <Briefcase size={14} className="text-primary" />
-                        </div>
-                        <div>
-                            <div className="text-main" style={{ fontSize: '13px' }}>{lead.requestedService?.name || 'General Inquiry'}</div>
-                            <div className="text-sub" style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {lead.description}
+        <ExpandableRowTable 
+            data={filteredLeads}
+            columns={columns}
+            loading={loading}
+            renderExpanded={(lead: any) => (
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
+                    <div>
+                        <div className="stat-label">Inquiry Requirements</div>
+                        <p style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '15px', color: 'var(--text-main)', marginTop: '12px', lineHeight: '1.6' }}>
+                            {lead.description}
+                        </p>
+                        <div style={{ marginTop: '20px', display: 'flex', gap: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
+                                <Calendar size={16} /> Created: {new Date(lead.createdAt).toLocaleDateString()}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
+                                <Clock size={16} /> Ref ID: #LD-{lead.id + 1000}
                             </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                        <span className={`badge ${getPriorityBadge(lead.priority)}`}>
-                            {lead.priority}
-                        </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${getStatusBadge(lead.status)}`}>
-                        {lead.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="actions-cell">
-                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                        <div className="stat-label">Pipeline Actions</div>
                         {(lead.status === 'NEW' || lead.status === 'CONTACTED') && (
-                          <button 
-                            onClick={() => { setSelectedLead(lead); setIsQuotationModalOpen(true); }}
-                            className="btn btn-secondary"
-                            style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' }}
-                          >
-                            <FileText size={14} /> Create Quote
-                          </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setIsQuotationModalOpen(true); }}
+                                className="btn btn-primary"
+                                style={{ width: '100%' }}
+                            >
+                                <FileText size={18} /> Construct Estimate
+                            </button>
                         )}
-                        <button className="nav-icon-btn text-error" onClick={() => handleDeleteLead(lead.id)}>
-                          <Trash2 size={18} />
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
+                            className="btn btn-secondary text-error" 
+                            style={{ width: '100%' }}
+                        >
+                            <Trash2 size={18} /> Archive Opportunity
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                    </div>
+                </div>
+            )}
+        />
+        
+        <div style={{ marginTop: '24px' }}>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       </div>
 
-      {/* New Lead Modal */}
-      <Modal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} title="New Sales Opportunity">
-        <form onSubmit={handleCreateLead}>
-          <div className="form-grid">
+      <Modal isOpen={isLeadModalOpen} onClose={() => setIsLeadModalOpen(false)} title="Capture New Sales Opportunity" width="800px">
+        <form onSubmit={handleCreateLead} className="premium-form-layout">
+          <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             <div className="form-group">
-              <label>Customer Name</label>
-              <div className="input-with-icon">
-                  <User size={18} className="input-icon" />
-                  <input type="text" className="input-field pl-10" placeholder="Full Name" value={newLeadData.customerName} onChange={e => setNewLeadData({...newLeadData, customerName: e.target.value})} required />
+              <label className="form-label">Customer Name</label>
+              <div className="search-bar">
+                  <User size={18} className="text-muted" />
+                  <input type="text" placeholder="Full legal name" value={newLeadData.customerName} onChange={e => setNewLeadData({...newLeadData, customerName: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
-              <label>Phone Number</label>
-              <div className="input-with-icon">
-                  <Phone size={18} className="input-icon" />
-                  <input type="tel" className="input-field pl-10" placeholder="+1 (555) 000-0000" value={newLeadData.customerPhone} onChange={e => setNewLeadData({...newLeadData, customerPhone: e.target.value})} required />
+              <label className="form-label">Contact Number</label>
+              <div className="search-bar">
+                  <Phone size={18} className="text-muted" />
+                  <input type="tel" placeholder="+91 00000 00000" value={newLeadData.customerPhone} onChange={e => setNewLeadData({...newLeadData, customerPhone: e.target.value})} required />
               </div>
             </div>
           </div>
-          <div className="form-group">
-            <label>Requested Service</label>
-            <div className="input-with-icon">
-                <Briefcase size={18} className="input-icon" />
-                <select className="input-field pl-10" value={newLeadData.serviceItemId} onChange={e => setNewLeadData({...newLeadData, serviceItemId: e.target.value})}>
-                    <option value="">Select from catalog (optional)</option>
-                    {services.map(s => (
-                        <option key={s.id} value={s.id}>{s.name} - ₹{s.basePrice}</option>
+
+          <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div className="form-group">
+              <label className="form-label">Interest Category</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)', height: '48px' }}>
+                <Briefcase size={18} className="text-muted" style={{ marginRight: '12px' }} />
+                <select style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: '600', outline: 'none' }} value={newLeadData.serviceItemId} onChange={e => setNewLeadData({...newLeadData, serviceItemId: e.target.value})}>
+                    <option value="">General Service Inquiry</option>
+                    {Array.isArray(services) && services.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                 </select>
+              </div>
             </div>
-          </div>
-          <div className="form-group">
-            <label>Inquiry Priority</label>
-            <div className="input-with-icon">
-                <Tag size={18} className="input-icon" />
-                <select className="input-field pl-10" value={newLeadData.priority} onChange={e => setNewLeadData({...newLeadData, priority: e.target.value})}>
-                    <option value="HIGH">Urgent / High Priority</option>
-                    <option value="MEDIUM">Standard / Medium</option>
-                    <option value="LOW">Low / Information Only</option>
+            <div className="form-group">
+              <label className="form-label">Engagement Priority</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)', height: '48px' }}>
+                <Tag size={18} className="text-muted" style={{ marginRight: '12px' }} />
+                <select style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: '600', outline: 'none' }} value={newLeadData.priority} onChange={e => setNewLeadData({...newLeadData, priority: e.target.value})}>
+                    <option value="HIGH">High Priority / Urgent</option>
+                    <option value="MEDIUM">Standard Engagement</option>
+                    <option value="LOW">Low / Backlog</option>
                 </select>
+              </div>
             </div>
           </div>
+
           <div className="form-group">
-            <label>Specific Requirements</label>
-            <textarea className="input-field textarea-field" placeholder="Describe what the customer is looking for in detail..." value={newLeadData.description} onChange={e => setNewLeadData({...newLeadData, description: e.target.value})} required />
+            <label className="form-label">Technical Requirements & Scope</label>
+            <textarea 
+                style={{ width: '100%', padding: '16px', border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--surface-muted)', fontSize: '15px', fontWeight: '500', outline: 'none', transition: 'all 0.2s' }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.background = 'white'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = 'var(--surface-muted)'; }}
+                placeholder="Detail the customer's specific needs, site conditions, or deadlines..." 
+                value={newLeadData.description} 
+                onChange={e => setNewLeadData({...newLeadData, description: e.target.value})} 
+                required 
+                rows={4}
+            />
           </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-            <button type="button" onClick={() => setIsLeadModalOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={submitting} style={{ flex: 2 }}>
+
+          <div className="modal-footer-actions">
+            <button type="button" onClick={() => setIsLeadModalOpen(false)} className="btn btn-secondary">Discard</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting} style={{ minWidth: '220px' }}>
                 {submitting ? <Loader2 className="animate-spin" /> : 'Register Opportunity'}
             </button>
           </div>

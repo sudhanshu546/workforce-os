@@ -1,14 +1,19 @@
 package com.workforce.os.modules.sales.web;
 
 import com.workforce.os.common.context.TenantContext;
+import com.workforce.os.common.dto.ApiResponse;
 import com.workforce.os.modules.sales.domain.Quotation;
+import com.workforce.os.modules.sales.dto.QuotationResponseDTO;
+import com.workforce.os.modules.sales.mapper.QuotationMapper;
 import com.workforce.os.modules.sales.repository.QuotationRepository;
 import com.workforce.os.modules.sales.service.QuotationService;
+import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,42 +25,54 @@ public class QuotationController {
 
     private final QuotationService quotationService;
     private final QuotationRepository quotationRepository;
+    private final QuotationMapper quotationMapper;
 
     @GetMapping
-    public ResponseEntity<Page<Quotation>> getQuotations(Pageable pageable) {
-        return ResponseEntity.ok(quotationRepository.findByTenantId(TenantContext.getCurrentTenant(), pageable));
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Page<QuotationResponseDTO>>> getQuotations(Pageable pageable) {
+        Page<Quotation> quotations = quotationRepository.findByTenantId(TenantContext.getCurrentTenant(), pageable);
+        return ResponseEntity.ok(ApiResponse.success(quotations.map(quotationMapper::toDTO), "Quotations retrieved successfully"));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Quotation> getQuotation(@PathVariable Long id) {
-        return ResponseEntity.ok(quotationService.getQuotationById(id));
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<ApiResponse<QuotationResponseDTO>> getQuotation(@PathVariable Long id) {
+        Quotation quotation = quotationService.getQuotationById(id);
+        return ResponseEntity.ok(ApiResponse.success(quotationMapper.toDTO(quotation), "Quotation retrieved successfully"));
     }
 
     @GetMapping("/lead/{leadId}")
-    public ResponseEntity<Quotation> getQuotationByLead(@PathVariable Long leadId) {
-        return ResponseEntity.ok(quotationRepository.findByLeadId(leadId)
-                .orElseThrow(() -> new RuntimeException("Quotation not found for lead: " + leadId)));
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<ApiResponse<QuotationResponseDTO>> getQuotationByLead(@PathVariable Long leadId) {
+        Quotation quotation = quotationRepository.findByLeadId(leadId)
+                .orElseThrow(() -> new RuntimeException("Quotation not found for lead: " + leadId));
+        return ResponseEntity.ok(ApiResponse.success(quotationMapper.toDTO(quotation), "Quotation retrieved successfully"));
     }
 
     @PostMapping
-    public ResponseEntity<Quotation> createQuotation(@RequestBody CreateQuotationRequest request) {
-        return ResponseEntity.ok(quotationService.createQuotation(
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<QuotationResponseDTO>> createQuotation(@Valid @RequestBody CreateQuotationRequest request) {
+        Quotation quotation = quotationService.createQuotation(
                 request.getLeadId(),
                 request.getItems(),
                 request.getTax(),
                 request.getDiscount()
-        ));
+        );
+        return ResponseEntity.ok(ApiResponse.success(quotationMapper.toDTO(quotation), "Quotation created successfully"));
     }
 
     @PatchMapping("/{id}/approve")
-    public ResponseEntity<Quotation> approveQuotation(@PathVariable Long id) {
-        return ResponseEntity.ok(quotationService.approveQuotation(id));
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<ApiResponse<QuotationResponseDTO>> approveQuotation(@PathVariable Long id) {
+        Quotation quotation = quotationService.approveQuotation(id);
+        return ResponseEntity.ok(ApiResponse.success(quotationMapper.toDTO(quotation), "Quotation approved successfully"));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteQuotation(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> deleteQuotation(@PathVariable Long id) {
         quotationService.deleteQuotation(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success(null, "Quotation deleted successfully"));
     }
 
     @Data

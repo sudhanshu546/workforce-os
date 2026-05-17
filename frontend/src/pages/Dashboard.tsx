@@ -13,14 +13,17 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+import { requestNotificationPermission } from '../services/notifications';
+import { STORAGE_KEYS, ROLES } from '../utils/constants';
+import { ExpandableRowTable } from '../components/ExpandableRowTable';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const user = useSelector((state: any) => state.auth.user);
   
-  const role = localStorage.getItem('role') || 'WORKER';
-  const workerId = localStorage.getItem('worker_id');
-  const customerId = localStorage.getItem('customerId');
+  const role = localStorage.getItem(STORAGE_KEYS.ROLE) || ROLES.WORKER;
+  const workerId = localStorage.getItem(STORAGE_KEYS.WORKER_ID);
+  const customerId = localStorage.getItem(STORAGE_KEYS.CUSTOMER_ID);
 
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
@@ -38,6 +41,8 @@ const Dashboard: React.FC = () => {
   const [orgWorkers, setOrgWorkers] = useState<any[]>([]);
   const [preferredWorkerId, setPreferredWorkerId] = useState<number | null>(null);
   const [requirementNotes, setRequirementNotes] = useState('');
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   
   // Modal States
   const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
@@ -57,12 +62,12 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    if (role === 'WORKER') fetchAttendanceStatus();
+    if (role === ROLES.WORKER) fetchAttendanceStatus();
     
-    if (role === 'CUSTOMER') {
+    if (role === ROLES.CUSTOMER) {
       fetchCustomerDashboardData();
       
-      const socket = new SockJS('http://localhost:8080/ws-workforce');
+      const socket = new SockJS(import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws-workforce');
       const stompClient = Stomp.over(socket);
       
       stompClient.connect({}, () => {
@@ -81,38 +86,43 @@ const Dashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      if (role === 'OWNER') {
-        const [statsRes, woRes] = await Promise.all([
+      if (role === ROLES.OWNER) {
+        const [statsData, woData, lowStockData]: any = await Promise.all([
           api.get('/dashboard/owner'),
-          api.get('/work-orders?page=0&size=5')
+          api.get('/work-orders?page=0&size=5'),
+          api.get('/inventory/materials/low-stock')
         ]);
-        setStats(statsRes.data);
-        setRecentOrders(woRes.data.content || []);
-        setActivities(statsRes.data.recentActivities || []);
-      } else if (role === 'WORKER') {
-        const [statsRes, tasksRes] = await Promise.all([
+        setStats(statsData);
+        setRecentOrders(woData?.content || []);
+        setActivities(statsData?.recentActivities || []);
+        setLowStockMaterials(lowStockData || []);
+      } else if (role === ROLES.WORKER) {
+        const [statsData, tasksData]: any = await Promise.all([
           api.get(`/dashboard/worker?workerId=${workerId}`),
           api.get(`/work-orders/worker/${workerId}?page=0&size=5`)
         ]);
-        setStats(statsRes.data);
-        setRecentOrders(tasksRes.data.content || []);
-        setAttendanceStatus(statsRes.data.clockedIn ? 'CLOCKED_IN' : 'CLOCKED_OUT');
+        setStats(statsData);
+        setRecentOrders(tasksData?.content || []);
+        setAttendanceStatus(statsData?.clockedIn ? 'CLOCKED_IN' : 'CLOCKED_OUT');
       }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     } finally {
-      if (role !== 'CUSTOMER') setLoading(false);
+      if (role !== ROLES.CUSTOMER) setLoading(false);
     }
   };
 
   const fetchCustomerDashboardData = async () => {
     try {
-      const [orgsRes, requestsRes] = await Promise.all([
+      const [orgsData, requestsData, addrData]: any = await Promise.all([
         api.get('/public/organizations'),
-        api.get(`/leads/customer/${customerId}`)
+        api.get(`/leads/customer/${customerId}`),
+        api.get(`/customers/me/addresses`)
       ]);
-      setOrganizations(orgsRes.data);
-      setCustomerRequests(requestsRes.data);
+      setOrganizations(orgsData || []);
+      setCustomerRequests(requestsData || []);
+      setAddresses(addrData || []);
+      if (addrData && addrData.length > 0) setSelectedAddressId(addrData[0].id);
     } catch (err) {
       console.error('Failed to fetch customer data:', err);
     } finally {
@@ -122,8 +132,8 @@ const Dashboard: React.FC = () => {
 
   const fetchAttendanceStatus = async () => {
     try {
-      const response = await api.get(`/attendance/status?workerId=${workerId}`);
-      setAttendanceStatus(response.data ? 'CLOCKED_IN' : 'CLOCKED_OUT');
+      const data: any = await api.get(`/attendance/status?workerId=${workerId}`);
+      setAttendanceStatus(data ? 'CLOCKED_IN' : 'CLOCKED_OUT');
     } catch (err) {
       console.error('Failed to fetch attendance status');
     }
@@ -131,8 +141,8 @@ const Dashboard: React.FC = () => {
 
   const handleViewQuote = async (leadId: number) => {
     try {
-        const response = await api.get(`/quotations/lead/${leadId}`);
-        setSelectedQuote(response.data);
+        const data: any = await api.get(`/quotations/lead/${leadId}`);
+        setSelectedQuote(data);
         setIsQuoteModalOpen(true);
     } catch (err) {
         alert('Could not retrieve quotation details');
@@ -140,76 +150,74 @@ const Dashboard: React.FC = () => {
   };
 
   const handleApproveQuote = async (quoteId: number) => {
+    // Note: Replacing confirm with native logic for brevity, or we can use a custom modal
     if (!window.confirm('Do you want to approve this quotation and proceed with the service?')) return;
     try {
         await api.patch(`/quotations/${quoteId}/approve`);
-        alert('Quotation approved! A work order has been generated.');
+        (window as any).showToast('Quotation approved! A work order has been generated.', 'success');
         setIsQuoteModalOpen(false);
         fetchCustomerDashboardData();
     } catch (err) {
-        alert('Failed to approve quotation');
+        (window as any).showToast('Failed to approve quotation', 'error');
     }
   };
 
   const handleVerifyWork = async (workOrderId: number) => {
     try {
-        const response = await api.get(`/work-orders/${workOrderId}`);
-        setSelectedWorkOrder(response.data);
+        const data: any = await api.get(`/work-orders/${workOrderId}`);
+        setSelectedWorkOrder(data);
         setIsVerificationModalOpen(true);
     } catch (err) {
-        alert('Could not retrieve work details for verification');
+        (window as any).showToast('Could not retrieve work details for verification', 'error');
     }
   };
 
   const handleFinalVerify = async () => {
     try {
         await api.patch(`/work-orders/${selectedWorkOrder.id}/verify`);
-        alert('Work verified successfully! Your invoice is now ready.');
+        (window as any).showToast('Work verified successfully! Your invoice is now ready.', 'success');
         setIsVerificationModalOpen(false);
         fetchCustomerDashboardData();
     } catch (err) {
-        alert('Verification failed. Please try again.');
+        (window as any).showToast('Verification failed. Please try again.', 'error');
     }
   };
 
   const handleViewInvoice = async (invoiceId: number) => {
     try {
-        const response = await api.get(`/finance/invoices/${invoiceId}`);
-        setSelectedInvoice(response.data);
+        const data: any = await api.get(`/finance/invoices/${invoiceId}`);
+        setSelectedInvoice(data);
         setIsInvoiceModalOpen(true);
     } catch (err) {
-        alert('Could not retrieve invoice details');
+        (window as any).showToast('Could not retrieve invoice details', 'error');
     }
   };
 
   const handlePayInvoice = async (invoiceId: number, amount: number) => {
     try {
-        // 1. Create Order
-        const orderRes = await api.post(`/finance/invoices/${invoiceId}/payment-order`);
-        const { orderId } = orderRes.data;
+        const data: any = await api.post(`/finance/invoices/${invoiceId}/payment-order`);
+        const { orderId } = data;
 
-        // 2. Configure Razorpay
         const options = {
-            key: 'rzp_test_default', // In production, use your actual Key ID
+            key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_default',
             amount: amount * 100,
             currency: 'INR',
             name: 'Workforce OS',
             description: `Payment for Invoice ${invoiceId}`,
             order_id: orderId,
             handler: async (response: any) => {
-                // 3. Verify Payment
                 try {
                     await api.post('/finance/payments/verify', {
                         invoiceId,
                         razorpayOrderId: response.razorpay_order_id,
                         razorpayPaymentId: response.razorpay_payment_id,
                         razorpaySignature: response.razorpay_signature,
-                        paymentMethod: 'RAZORPAY'
+                        paymentMethod: 'ONLINE'
                     });
-                    alert('Payment successful!');
+                    (window as any).showToast('Payment successful!', 'success');
                     fetchCustomerDashboardData();
                 } catch (err) {
-                    alert('Payment verification failed');
+                    (window as any).showToast('Payment verification failed', 'error');
                 }
             },
             prefill: {
@@ -223,7 +231,7 @@ const Dashboard: React.FC = () => {
         razor.open();
 
     } catch (err) {
-        alert('Could not initiate payment');
+        (window as any).showToast('Could not initiate payment', 'error');
     }
   };
 
@@ -231,16 +239,16 @@ const Dashboard: React.FC = () => {
     e.preventDefault();
     try {
         await api.post('/feedback', {
-            workOrderId: selectedRequest.id,
+            workOrderId: selectedWorkOrder.id,
             customerId: customerId,
             rating,
             comments
         });
-        alert('Thank you for your feedback!');
+        (window as any).showToast('Thank you for your feedback!', 'success');
         setIsFeedbackModalOpen(false);
         fetchCustomerDashboardData();
     } catch(err) {
-        alert('Failed to submit feedback');
+        (window as any).showToast('Failed to submit feedback', 'error');
     }
   };
 
@@ -250,24 +258,27 @@ const Dashboard: React.FC = () => {
     setPreferredWorkerId(null);
     setRequirementNotes('');
     try {
-      const [servicesRes, workersRes] = await Promise.all([
+      const [servicesData, workersData]: any = await Promise.all([
         api.get(`/public/services/organization/${org.tenantId}`),
         api.get(`/public/workers/organization/${org.tenantId}`)
       ]);
-      setOrgServices(servicesRes.data);
-      setOrgWorkers(workersRes.data);
+      setOrgServices(servicesData || []);
+      setOrgWorkers(workersData || []);
     } catch (err) {
       console.error('Failed to fetch org details');
     }
   };
 
   const handleRequestService = async (service: any) => {
+    if (!selectedAddressId) { alert('Please select an address'); return; }
     try {
       await api.post('/leads', {
         customerName: user?.name || 'Customer', 
         customerPhone: user?.number || '0000000000',
+        customerEmail: user?.email || '',
         organizationId: selectedOrg.id,
         serviceItemId: service.id,
+        customerAddressId: selectedAddressId,
         description: `${requirementNotes || 'Request for ' + service.name}. ${preferredWorkerId ? 'Preferred Worker ID: ' + preferredWorkerId : ''}`,
         priority: 'MEDIUM'
       });
@@ -275,7 +286,7 @@ const Dashboard: React.FC = () => {
       setIsOrgModalOpen(false);
       fetchCustomerDashboardData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to send request');
+      alert(err.message || 'Failed to send request');
     }
   };
 
@@ -303,8 +314,8 @@ const Dashboard: React.FC = () => {
   };
 
   const filteredOrgs = Array.isArray(organizations) ? organizations.filter(org => 
-    org.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.businessType.toLowerCase().includes(searchTerm.toLowerCase())
+    (org?.businessName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (org?.businessType || '').toLowerCase().includes(searchTerm.toLowerCase())
   ) : [];
 
   if (loading) return <Layout><div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin text-primary" size={48} /></div></Layout>;
@@ -490,7 +501,7 @@ const Dashboard: React.FC = () => {
     `}</style>
   );
 
-  if (role === 'OWNER') {
+  if (role === ROLES.OWNER) {
     return (
       <Layout>
         {dashboardStyles}
@@ -524,30 +535,31 @@ const Dashboard: React.FC = () => {
             </div>
 
             <div className="dashboard-main-grid">
+                
                 <div className="content-card">
                     <div className="card-header-flex">
-                        <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Recent Work Orders</h2>
-                        <button className="btn-text" onClick={() => navigate('/work-orders')}>View All <ChevronRight size={16} /></button>
+                        <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Recent Dispatch Activities</h2>
+                        <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={() => navigate('/work-orders')}>Full Control <ChevronRight size={14} /></button>
                     </div>
-                    <div className="premium-table-container">
-                        <table className="premium-table">
-                            <thead>
-                                <tr><th>Job ID</th><th>Customer</th><th>Status</th><th>Scheduled</th></tr>
-                            </thead>
-                            <tbody>
-                                {recentOrders.map(order => (
-                                    <tr key={order.id} onClick={() => navigate('/work-orders')} style={{ cursor: 'pointer' }}>
-                                        <td><span className="id-tag">#WO-{order.id+1000}</span></td>
-                                        <td><div className="text-main">{order.customer?.name}</div></td>
-                                        <td><span className={`badge badge-primary`}>{order.status}</span></td>
-                                        <td><span className="text-sub">{order.scheduledDate}</span></td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ExpandableRowTable 
+                        data={recentOrders} 
+                        columns={[
+                            { header: 'Order Ref', accessor: (order: any) => <span className="id-tag">#WO-{order.id+1000}</span> },
+                            { header: 'Service Client', accessor: (order: any) => <div style={{ fontWeight: '700' }}>{order.customer?.name}</div> },
+                            { header: 'Deployment', accessor: (order: any) => <span className={`badge ${order.status === 'COMPLETED' ? 'badge-success' : 'badge-primary'}`} style={{ fontSize: '10px' }}>{order.status}</span> },
+                            { header: 'Scheduled', accessor: (order: any) => <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{order.scheduledDate}</span> }
+                        ]}
+                        renderExpanded={(order: any) => (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div className="stat-label">Site Location</div>
+                                    <div style={{ marginTop: '4px', fontWeight: '600' }}>{order.customer?.address || 'Site mapping pending'}</div>
+                                </div>
+                                <button onClick={() => navigate('/work-orders')} className="btn btn-primary"><Navigation size={16} /> Open in Fulfillment</button>
+                            </div>
+                        )}
+                    />
                 </div>
-
                 <div className="content-card">
                     <div className="card-header-flex">
                         <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Inventory Alerts</h2>
@@ -570,7 +582,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (role === 'WORKER') {
+  if (role === ROLES.WORKER) {
     return (
       <Layout>
         {dashboardStyles}
@@ -662,7 +674,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (role === 'CUSTOMER') {
+  if (role === ROLES.CUSTOMER) {
     return (
       <Layout>
         {dashboardStyles}
@@ -696,13 +708,13 @@ const Dashboard: React.FC = () => {
             <section>
                 <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '32px' }}>Service History</h2>
                 <div className="premium-table-container">
-                    <table className="premium-table">
+                    <table className="premium-table hide-mobile">
                     <thead><tr><th>Requested Service</th><th>Provider</th><th>Current Status</th><th>Request Date</th></tr></thead>
                     <tbody>
-                        {customerRequests.map((req) => (
+                        {Array.isArray(customerRequests) && customerRequests.map((req) => (
                         <tr key={req.id}>
                             <td><div className="text-main" style={{ fontWeight: '750' }}>{req.requestedService?.name || 'General Inquiry'}</div><div className="text-sub">Tracking ID: SR-{req.id+500}</div></td>
-                            <td><div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px', background: '#e0e7ff', color: 'var(--primary)' }}>{req.organization?.businessName[0]}</div><span style={{ fontWeight: '600' }}>{req.organization?.businessName}</span></div></td>
+                            <td><div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px', background: '#e0e7ff', color: 'var(--primary)' }}>{req.organization?.businessName?.[0] || 'O'}</div><span style={{ fontWeight: '600' }}>{req.organization?.businessName || 'N/A'}</span></div></td>
                             <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <span className={`badge ${req.status === 'NEW' ? 'badge-primary' : req.status === 'QUOTED' ? 'badge-warning' : req.status === 'CONVERTED' ? 'badge-success' : 'badge-secondary'}`}>{req.status}</span>
@@ -717,6 +729,34 @@ const Dashboard: React.FC = () => {
                         ))}
                     </tbody>
                     </table>
+
+                    {/* Mobile View for Customer History */}
+                    <div className="show-mobile mobile-cards-view">
+                        {Array.isArray(customerRequests) && customerRequests.map((req) => (
+                            <div key={req.id} className="mobile-card">
+                                <div className="mobile-card-header">
+                                    <span style={{ fontWeight: '800' }}>{req.requestedService?.name || 'Inquiry'}</span>
+                                    <span className={`badge ${req.status === 'NEW' ? 'badge-primary' : req.status === 'QUOTED' ? 'badge-warning' : req.status === 'CONVERTED' ? 'badge-success' : 'badge-secondary'}`}>{req.status}</span>
+                                </div>
+                                <div className="mobile-card-body">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div className="avatar" style={{ width: '24px', height: '24px', fontSize: '10px' }}>{req.organization?.businessName[0]}</div>
+                                        <span style={{ fontSize: '14px', fontWeight: '600' }}>{req.organization?.businessName}</span>
+                                    </div>
+                                    <div className="dispatch-info">
+                                        <div className="date-pill"><Calendar size={12} /> {new Date(req.createdAt).toLocaleDateString()}</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>SR-{req.id+500}</div>
+                                    </div>
+                                </div>
+                                <div className="mobile-card-actions">
+                                    {req.status === 'QUOTED' && <button onClick={() => handleViewQuote(req.id)} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}><FileText size={16} /> Review Quote</button>}
+                                    {req.workOrderStatus === 'AWAITING_VERIFICATION' && <button onClick={() => handleVerifyWork(req.workOrderId)} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}><CheckCircle size={16} /> Verify Work</button>}
+                                    {req.status === 'CONVERTED' && req.invoiceId && <button onClick={() => handleViewInvoice(req.invoiceId)} className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }}><Receipt size={16} /> View Invoice</button>}
+                                    {req.status === 'CONVERTED' && req.invoiceStatus === 'UNPAID' && <button onClick={() => handlePayInvoice(req.invoiceId, req.invoiceAmount)} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}><IndianRupee size={16} /> Pay Now</button>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </section>
         </div>
@@ -748,6 +788,21 @@ const Dashboard: React.FC = () => {
                     <div className="booking-step-card">
                         <div className="step-badge">2</div>
                         <div style={{ flex: 1 }}>
+                            <h4 className="section-title-standard">Select Address</h4>
+                            <div style={{ marginTop: '16px' }}>
+                                {addresses.map(addr => (
+                                    <div key={addr.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: selectedAddressId === addr.id ? '1px solid var(--primary)' : '1px solid var(--border)', borderRadius: '12px', cursor: 'pointer', marginBottom: '8px' }} onClick={() => setSelectedAddressId(addr.id)}>
+                                        <input type="radio" checked={selectedAddressId === addr.id} readOnly />
+                                        <span>{addr.street}, {addr.city}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="booking-step-card">
+                        <div className="step-badge">3</div>
+                        <div style={{ flex: 1 }}>
                             <h4 className="section-title-standard">Personalize Request (Optional)</h4>
                             <div style={{ marginTop: '16px' }}>
                                 <label className="form-label">Preferred Technician</label>
@@ -758,8 +813,8 @@ const Dashboard: React.FC = () => {
                                             className={`worker-item-card ${preferredWorkerId === worker.id ? 'selected' : ''}`}
                                             onClick={() => setPreferredWorkerId(worker.id)}
                                         >
-                                            <div className="worker-avatar-box">{worker.user.name[0]}</div>
-                                            <div style={{ fontWeight: '700', fontSize: '13px' }}>{worker.user.name}</div>
+                                            <div className="worker-avatar-box">{worker.user?.name?.[0] || 'W'}</div>
+                                            <div style={{ fontWeight: '700', fontSize: '13px' }}>{worker.user?.name || 'Unknown Worker'}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -834,7 +889,7 @@ const Dashboard: React.FC = () => {
                     </table>
                     <div className="modal-footer-actions">
                         <button onClick={() => setIsInvoiceModalOpen(false)} className="btn btn-secondary">Close</button>
-                        <a href={`http://localhost:8080/api/v1/finance/invoices/${selectedInvoice.id}/pdf`} className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <a href={`${import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')}/finance/invoices/${selectedInvoice.id}/pdf`} className="btn btn-secondary" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Download size={16} /> Download PDF
                         </a>
                         {selectedInvoice.status !== 'PAID' && <button onClick={() => { setIsInvoiceModalOpen(false); handlePayInvoice(selectedInvoice.id, selectedInvoice.total); }} className="btn btn-primary" style={{ minWidth: '200px' }}>Pay Now</button>}
@@ -855,7 +910,7 @@ const Dashboard: React.FC = () => {
                             </div>
                             <div style={{ textAlign: 'right' }}>
                                 <div className="stat-label">VALID UNTIL</div>
-                                <div style={{ fontSize: '16px', fontWeight: '700' }}>{new Date(selectedQuote.expiryDate).toLocaleDateString()}</div>
+                                <div style={{ fontSize: '16px', fontWeight: '700' }}>{selectedQuote.expiryDate ? new Date(selectedQuote.expiryDate).toLocaleDateString() : 'N/A'}</div>
                             </div>
                         </div>
                     </div>
@@ -863,18 +918,18 @@ const Dashboard: React.FC = () => {
                         <thead><tr><th>Item Description</th><th style={{ textAlign: 'center' }}>Qty</th><th style={{ textAlign: 'right' }}>Unit Price</th><th style={{ textAlign: 'right' }}>Total</th></tr></thead>
                         <tbody>
                             {selectedQuote.items?.map((item: any, idx: number) => (
-                                <tr key={idx}><td>{item.description}</td><td style={{ textAlign: 'center' }}>{item.quantity}</td><td style={{ textAlign: 'right' }}>₹{item.unitPrice.toFixed(2)}</td><td style={{ textAlign: 'right' }}>₹{(item.quantity * item.unitPrice).toFixed(2)}</td></tr>
+                                <tr key={idx}><td>{item.description}</td><td style={{ textAlign: 'center' }}>{item.quantity}</td><td style={{ textAlign: 'right' }}>₹{(item.unitPrice || 0).toFixed(2)}</td><td style={{ textAlign: 'right' }}>₹{((item.quantity || 0) * (item.unitPrice || 0)).toFixed(2)}</td></tr>
                             ))}
                             <tr style={{ borderTop: '2px solid var(--border)' }}>
                                 <td colSpan={3} style={{ textAlign: 'right', fontWeight: '800' }}>Grand Total</td>
-                                <td style={{ textAlign: 'right', fontWeight: '900', fontSize: '18px', color: 'var(--primary)' }}>₹{selectedQuote.totalAmount.toFixed(2)}</td>
+                                <td style={{ textAlign: 'right', fontWeight: '900', fontSize: '18px', color: 'var(--primary)' }}>₹{(selectedQuote.total || 0).toFixed(2)}</td>
                             </tr>
                         </tbody>
                     </table>
                     <div className="modal-footer-actions">
                         <button onClick={() => setIsQuoteModalOpen(false)} className="btn btn-secondary">Close</button>
-                        {selectedQuote.status === 'PENDING' && (
-                            <button onClick={() => handleApproveQuote(selectedQuote.id)} className="btn-primary" style={{ minWidth: '200px' }}>Approve & Start Work</button>
+                        {['PENDING', 'DRAFT'].includes(selectedQuote.status?.toString().toUpperCase()) && (
+                            <button onClick={() => handleApproveQuote(selectedQuote.id)} className="btn btn-primary" style={{ minWidth: '200px' }}>Approve & Start Work</button>
                         )}
                     </div>
                 </div>

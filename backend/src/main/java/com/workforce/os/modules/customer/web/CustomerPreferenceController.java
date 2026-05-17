@@ -1,5 +1,6 @@
 package com.workforce.os.modules.customer.web;
 
+import com.workforce.os.common.dto.ApiResponse;
 import com.workforce.os.modules.customer.dto.CustomerPreferenceResponse;
 import com.workforce.os.modules.customer.dto.CustomerPreferenceUpdateRequest;
 import com.workforce.os.modules.customer.service.CustomerPreferenceService;
@@ -17,16 +18,16 @@ public class CustomerPreferenceController {
     private final CustomerPreferenceService customerPreferenceService;
 
     @GetMapping
-    public ResponseEntity<CustomerPreferenceResponse> getPreferences() {
+    public ResponseEntity<ApiResponse<CustomerPreferenceResponse>> getPreferences() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return ResponseEntity.ok(customerPreferenceService.getPreferences(email));
+        return ResponseEntity.ok(ApiResponse.success(customerPreferenceService.getPreferences(email), "Preferences retrieved successfully"));
     }
 
     @PutMapping
-    public ResponseEntity<CustomerPreferenceResponse> updatePreferences(@RequestBody CustomerPreferenceUpdateRequest request) {
+    public ResponseEntity<ApiResponse<CustomerPreferenceResponse>> updatePreferences(@RequestBody CustomerPreferenceUpdateRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return ResponseEntity.ok(customerPreferenceService.updatePreferences(email, request));
+        return ResponseEntity.ok(ApiResponse.success(customerPreferenceService.updatePreferences(email, request), "Preferences updated successfully"));
     }
 }

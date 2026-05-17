@@ -17,6 +17,11 @@ import ServicesPage from './pages/ServicesPage';
 import InvoicesPage from './pages/InvoicesPage';
 import Inventory from './pages/Inventory';
 import AnalyticsPage from './pages/AnalyticsPage';
+import SchedulingCalendar from './pages/SchedulingCalendar';
+import CustomerOrdersPage from './pages/CustomerOrdersPage';
+import OrderVerification from './pages/OrderVerification';
+import LiveOpsMap from './pages/LiveOpsMap';
+import ExpensesPage from './pages/ExpensesPage';
 
 function App() {
   return (
@@ -31,11 +36,17 @@ function App() {
         
         {/* Protected Routes */}
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/live-ops" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><LiveOpsMap /></PrivateRoute>} />
+        <Route path="/invoices" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><InvoicesPage /></PrivateRoute>} />
+        <Route path="/finance/expenses" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><ExpensesPage /></PrivateRoute>} />
         <Route path="/analytics" element={<PrivateRoute roles={['OWNER']}><AnalyticsPage /></PrivateRoute>} />
+        <Route path="/calendar" element={<PrivateRoute roles={['OWNER']}><SchedulingCalendar /></PrivateRoute>} />
         
         {/* Customer Protected Routes */}
         <Route path="/customer/profile" element={<PrivateRoute roles={['CUSTOMER']}><CustomerProfilePage /></PrivateRoute>} />
         <Route path="/customer/addresses" element={<PrivateRoute roles={['CUSTOMER']}><CustomerAddressPage /></PrivateRoute>} />
+        <Route path="/customer/orders" element={<PrivateRoute roles={['CUSTOMER']}><CustomerOrdersPage /></PrivateRoute>} />
+        <Route path="/customer/orders/:orderId/verify" element={<PrivateRoute roles={['CUSTOMER']}><OrderVerification /></PrivateRoute>} />
 
         {/* Workforce Protected Routes */}
         <Route path="/leads" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Leads /></PrivateRoute>} />

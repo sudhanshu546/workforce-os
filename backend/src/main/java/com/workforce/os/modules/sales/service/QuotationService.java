@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.workforce.os.common.util.MessageConstants.UNAUTHORIZED;
+
 @Service
 @RequiredArgsConstructor
 public class QuotationService {
@@ -76,6 +78,9 @@ public class QuotationService {
     @Transactional
     public Quotation approveQuotation(Long quotationId) {
         Quotation quotation = quotationRepository.findById(quotationId).orElseThrow();
+        // Manually initialize the items collection to prevent LazyInitializationException later
+        quotation.getItems().size();
+        
         quotation.setStatus(Quotation.QuotationStatus.APPROVED);
         
         Lead lead = quotation.getLead();
@@ -92,6 +97,7 @@ public class QuotationService {
         return quotationRepository.findAllByTenantId(TenantContext.getCurrentTenant());
     }
 
+    @Transactional(readOnly = true)
     public Quotation getQuotationById(Long id) {
         return quotationRepository.findById(id).orElseThrow();
     }
@@ -100,12 +106,19 @@ public class QuotationService {
     public void deleteQuotation(Long id) {
         Quotation quotation = quotationRepository.findById(id).orElseThrow();
         if (!quotation.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException(UNAUTHORIZED);
         }
+        
+        // Prevent deletion if an active work order exists
+        workOrderService.getWorkOrderRepository().findByQuotationId(id).ifPresent(wo -> {
+            if (wo.getStatus() != com.workforce.os.modules.operations.domain.WorkOrder.WorkOrderStatus.CANCELLED) {
+                throw new RuntimeException("Cannot delete quotation with an active Work Order. Cancel the Work Order first.");
+            }
+        });
         
         // Revert lead status if necessary
         Lead lead = quotation.getLead();
-        if (lead.getStatus() == Lead.LeadStatus.QUOTED) {
+        if (lead.getStatus() == Lead.LeadStatus.QUOTED || lead.getStatus() == Lead.LeadStatus.CONVERTED) {
             lead.setStatus(Lead.LeadStatus.CONTACTED);
             leadRepository.save(lead);
         }

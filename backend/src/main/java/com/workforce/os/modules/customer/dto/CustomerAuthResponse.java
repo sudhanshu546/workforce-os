@@ -17,4 +17,6 @@ public class CustomerAuthResponse {
     private String refreshToken;
     private String role;
     private Long customerId;
+    private String name;
+    private String email;
 }

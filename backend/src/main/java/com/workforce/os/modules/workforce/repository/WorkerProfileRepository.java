@@ -13,10 +13,13 @@ import java.util.Optional;
 @Repository
 public interface WorkerProfileRepository extends JpaRepository<WorkerProfile, Long> {
     List<WorkerProfile> findBySupportedServices_Id(Long serviceId);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"skills", "user"})
     List<WorkerProfile> findAllByTenantId(String tenantId);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"skills", "user"})
     @Nullable Page<WorkerProfile> findByTenantId(String currentTenant, Pageable pageable);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"skills", "user"})
     Optional<WorkerProfile> findByUserEmail(String email);
 
     long countByTenantId(String tenantId);

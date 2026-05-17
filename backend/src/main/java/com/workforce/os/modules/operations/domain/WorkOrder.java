@@ -35,13 +35,13 @@ public class WorkOrder extends BaseEntity {
     private WorkerProfile assignedWorker;
 
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<WorkOrderTask> tasks = new ArrayList<>();
+    private java.util.Set<WorkOrderTask> tasks = new java.util.LinkedHashSet<>();
 
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<WorkOrderEvidence> evidence = new ArrayList<>();
+    private java.util.Set<WorkOrderEvidence> evidence = new java.util.LinkedHashSet<>();
 
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<WorkOrderMaterial> materials = new ArrayList<>();
+    private java.util.Set<WorkOrderMaterial> materials = new java.util.LinkedHashSet<>();
 
     private LocalDate scheduledDate;
     private LocalTime startTime;
@@ -51,6 +51,6 @@ public class WorkOrder extends BaseEntity {
     private WorkOrderStatus status;
 
     public enum WorkOrderStatus {
-        PENDING_ASSIGNMENT, ASSIGNED, IN_PROGRESS, AWAITING_VERIFICATION, COMPLETED, CANCELLED
+        PENDING_ASSIGNMENT, ASSIGNED, IN_PROGRESS, AWAITING_VERIFICATION, AWAITING_PAYMENT, PAYMENT_PENDING_WORKER, COMPLETED, CANCELLED
     }
 }

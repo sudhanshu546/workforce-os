@@ -28,6 +28,8 @@ public class CustomerAddressService {
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         CustomerAddress address = customerAddressMapper.toCustomerAddress(request);
+        address.setLatitude(request.getLatitude());
+        address.setLongitude(request.getLongitude());
         address.setCustomer(customer);
         address.setTenantId(customer.getTenantId());
 
@@ -74,6 +76,8 @@ public class CustomerAddressService {
         address.setState(request.getState());
         address.setZipCode(request.getZipCode());
         address.setCountry(request.getCountry());
+        address.setLatitude(request.getLatitude());
+        address.setLongitude(request.getLongitude());
 
         CustomerAddress saved = customerAddressRepository.save(address);
         return customerAddressMapper.toCustomerAddressResponse(saved);

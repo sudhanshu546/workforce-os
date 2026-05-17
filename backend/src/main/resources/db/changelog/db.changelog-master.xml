@@ -7,5 +7,7 @@
 
     <!-- Include initial schema changes here -->
     <include file="db/changelog/changes/001-init-worker-services.xml"/>
-
-</databaseChangeLog>
+    <include file="db/changelog/changes/002-add-performance-indexes.xml"/>
+    <include file="db/changelog/changes/003-create-work-order-audits.xml"/>
+    <include file="db/changelog/changes/004-add-customer-id-to-notifications.xml"/>
+    </databaseChangeLog>

@@ -21,5 +21,5 @@ public class WorkOrderTask {
 
     private String description;
     
-    private boolean isCompleted = false;
+    private boolean completed = false;
 }

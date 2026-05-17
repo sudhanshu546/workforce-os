@@ -16,6 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.workforce.os.common.util.MessageConstants.EMAIL_EXISTS;
+import static com.workforce.os.common.util.MessageConstants.PHONE_EXISTS;
+
 @Service
 @RequiredArgsConstructor
 public class CustomerRegistrationService {
@@ -30,10 +33,10 @@ public class CustomerRegistrationService {
     @Transactional
     public CustomerAuthResponse registerCustomer(CustomerRegisterRequest request) {
         if (customerRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new RuntimeException(EMAIL_EXISTS);
         }
         if (customerRepository.existsByPhone(request.getPhone())) {
-            throw new RuntimeException("Phone number already exists");
+            throw new RuntimeException(PHONE_EXISTS);
         }
 
         Customer customer = customerMapper.toCustomer(request);
@@ -62,6 +65,8 @@ public class CustomerRegistrationService {
                 .refreshToken(refreshToken)
                 .role("CUSTOMER")
                 .customerId(savedCustomer.getId())
+                .name(savedCustomer.getName())
+                .email(savedCustomer.getEmail())
                 .build();
     }
 }

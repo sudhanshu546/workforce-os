@@ -14,8 +14,8 @@ const AnalyticsPage: React.FC = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await api.get('/analytics/owner');
-        setData(res.data);
+        const data: any = await api.get('/analytics/owner');
+        setData(data);
       } catch (err) {
         console.error('Failed to fetch analytics', err);
       } finally {

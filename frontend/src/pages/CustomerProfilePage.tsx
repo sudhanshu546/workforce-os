@@ -16,9 +16,9 @@ const CustomerProfilePage: React.FC = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await api.get('/auth/profile');
-      setProfile(response.data);
-      setFormData({ name: response.data.name, phone: response.data.number || '' });
+      const data: any = await api.get('/customers/me');
+      setProfile(data);
+      setFormData({ name: data.name, phone: data.number || '' });
     } catch (err) {
       console.error('Failed to fetch profile', err);
     } finally {
@@ -30,9 +30,7 @@ const CustomerProfilePage: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const response = await api.put('/customers/me', formData);
-      // Backend returns CustomerProfileResponse which might not have phone if not updated there.
-      // But our service updates both. Let's re-fetch to be sure or merge.
+      await api.put('/customers/me', formData);
       await fetchProfile();
       setEditing(false);
     } catch (err) {
@@ -42,78 +40,86 @@ const CustomerProfilePage: React.FC = () => {
     }
   };
 
-  if (loading) return <Layout><div style={{ textAlign: 'center', padding: '40px' }}><Loader2 className="animate-spin" /></div></Layout>;
+  if (loading) return <Layout><div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div></Layout>;
 
   return (
     <Layout>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700' }}>My Profile</h1>
-            <p style={{ color: 'var(--text-muted)' }}>Manage your personal information</p>
+            <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Personal Identity</h1>
+            <p className="text-muted">Maintain your contact records and secure account preferences.</p>
           </div>
           {!editing && (
-            <button onClick={() => setEditing(true)} className="btn btn-primary" style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Edit2 size={18} /> Edit Profile
+            <button onClick={() => setEditing(true)} className="btn btn-primary">
+              <Edit2 size={18} /> Modify Profile
             </button>
           )}
         </header>
 
-        <div className="card" style={{ padding: '32px' }}>
+        <div className="card-premium" style={{ padding: '40px' }}>
           {editing ? (
-            <form onSubmit={handleUpdate}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="input-group">
-                  <label>Full Name</label>
-                  <input 
-                    type="text" 
-                    value={formData.name} 
-                    onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                    required 
-                  />
+            <form onSubmit={handleUpdate} className="premium-form-layout">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div className="form-group">
+                  <label className="form-label">Full Legal Name</label>
+                  <div className="search-bar">
+                      <User size={18} className="text-muted" />
+                      <input 
+                        type="text" 
+                        value={formData.name} 
+                        onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                        required 
+                      />
+                  </div>
                 </div>
-                <div className="input-group">
-                  <label>Phone Number</label>
-                  <input 
-                    type="tel" 
-                    value={formData.phone} 
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                    required 
-                  />
+                <div className="form-group">
+                  <label className="form-label">Primary Contact Number</label>
+                  <div className="search-bar">
+                      <Phone size={18} className="text-muted" />
+                      <input 
+                        type="tel" 
+                        value={formData.phone} 
+                        onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+                        required 
+                      />
+                  </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Save Changes
+              <div style={{ display: 'flex', gap: '16px', marginTop: '32px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
+                <button type="submit" className="btn btn-primary" disabled={saving} style={{ minWidth: '180px' }}>
+                  {saving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Commit Changes
                 </button>
-                <button type="button" onClick={() => setEditing(false)} className="btn" style={{ background: '#f1f5f9' }}>
+                <button type="button" onClick={() => setEditing(false)} className="btn btn-secondary">
                   <X size={18} /> Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <div style={{ display: 'grid', gap: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(124, 58, 237, 0.1)', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <User size={32} />
+            <div style={{ display: 'grid', gap: '40px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '24px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '900', border: '2px solid white', boxShadow: 'var(--shadow-sm)' }}>
+                  {profile?.name.charAt(0)}
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '20px', fontWeight: '600' }}>{profile?.name}</h2>
-                  <p style={{ color: 'var(--text-muted)' }}>Customer</p>
+                  <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-h)' }}>{profile?.name}</h2>
+                  <span className="badge badge-primary" style={{ marginTop: '4px' }}>Registered Client</span>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', borderTop: '1px solid var(--border-light)', paddingTop: '40px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Email Address</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
-                    <Mail size={16} color="var(--primary)" /> {profile?.email}
+                  <div className="stat-label" style={{ marginBottom: '8px' }}>Verified Email</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: '700', color: 'var(--text-h)', fontSize: '16px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Mail size={18} className="text-muted" /></div>
+                    {profile?.email}
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>Phone Number</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '500' }}>
-                    <Phone size={16} color="var(--primary)" /> {profile?.number}
+                  <div className="stat-label" style={{ marginBottom: '8px' }}>Phone Line</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: '700', color: 'var(--text-h)', fontSize: '16px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Phone size={18} className="text-muted" /></div>
+                    {profile?.number}
                   </div>
                 </div>
               </div>
@@ -121,6 +127,10 @@ const CustomerProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+      <style>{`
+          .form-label { display: block; font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+          .stat-label { font-size: 11px; font-weight: 900; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+      `}</style>
     </Layout>
   );
 };

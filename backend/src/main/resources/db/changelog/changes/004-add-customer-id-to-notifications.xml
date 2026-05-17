@@ -1,0 +1,22 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.26.xsd">
+
+    <changeSet author="system" id="004-add-customer-id-to-notifications">
+        <addColumn tableName="notifications">
+            <column name="customer_id" type="BIGINT"/>
+        </addColumn>
+
+        <addForeignKeyConstraint baseColumnNames="customer_id"
+                                 baseTableName="notifications"
+                                 constraintName="fk_notification_customer"
+                                 referencedColumnNames="id"
+                                 referencedTableName="customers"/>
+
+        <createIndex indexName="idx_notification_customer" tableName="notifications">
+            <column name="customer_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

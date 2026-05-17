@@ -1,22 +1,97 @@
 services:
   db:
-    image: postgres:15
+    image: postgres:15-alpine
+    container_name: workforce-db
     environment:
       POSTGRES_DB: workforce_os
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
 
-  app:
+  pgbouncer:
+    image: edoburu/pgbouncer
+    container_name: workforce-pooler
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=db
+      - DB_NAME=workforce_os
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=10000
+      - DEFAULT_POOL_SIZE=20
+    ports:
+      - "6432:6432"
+    depends_on:
+      - db
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: workforce-redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: workforce-mq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: always
+
+  backend:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./backend
+    container_name: workforce-backend
     ports:
       - "8080:8080"
     environment:
-      DATABASE_URL: jdbc:postgresql://db:5432/workforce_os
+      DATABASE_URL: jdbc:postgresql://pgbouncer:6432/workforce_os
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SPRING_RABBITMQ_HOST: rabbitmq
     depends_on:
-      - db
+      - pgbouncer
+      - redis
+      - rabbitmq
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: workforce-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: workforce-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: workforce-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    restart: always
+
+volumes:
+  postgres_data:

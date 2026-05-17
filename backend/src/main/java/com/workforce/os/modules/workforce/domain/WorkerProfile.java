@@ -45,6 +45,9 @@ public class WorkerProfile extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private WorkerStatus status;
 
+    @OneToMany(mappedBy = "worker", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<WorkerSkill> skills = new HashSet<>();
+
     @ManyToMany
     @JoinTable(
         name = "worker_supported_services",

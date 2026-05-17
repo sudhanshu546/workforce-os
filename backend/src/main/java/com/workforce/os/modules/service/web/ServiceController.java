@@ -1,13 +1,20 @@
 package com.workforce.os.modules.service.web;
 
+import com.workforce.os.common.dto.ApiResponse;
 import com.workforce.os.modules.service.domain.ServiceCategory;
 import com.workforce.os.modules.service.domain.ServiceItem;
+import com.workforce.os.modules.service.dto.ServiceCategoryDTO;
+import com.workforce.os.modules.service.dto.ServiceItemDTO;
+import com.workforce.os.modules.service.mapper.ServiceMapper;
 import com.workforce.os.modules.service.service.ServiceCatalogService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/services")
@@ -15,49 +22,65 @@ import java.util.List;
 public class ServiceController {
 
     private final ServiceCatalogService serviceCatalogService;
+    private final ServiceMapper serviceMapper;
 
     @GetMapping("/categories")
-    public ResponseEntity<List<ServiceCategory>> getCategories() {
-        return ResponseEntity.ok(serviceCatalogService.getAllCategories());
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<ApiResponse<List<ServiceCategoryDTO>>> getCategories() {
+        return ResponseEntity.ok(ApiResponse.success(serviceCatalogService.getAllCategories(), "Categories retrieved successfully"));
     }
 
     @GetMapping("/items")
-    public ResponseEntity<List<ServiceItem>> getItems(@RequestParam(required = false) Long categoryId) {
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<ApiResponse<List<ServiceItemDTO>>> getItems(@RequestParam(required = false) Long categoryId) {
+        List<ServiceItemDTO> dtos;
         if (categoryId != null) {
-            return ResponseEntity.ok(serviceCatalogService.getItemsByCategory(categoryId));
+            dtos = serviceCatalogService.getItemsByCategory(categoryId);
+        } else {
+            dtos = serviceCatalogService.getAllItems();
         }
-        return ResponseEntity.ok(serviceCatalogService.getAllItems());
+        return ResponseEntity.ok(ApiResponse.success(dtos, "Service items retrieved successfully"));
     }
 
     @PostMapping("/categories")
-    public ResponseEntity<ServiceCategory> createCategory(@RequestBody ServiceCategory category) {
-        return ResponseEntity.ok(serviceCatalogService.createCategory(category.getName(), category.getDescription()));
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<ServiceCategoryDTO>> createCategory(@Valid @RequestBody ServiceCategoryDTO categoryDTO) {
+        ServiceCategoryDTO category = serviceCatalogService.createCategory(categoryDTO.getName(), categoryDTO.getDescription());
+        return ResponseEntity.ok(ApiResponse.success(category, "Category created successfully"));
     }
 
     @PostMapping("/items")
-    public ResponseEntity<ServiceItem> createItem(@RequestParam Long categoryId, @RequestBody ServiceItem item) {
-        return ResponseEntity.ok(serviceCatalogService.createServiceItem(categoryId, item.getName(), item.getDescription(), item.getBasePrice()));
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<ServiceItemDTO>> createItem(@RequestParam Long categoryId, @Valid @RequestBody ServiceItemDTO itemDTO) {
+        ServiceItemDTO item = serviceCatalogService.createServiceItem(categoryId, itemDTO.getName(), itemDTO.getDescription(), itemDTO.getBasePrice());
+        return ResponseEntity.ok(ApiResponse.success(item, "Service item created successfully"));
     }
 
     @PutMapping("/categories/{id}")
-    public ResponseEntity<ServiceCategory> updateCategory(@PathVariable Long id, @RequestBody ServiceCategory category) {
-        return ResponseEntity.ok(serviceCatalogService.updateCategory(id, category.getName(), category.getDescription()));
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<ServiceCategoryDTO>> updateCategory(@PathVariable Long id, @Valid @RequestBody ServiceCategoryDTO categoryDTO) {
+        ServiceCategoryDTO category = serviceCatalogService.updateCategory(id, categoryDTO.getName(), categoryDTO.getDescription());
+        return ResponseEntity.ok(ApiResponse.success(category, "Category updated successfully"));
     }
 
     @DeleteMapping("/categories/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
         serviceCatalogService.deleteCategory(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success(null, "Category deleted successfully"));
     }
 
     @PutMapping("/items/{id}")
-    public ResponseEntity<ServiceItem> updateItem(@PathVariable Long id, @RequestBody ServiceItem item) {
-        return ResponseEntity.ok(serviceCatalogService.updateServiceItem(id, item.getName(), item.getDescription(), item.getBasePrice()));
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<ServiceItemDTO>> updateItem(@PathVariable Long id, @Valid @RequestBody ServiceItemDTO itemDTO) {
+        ServiceItemDTO item = serviceCatalogService.updateServiceItem(id, itemDTO.getName(), itemDTO.getDescription(), itemDTO.getBasePrice());
+        return ResponseEntity.ok(ApiResponse.success(item, "Service item updated successfully"));
     }
 
     @DeleteMapping("/items/{id}")
-    public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> deleteItem(@PathVariable Long id) {
         serviceCatalogService.deleteServiceItem(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success(null, "Service item deleted successfully"));
     }
 }

@@ -14,6 +14,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
@@ -24,7 +26,7 @@ public class AttendanceService {
     @Transactional
     public Attendance clockIn(Long workerId, Long workOrderId, Double lat, Double lon, String status) {
         if (isWorkerClockedIn(workerId)) {
-            throw new RuntimeException("Worker is already clocked in");
+            throw new RuntimeException(ALREADY_CLOCKED_IN);
         }
         WorkerProfile worker = workerProfileRepository.findById(workerId).orElseThrow();
         Attendance attendance = new Attendance();
@@ -45,10 +47,10 @@ public class AttendanceService {
         Attendance attendance;
         if (workOrderId != null) {
             attendance = attendanceRepository.findByWorkerIdAndClockOutIsNull(workerId)
-                    .orElseThrow(() -> new RuntimeException("No active job session found for this work order"));
+                    .orElseThrow(() -> new RuntimeException(NO_ACTIVE_SESSION));
         } else {
             attendance = attendanceRepository.findByWorkerIdAndClockOutIsNull(workerId)
-                    .orElseThrow(() -> new RuntimeException("No active shift found"));
+                    .orElseThrow(() -> new RuntimeException(NO_ACTIVE_SHIFT));
         }
         
         attendance.setClockOut(LocalDateTime.now());

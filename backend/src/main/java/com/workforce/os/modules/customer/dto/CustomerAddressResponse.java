@@ -10,5 +10,7 @@ public class CustomerAddressResponse {
     private String state;
     private String zipCode;
     private String country;
+    private Double latitude;
+    private Double longitude;
     private boolean isDefault;
 }

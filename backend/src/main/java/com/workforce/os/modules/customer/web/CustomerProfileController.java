@@ -1,10 +1,12 @@
 package com.workforce.os.modules.customer.web;
 
+import com.workforce.os.common.dto.ApiResponse;
 import com.workforce.os.modules.customer.dto.CustomerProfileResponse;
 import com.workforce.os.modules.customer.dto.CustomerProfileUpdateRequest;
 import com.workforce.os.modules.customer.service.CustomerProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -17,16 +19,18 @@ public class CustomerProfileController {
     private final CustomerProfileService customerProfileService;
 
     @GetMapping
-    public ResponseEntity<CustomerProfileResponse> getProfile() {
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> getProfile() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return ResponseEntity.ok(customerProfileService.getProfile(email));
+        return ResponseEntity.ok(ApiResponse.success(customerProfileService.getProfile(email), "Profile retrieved successfully"));
     }
 
     @PutMapping
-    public ResponseEntity<CustomerProfileResponse> updateProfile(@RequestBody CustomerProfileUpdateRequest request) {
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateProfile(@RequestBody CustomerProfileUpdateRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return ResponseEntity.ok(customerProfileService.updateProfile(email, request));
+        return ResponseEntity.ok(ApiResponse.success(customerProfileService.updateProfile(email, request), "Profile updated successfully"));
     }
 }

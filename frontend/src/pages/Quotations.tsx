@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  FileText, CheckCircle2, XCircle, Search, Filter, Eye, Loader2,
-  DollarSign, User, Phone, Trash2, Printer, Mail, Download, Clock, Plus,
-  Calendar, ChevronRight, AlertCircle, ArrowRight
+  FileText, CheckCircle2, Search, Filter, Loader2,
+  Trash2, Download, Plus, Calendar, IndianRupee
 } from 'lucide-react';
 import api from '../services/api';
-import Modal from '../components/Modal';
 import { Layout } from '../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../components/Pagination';
+import { ExpandableRowTable } from '../components/ExpandableRowTable';
 
 const Quotations: React.FC = () => {
   const [quotations, setQuotations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [selectedQuote, setSelectedQuote] = useState<any>(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,9 +33,9 @@ const Quotations: React.FC = () => {
   const fetchQuotations = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/quotations?page=${page}&size=10`);
-      setQuotations(response.data.content || []);
-      setTotalPages(response.data.totalPages || 0);
+      const data: any = await api.get(`/quotations?page=${page}&size=10`);
+      setQuotations(data?.content || []);
+      setTotalPages(data?.totalPages || 0);
     } catch (err) {
       console.error('Error fetching quotations:', err);
     } finally {
@@ -47,11 +44,10 @@ const Quotations: React.FC = () => {
   };
 
   const handleApprove = async (id: number) => {
-    if (window.confirm('Are you sure you want to approve this quotation? This will automatically create a Work Order and schedule the job.')) {
+    if (window.confirm('Are you sure you want to approve this quotation? This will automatically create a Work Order.')) {
         setSubmitting(true);
         try {
             await api.patch(`/quotations/${id}/approve`);
-            setIsViewModalOpen(false);
             fetchQuotations();
         } catch (err) {
             console.error('Failed to approve quotation:', err);
@@ -87,388 +83,123 @@ const Quotations: React.FC = () => {
       }
   };
 
+  const columns = [
+    { header: 'Reference', accessor: (q: any) => <span className="id-tag">#QT-{q.id + 1000}</span> },
+    { header: 'Customer', accessor: (q: any) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="avatar" style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px' }}>{q.lead?.customer?.name[0]}</div>
+            <div style={{ fontWeight: '700', color: 'var(--text-h)' }}>{q.lead?.customer?.name}</div>
+        </div>
+    )},
+    { header: 'Issuance', accessor: (q: any) => <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>{new Date(q.createdAt).toLocaleDateString()}</span> },
+    { header: 'Total Value', accessor: (q: any) => <span style={{ fontWeight: '800', color: 'var(--text-h)' }}>₹{(q.totalAmount || 0).toLocaleString()}</span> },
+    { header: 'Status', accessor: (q: any) => <span className={`badge ${getStatusBadge(q.status)}`}>{q.status}</span> }
+  ];
+
   return (
     <Layout>
-      <div className="quotations-container">
-        <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
+      <div className="quotations-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-h)', marginBottom: '8px' }}>Quotations</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Manage, approve, and send professional quotes to customers.</p>
+            <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Active Estimates</h1>
+            <p className="text-muted">Review, authorize and dispatch professional service quotations.</p>
           </div>
-          <button onClick={() => navigate('/leads')} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}>
-            <Plus size={18} /> New from Lead
+          <button onClick={() => navigate('/leads')} className="btn btn-primary">
+            <Plus size={20} /> Issue New Quote
           </button>
         </header>
 
-        <div className="filter-bar card" style={{ padding: '16px', marginBottom: '32px', display: 'flex', gap: '16px' }}>
-          <div className="search-bar" style={{ flex: 1 }}>
-            <Search size={18} />
+        <div className="filter-bar" style={{ marginBottom: '24px' }}>
+          <div className="search-bar">
+            <Search size={18} className="text-muted" />
             <input 
                 type="text" 
-                placeholder="Search by customer name..." 
+                placeholder="Find customer quote..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="filter-select-wrapper">
-            <Filter size={18} className="filter-icon" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <Filter size={18} className="text-muted" />
             <select 
-                className="input-field" 
-                style={{ paddingLeft: '40px', width: '220px' }}
+                style={{ border: 'none', background: 'transparent', height: '44px', fontWeight: '600', color: 'var(--text-h)', outline: 'none' }}
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
             >
-                <option value="ALL">All Status</option>
-                <option value="DRAFT">Draft</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
+                <option value="ALL">All Stages</option>
+                <option value="DRAFT">Pending Approval</option>
+                <option value="APPROVED">Authorized</option>
+                <option value="REJECTED">Declined</option>
             </select>
           </div>
         </div>
 
-        <div className="premium-table-container">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Reference</th>
-                <th>Customer</th>
-                <th>Issuance Date</th>
-                <th>Total Value</th>
-                <th>Status</th>
-                <th className="actions-cell">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={32} style={{ margin: '0 auto', color: 'var(--primary)' }} /></td></tr>
-              ) : filteredQuotes.length === 0 ? (
-                <tr>
-                    <td colSpan={6}>
-                        <div className="empty-state" style={{ padding: '80px 0' }}>
-                            <AlertCircle size={48} className="empty-state-icon" />
-                            <h3>No quotations found</h3>
-                            <p>Try refining your search or issue a new quote from the Sales Pipeline.</p>
-                        </div>
-                    </td>
-                </tr>
-              ) : (
-                filteredQuotes.map((quote) => (
-                  <tr key={quote.id}>
-                    <td><span className="id-tag">#QT-{quote.id + 1000}</span></td>
-                    <td>
-                        <div className="avatar-cell">
-                            <div className="avatar">{quote.lead?.customer?.name.charAt(0)}</div>
-                            <div>
-                                <div className="text-main">{quote.lead?.customer?.name}</div>
-                                <div className="text-sub">{quote.lead?.customer?.phone}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Calendar size={14} className="text-muted" />
-                            <span style={{ fontSize: '13px', fontWeight: '500' }}>{new Date(quote.createdAt).toLocaleDateString()}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span style={{ fontWeight: '800', color: 'var(--text-h)', fontSize: '15px' }}>
-                            ${quote.totalAmount.toFixed(2)}
-                        </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${getStatusBadge(quote.status)}`}>
-                        {quote.status}
-                      </span>
-                    </td>
-                    <td className="actions-cell">
-                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                            <button 
-                                onClick={() => { setSelectedQuote(quote); setIsViewModalOpen(true); }}
-                                className="nav-icon-btn"
-                                style={{ background: '#f8fafc', padding: '8px', borderRadius: '8px' }}
-                            >
-                                <Eye size={18} />
-                            </button>
-                            <button 
-                                className="nav-icon-btn text-error" 
-                                onClick={() => handleDelete(quote.id)}
-                                style={{ background: '#fef2f2', padding: '8px', borderRadius: '8px' }}
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
-      </div>
-
-      {/* View Quotation Modal */}
-      <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Document Preview: Quotation">
-        {selectedQuote && (
-          <div className="quote-detail-view">
-            <div className="quote-header-box">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <ExpandableRowTable 
+            data={filteredQuotes}
+            columns={columns}
+            loading={loading}
+            renderExpanded={(q: any) => (
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '40px' }}>
                     <div>
-                        <span className="quote-badge">OFFICIAL QUOTE</span>
-                        <h2 style={{ fontSize: '28px', fontWeight: '800', marginTop: '12px', letterSpacing: '-0.02em' }}>#QT-{selectedQuote.id + 1000}</h2>
-                        <div style={{ display: 'flex', gap: '20px', marginTop: '16px' }}>
-                            <div className="info-item">
-                                <Calendar size={14} className="text-primary" /> Issued: {new Date(selectedQuote.createdAt).toLocaleDateString()}
-                            </div>
-                            <div className="info-item">
-                                <Clock size={14} className="text-primary" /> Valid for 30 days
-                            </div>
+                        <div className="stat-label">Project Scope & Details</div>
+                        <div style={{ marginTop: '12px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <p style={{ fontSize: '15px', color: 'var(--text-main)', lineHeight: '1.6' }}>{q.lead?.description}</p>
+                            
+                            <table style={{ width: '100%', marginTop: '24px', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
+                                        <th style={{ textAlign: 'left', padding: '12px 0', fontSize: '11px', color: 'var(--text-muted)' }}>SERVICE ITEM</th>
+                                        <th style={{ textAlign: 'center', padding: '12px 0', fontSize: '11px', color: 'var(--text-muted)' }}>QTY</th>
+                                        <th style={{ textAlign: 'right', padding: '12px 0', fontSize: '11px', color: 'var(--text-muted)' }}>TOTAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {q.items?.map((item: any, idx: number) => (
+                                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                                            <td style={{ padding: '14px 0', fontSize: '13px', fontWeight: '600' }}>{item.description}</td>
+                                            <td style={{ padding: '14px 0', textAlign: 'center', fontSize: '13px' }}>{item.quantity}</td>
+                                            <td style={{ padding: '14px 0', textAlign: 'right', fontSize: '13px', fontWeight: '700' }}>₹{item.totalAmount.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <span className={`badge ${getStatusBadge(selectedQuote.status)}`} style={{ fontSize: '14px', padding: '8px 20px', borderRadius: '12px' }}>
-                            {selectedQuote.status}
-                        </span>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div className="financial-summary-card" style={{ background: 'var(--text-h)', padding: '24px', borderRadius: '16px', color: 'white' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', opacity: 0.8 }}>
+                                <span>Service Subtotal</span>
+                                <span>₹{q.subtotal.toLocaleString()}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', opacity: 0.8 }}>
+                                <span>Tax (GST)</span>
+                                <span>+ ₹{q.tax.toLocaleString()}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '24px', fontWeight: '900' }}>
+                                <span>Grand Total</span>
+                                <span style={{ color: 'var(--primary)' }}>₹{q.totalAmount.toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                            {q.status === 'DRAFT' && (
+                                <button onClick={(e) => { e.stopPropagation(); handleApprove(q.id); }} className="btn btn-primary" style={{ flex: 1 }}>
+                                    <CheckCircle2 size={18} /> Authorize Quote
+                                </button>
+                            )}
+                            <button className="btn btn-secondary" style={{ flex: 1 }}><Download size={18} /> Export PDF</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(q.id); }} className="btn btn-secondary text-error" style={{ width: '100%', justifyContent: 'center' }}><Trash2 size={18} /> Delete Record</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div className="quote-address-section">
-                <div className="address-card">
-                    <h4 className="section-title">CLIENT DETAILS</h4>
-                    <div className="address-content">
-                        <User size={16} className="text-primary" /> <strong>{selectedQuote.lead?.customer?.name}</strong>
-                    </div>
-                    <div className="address-content">
-                        <Phone size={16} className="text-primary" /> {selectedQuote.lead?.customer?.phone}
-                    </div>
-                    <div className="address-content">
-                        <Mail size={16} className="text-primary" /> {selectedQuote.lead?.customer?.email || 'No email provided'}
-                    </div>
-                </div>
-                <div className="address-card">
-                    <h4 className="section-title">PROJECT SCOPE</h4>
-                    <p style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-muted)', fontWeight: '500' }}>
-                        {selectedQuote.lead?.description}
-                    </p>
-                </div>
-            </div>
-
-            <div className="quote-items-section">
-                <table className="quote-table">
-                  <thead>
-                    <tr>
-                      <th>Service Description</th>
-                      <th style={{ textAlign: 'center' }}>Quantity</th>
-                      <th style={{ textAlign: 'right' }}>Unit Price</th>
-                      <th style={{ textAlign: 'right' }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedQuote.items?.map((item: any, i: number) => (
-                      <tr key={i}>
-                        <td>
-                            <div style={{ fontWeight: '700', color: 'var(--text-h)' }}>{item.description}</div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Standard catalog rate applied</div>
-                        </td>
-                        <td style={{ textAlign: 'center', fontWeight: '600' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right', fontWeight: '500' }}>${item.unitPrice.toFixed(2)}</td>
-                        <td style={{ textAlign: 'right', color: 'var(--text-h)' }}><strong>${item.totalAmount.toFixed(2)}</strong></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-            </div>
-
-            <div className="quote-footer-grid">
-                <div className="quote-notes" style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px' }}>
-                    <h4 className="section-title">BUSINESS TERMS</h4>
-                    <ul style={{ fontSize: '12px', color: 'var(--text-muted)', paddingLeft: '16px', marginTop: '8px', lineHeight: '1.8' }}>
-                        <li>This quote is valid for a period of 30 days from the issuance date.</li>
-                        <li>Execution of work order requires approval through the portal.</li>
-                        <li>Final invoice will be generated upon completion of services.</li>
-                    </ul>
-                </div>
-                <div className="quote-summary-box" style={{ background: 'var(--text-h)', color: '#fff' }}>
-                    <div className="sum-row" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                        <span>Subtotal</span>
-                        <span style={{ color: '#fff' }}>${selectedQuote.subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="sum-row" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                        <span>Tax (Calculated)</span>
-                        <span style={{ color: '#fff' }}>${selectedQuote.tax.toFixed(2)}</span>
-                    </div>
-                    <div className="sum-row discount" style={{ color: '#fb7185' }}>
-                        <span>Promotional Discount</span>
-                        <span>-${selectedQuote.discount.toFixed(2)}</span>
-                    </div>
-                    <div className="sum-row total" style={{ borderTopColor: 'rgba(255,255,255,0.1)', color: '#fff' }}>
-                        <span>Total Payable</span>
-                        <span style={{ color: '#818cf8' }}>${selectedQuote.totalAmount.toFixed(2)}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="quote-actions-bar" style={{ paddingBottom: '20px' }}>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                    <button className="btn btn-secondary" style={{ flex: 1, gap: '10px', height: '48px', fontWeight: '700' }}><Printer size={20} /> Print Quote</button>
-                    <button className="btn btn-secondary" style={{ flex: 1, gap: '10px', height: '48px', fontWeight: '700' }}><Mail size={20} /> Send via Email</button>
-                </div>
-                {selectedQuote.status === 'DRAFT' && (
-                    <button 
-                        onClick={() => handleApprove(selectedQuote.id)}
-                        disabled={submitting}
-                        className="btn btn-primary" 
-                        style={{ flex: 2, height: '56px', fontSize: '16px', fontWeight: '800', gap: '12px' }}
-                    >
-                        {submitting ? <Loader2 className="animate-spin" /> : <><CheckCircle2 size={24} /> Confirm & Schedule Job</>}
-                    </button>
-                )}
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      <style>{`
-        .quotations-container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .premium-table-container {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
-        }
-
-        .quote-detail-view {
-            padding: 0px;
-        }
-
-        .quote-header-box {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 32px;
-            margin-bottom: 32px;
-            border-left: 6px solid var(--primary);
-        }
-
-        .quote-badge {
-            background: #eef2ff;
-            color: var(--primary);
-            font-size: 12px;
-            font-weight: 800;
-            padding: 6px 12px;
-            border-radius: 8px;
-            letter-spacing: 0.07em;
-        }
-
-        .info-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .quote-address-section {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 32px;
-            margin-bottom: 32px;
-        }
-
-        .address-card {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 24px;
-        }
-
-        .section-title {
-            font-size: 11px;
-            font-weight: 900;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }
-
-        .address-content {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 15px;
-            margin-bottom: 12px;
-            color: var(--text-h);
-        }
-
-        .quote-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 40px;
-        }
-
-        .quote-table th {
-            text-align: left;
-            padding: 16px 0;
-            border-bottom: 2px solid var(--border);
-            font-size: 12px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .quote-table td {
-            padding: 20px 0;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 15px;
-        }
-
-        .quote-footer-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-bottom: 40px;
-            align-items: start;
-        }
-
-        .quote-summary-box {
-            border-radius: 20px;
-            padding: 32px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-
-        .sum-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            font-size: 16px;
-            font-weight: 500;
-        }
-
-        .sum-row.total {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            font-size: 28px;
-            font-weight: 900;
-        }
-
-        .quote-actions-bar {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            padding-top: 40px;
-            border-top: 1px solid var(--border);
-        }
-
-        @media (max-width: 768px) {
-            .quote-address-section, .quote-footer-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-      `}</style>
+            )}
+        />
+        
+        <div style={{ marginTop: '24px' }}>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+        </div>
+      </div>
     </Layout>
   );
 };

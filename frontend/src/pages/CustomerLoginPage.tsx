@@ -38,14 +38,14 @@ const CustomerLoginPage: React.FC = () => {
     setLoading(true);
     try {
       // Use the dedicated customer auth endpoint
-      const response = await api.post('/customers/auth/login', data); 
+      const responseData: any = await api.post('/customers/auth/login', data); 
       
       dispatch(setCredentials({ 
-        accessToken: response.data.access_token, 
-        refreshToken: response.data.refresh_token, 
-        role: response.data.role,
-        customerId: response.data.customerId,
-        user: response.data.user || { name: response.data.name, phone: '', email: data.email }
+        accessToken: responseData.access_token, 
+        refreshToken: responseData.refresh_token, 
+        role: responseData.role,
+        customerId: responseData.customerId,
+        user: responseData.user || { name: responseData.name, phone: '', email: data.email }
       }));
       
       // Redirect to a customer-specific dashboard or default page

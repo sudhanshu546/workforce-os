@@ -1,9 +1,19 @@
 package com.workforce.os.modules.identity.web;
 
+import com.workforce.os.modules.customer.repository.CustomerProfileRepository;
+import com.workforce.os.modules.customer.repository.CustomerRepository;
+import com.workforce.os.modules.identity.repository.UserRepository;
 import com.workforce.os.modules.identity.service.AuthService;
+import com.workforce.os.common.dto.ApiResponse;
+import com.workforce.os.common.util.MessageConstants;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import static com.workforce.os.common.util.MessageConstants.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -11,17 +21,17 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService service;
-    private final com.workforce.os.modules.identity.repository.UserRepository userRepository;
-    private final com.workforce.os.modules.customer.repository.CustomerRepository customerRepository;
-    private final com.workforce.os.modules.customer.repository.CustomerProfileRepository customerProfileRepository;
+    private final UserRepository userRepository;
+    private final CustomerRepository customerRepository;
+    private final CustomerProfileRepository customerProfileRepository;
 
     @GetMapping("/profile")
-    public ResponseEntity<UserProfileResponse> getProfile() {
-        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getProfile() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
         var principal = auth.getPrincipal();
         
         UserProfileResponse response = new UserProfileResponse();
-        if (principal instanceof org.springframework.security.core.userdetails.UserDetails userDetails) {
+        if (principal instanceof UserDetails userDetails) {
             String email = userDetails.getUsername();
             // Try to find the user in either workforce or customer modules
             var userOpt = userRepository.findByEmail(email);
@@ -45,28 +55,28 @@ public class AuthController {
                 }
             }
         }
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, PROFILE_RETRIEVED));
     }
 
     @PostMapping("/register-organization")
-    public ResponseEntity<AuthenticationResponse> registerOrganization(
-            @RequestBody RegisterRequest request
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> registerOrganization(
+            @Valid @RequestBody RegisterRequest request
     ) {
-        return ResponseEntity.ok(service.registerOrganization(request));
+        return ResponseEntity.ok(ApiResponse.success(service.registerOrganization(request), REGISTER_SUCCESS));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthenticationResponse> authenticate(
-            @RequestBody AuthenticationRequest request
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(
+            @Valid @RequestBody AuthenticationRequest request
     ) {
-        return ResponseEntity.ok(service.authenticate(request));
+        return ResponseEntity.ok(ApiResponse.success(service.authenticate(request), LOGIN_SUCCESS));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AuthenticationResponse> refreshToken(
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> refreshToken(
             @RequestBody String refreshToken
     ) {
-        return ResponseEntity.ok(service.refreshToken(refreshToken));
+        return ResponseEntity.ok(ApiResponse.success(service.refreshToken(refreshToken), TOKEN_REFRESHED));
     }
 
     @PostMapping("/logout")

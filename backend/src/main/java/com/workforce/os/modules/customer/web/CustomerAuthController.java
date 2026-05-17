@@ -1,5 +1,6 @@
 package com.workforce.os.modules.customer.web;
 
+import com.workforce.os.common.dto.ApiResponse;
 import com.workforce.os.modules.customer.dto.CustomerAuthResponse;
 import com.workforce.os.modules.customer.dto.CustomerLoginRequest;
 import com.workforce.os.modules.customer.dto.CustomerRegisterRequest;
@@ -20,25 +21,26 @@ public class CustomerAuthController {
     private final CustomerAuthService customerAuthService;
 
     @PostMapping("/register")
-    public ResponseEntity<CustomerAuthResponse> register(@RequestBody CustomerRegisterRequest request) {
+    public ResponseEntity<ApiResponse<CustomerAuthResponse>> register(@RequestBody CustomerRegisterRequest request) {
         CustomerAuthResponse response = customerRegistrationService.registerCustomer(request);
-        return ResponseEntity.created(URI.create("/api/v1/customers/me")).body(response);
+        return ResponseEntity.created(URI.create("/api/v1/customers/me"))
+                .body(ApiResponse.success(response, "Registration successful"));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<CustomerAuthResponse> login(@RequestBody CustomerLoginRequest request) {
+    public ResponseEntity<ApiResponse<CustomerAuthResponse>> login(@RequestBody CustomerLoginRequest request) {
         CustomerAuthResponse response = customerAuthService.authenticate(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody String refreshToken) {
+    public ResponseEntity<ApiResponse<Void>> logout(@RequestBody String refreshToken) {
         customerAuthService.logout(refreshToken);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success(null, "Logout successful"));
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<CustomerAuthResponse> refreshToken(@RequestBody String refreshToken) {
-        return ResponseEntity.ok(customerAuthService.refreshToken(refreshToken));
+    public ResponseEntity<ApiResponse<CustomerAuthResponse>> refreshToken(@RequestBody String refreshToken) {
+        return ResponseEntity.ok(ApiResponse.success(customerAuthService.refreshToken(refreshToken), "Token refreshed"));
     }
 }

@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
+import static com.workforce.os.common.util.MessageConstants.REFRESH_TOKEN_EXPIRED;
+
 @Service
 @RequiredArgsConstructor
 public class CustomerRefreshTokenService {
@@ -33,7 +35,7 @@ public class CustomerRefreshTokenService {
     public CustomerRefreshToken verifyExpiration(CustomerRefreshToken token) {
         if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
             refreshTokenRepository.delete(token);
-            throw new RuntimeException("Refresh token was expired. Please make a new signin request");
+            throw new RuntimeException(REFRESH_TOKEN_EXPIRED);
         }
         return token;
     }

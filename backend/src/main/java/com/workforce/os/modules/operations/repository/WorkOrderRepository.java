@@ -11,13 +11,38 @@ import java.util.Optional;
 
 @Repository
 public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long> {
-    List<WorkOrder> findAllByTenantId(String tenantId);
-    Page<WorkOrder> findByTenantId(String tenantId, Pageable pageable);
-    List<WorkOrder> findByAssignedWorkerId(Long workerId);
-    Page<WorkOrder> findByAssignedWorkerId(Long workerId, Pageable pageable);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+        "customer", "assignedWorker", "assignedWorker.user", "tasks", "evidence", "materials", "materials.material",
+        "quotation", "quotation.items", "quotation.lead", "quotation.lead.requestedService"
+    })
+    List<WorkOrder> findAllByTenantIdOrderByCreatedAtDesc(String tenantId);
+    
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+        "customer", "assignedWorker", "assignedWorker.user", "tasks", "evidence", "materials", "materials.material",
+        "quotation", "quotation.items", "quotation.lead", "quotation.lead.requestedService"
+    })
+    Page<WorkOrder> findByTenantIdOrderByCreatedAtDesc(String tenantId, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+        "customer", "assignedWorker", "assignedWorker.user", "tasks", "evidence", "materials", "materials.material",
+        "quotation", "quotation.items", "quotation.lead", "quotation.lead.requestedService"
+    })
+    Page<WorkOrder> findByAssignedWorkerIdOrderByCreatedAtDesc(Long workerId, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+        "customer", "assignedWorker", "assignedWorker.user", "tasks", "evidence", "materials", "materials.material",
+        "quotation", "quotation.items", "quotation.lead", "quotation.lead.requestedService"
+    })
+    Page<WorkOrder> findByCustomerIdOrderByCreatedAtDesc(Long customerId, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+        "customer", "assignedWorker", "assignedWorker.user", "tasks", "evidence", "materials", "materials.material",
+        "quotation", "quotation.items", "quotation.lead", "quotation.lead.requestedService"
+    })
+    Optional<WorkOrder> findById(Long id);
     long countByTenantId(String tenantId);
-    long countByAssignedWorkerIdAndStatusNot(Long workerId, String status);
-    long countByAssignedWorkerIdAndStatus(Long workerId, String status);
+    long countByAssignedWorkerIdAndStatusNot(Long workerId, WorkOrder.WorkOrderStatus status);
+    long countByAssignedWorkerIdAndStatus(Long workerId, WorkOrder.WorkOrderStatus status);
 
     Optional<WorkOrder> findByQuotationId(Long id);
 }

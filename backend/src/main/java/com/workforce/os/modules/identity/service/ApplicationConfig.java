@@ -13,6 +13,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import static com.workforce.os.common.util.MessageConstants.USER_NOT_FOUND;
+
 @Configuration
 @RequiredArgsConstructor
 public class ApplicationConfig {
@@ -33,7 +35,7 @@ public class ApplicationConfig {
             if (customer.isPresent()) {
                 return customer.get();
             }
-            throw new UsernameNotFoundException("User or Customer not found");
+            throw new UsernameNotFoundException(USER_NOT_FOUND);
         };
     }
 

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Layout } from '../components/Layout';
+import Modal from '../components/Modal';
+import api from '../services/api';
+import { ExpandableRowTable } from '../components/ExpandableRowTable';
 import { 
   Plus, Trash2, Loader2, Tag, Layers, 
   Search, Edit3, Package, AlertCircle, Filter, 
   ArrowRight, Info, IndianRupee
 } from 'lucide-react';
-import { Layout } from '../components/Layout';
-import Modal from '../components/Modal';
-import api from '../services/api';
 
 const ServicesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'services' | 'categories'>('services');
@@ -35,14 +36,16 @@ const ServicesPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [catRes, itemRes] = await Promise.all([
+      const [catRes, itemRes]: any = await Promise.all([
         api.get('/services/categories'),
         api.get(filterCategory === 'all' ? '/services/items' : `/services/items?categoryId=${filterCategory}`)
       ]);
-      setCategories(catRes.data);
-      setItems(itemRes.data);
+      setCategories(catRes || []);
+      setItems(itemRes || []);
     } catch (err) {
       console.error('Failed to fetch services', err);
+      setCategories([]);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -137,180 +140,144 @@ const ServicesPage: React.FC = () => {
     setIsItemModalOpen(true);
   };
 
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredItems = (items || []).filter(item => 
+    (item?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item?.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const categoryColumns = [
+    { header: 'Domain Name', accessor: (cat: any) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Tag size={18} />
+            </div>
+            <span style={{ fontWeight: '700', fontSize: '15px' }}>{cat.name}</span>
+        </div>
+    )},
+    { header: 'Issuance Tag', accessor: (cat: any) => <span className="id-tag">CAT-{cat.id + 100}</span> },
+    { header: 'Operational Status', accessor: () => <span className="badge badge-success">ACTIVE</span> }
+  ];
 
   return (
     <Layout>
       <div className="services-container">
-        <header style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-h)', marginBottom: '8px' }}>Service Management</h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Configure your service catalog and organizational structure.</p>
+              <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Service Catalog</h1>
+              <p className="text-muted">Maintain your master list of service offerings and department categories.</p>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+            <button 
                 onClick={() => {
                   if (activeTab === 'categories') setIsCategoryModalOpen(true);
                   else setIsItemModalOpen(true);
                 }} 
                 className="btn btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                <Plus size={18} /> {activeTab === 'categories' ? 'New Category' : 'New Service'}
-              </button>
-            </div>
-          </div>
-
-          <div className="tab-navigation">
-             <button 
-                className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`}
-                onClick={() => setActiveTab('services')}
-             >
-                <Package size={18} /> Service Catalog
-             </button>
-             <button 
-                className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
-                onClick={() => setActiveTab('categories')}
-             >
-                <Layers size={18} /> Categories
-             </button>
-          </div>
+            >
+                <Plus size={20} /> {activeTab === 'categories' ? 'Establish Category' : 'Publish Service'}
+            </button>
         </header>
 
+        <div className="tab-navigation" style={{ marginBottom: '32px' }}>
+             <button className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`} onClick={() => setActiveTab('services')}>
+                <Package size={18} /> Catalog Offerings
+             </button>
+             <button className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`} onClick={() => setActiveTab('categories')}>
+                <Layers size={18} /> Business Categories
+             </button>
+        </div>
+
         {activeTab === 'services' && (
-          <div className="tab-content animate-in">
-            <div className="filter-bar card">
-                <div style={{ display: 'flex', gap: '16px', flex: 1 }}>
-                    <div className="search-bar" style={{ flex: 1 }}>
-                        <Search size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="Search services by name or description..." 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <div className="filter-select-wrapper">
-                        <Filter size={18} className="filter-icon" />
-                        <select 
-                            className="input-field" 
-                            style={{ paddingLeft: '40px', width: '220px' }}
-                            value={filterCategory}
-                            onChange={(e) => setFilterCategory(e.target.value)}
-                        >
-                            <option value="all">All Categories</option>
-                            {categories.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
-                    </div>
+          <div className="tab-content">
+            <div className="filter-bar" style={{ marginBottom: '32px' }}>
+                <div className="search-bar">
+                    <Search size={18} className="text-muted" />
+                    <input 
+                        type="text" 
+                        placeholder="Search services..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <Filter size={18} className="text-muted" />
+                    <select 
+                        style={{ border: 'none', background: 'transparent', height: '44px', fontWeight: '600', color: 'var(--text-h)', outline: 'none', minWidth: '180px' }}
+                        value={filterCategory}
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                    >
+                        <option value="all">All Groups</option>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
             {loading ? (
-                <div className="empty-state">
-                    <Loader2 className="animate-spin empty-state-icon" size={48} />
-                    <p>Updating catalog view...</p>
-                </div>
+                <div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div>
             ) : filteredItems.length > 0 ? (
-                <div className="service-grid">
+                <div className="service-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
                   {filteredItems.map(item => (
-                    <div key={item.id} className="card service-card">
-                      <div>
-                        <div className="service-header">
-                          <div>
-                            <span className="badge badge-primary" style={{ marginBottom: '8px' }}>{item.category?.name}</span>
-                            <h4 className="service-title">{item.name}</h4>
-                          </div>
-                          <span className="service-price">₹{item.basePrice.toFixed(2)}</span>
+                    <div key={item.id} className="card" style={{ padding: '24px', position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: '24px', right: '24px', fontWeight: '900', fontSize: '20px', color: 'var(--primary)' }}>₹{item.basePrice.toFixed(2)}</div>
+                        <span className="badge badge-primary" style={{ marginBottom: '12px', fontSize: '10px' }}>{item.category?.name}</span>
+                        <h4 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px' }}>{item.name}</h4>
+                        <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '24px' }}>{item.description}</p>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
+                            <button className="btn btn-secondary" style={{ padding: '8px 16px' }} onClick={() => startEditItem(item)}><Edit3 size={16} /> Edit</button>
+                            <button className="btn btn-secondary text-error" style={{ padding: '8px 16px' }} onClick={() => handleDeleteItem(item.id)}><Trash2 size={16} /> Remove</button>
                         </div>
-                        <p className="service-desc">{item.description}</p>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                            <Info size={14} /> Basic Rate
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button className="nav-icon-btn" onClick={() => startEditItem(item)}><Edit3 size={16} /></button>
-                            <button className="nav-icon-btn text-error" onClick={() => handleDeleteItem(item.id)}><Trash2 size={16} /></button>
-                        </div>
-                      </div>
                     </div>
                   ))}
                 </div>
             ) : (
-                <div className="empty-state card">
-                    <Package className="empty-state-icon" size={48} />
-                    <h3>No services found</h3>
-                    <p>Adjust your filters or add a new service to this category.</p>
+                <div style={{ textAlign: 'center', padding: '100px', background: 'var(--surface-muted)', borderRadius: '20px', border: '1.5px dashed var(--border)' }}>
+                    <Package size={48} className="text-muted" style={{ marginBottom: '16px' }} />
+                    <h3 style={{ fontWeight: '800' }}>Catalog Empty</h3>
+                    <p className="text-muted">No services found matching your criteria.</p>
                 </div>
             )}
           </div>
         )}
 
         {activeTab === 'categories' && (
-           <div className="tab-content animate-in">
-              <div className="card" style={{ overflow: 'hidden' }}>
-                 <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Category Name</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th style={{ textAlign: 'right' }}>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {categories.map(cat => (
-                            <tr key={cat.id}>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div className="cat-icon-thumb">
-                                            <Tag size={16} />
-                                        </div>
-                                        <span style={{ fontWeight: '600' }}>{cat.name}</span>
-                                    </div>
-                                </td>
-                                <td><span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{cat.description}</span></td>
-                                <td><span className="badge badge-success">Active</span></td>
-                                <td style={{ textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                        <button className="btn-icon" onClick={() => startEditCategory(cat)}><Edit3 size={16} /></button>
-                                        <button className="btn-icon text-error" onClick={() => handleDeleteCategory(cat.id)}><Trash2 size={16} /></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                        {categories.length === 0 && !loading && (
-                            <tr>
-                                <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                                    No categories defined yet.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                 </table>
-              </div>
+           <div className="tab-content">
+              <ExpandableRowTable 
+                data={categories}
+                columns={categoryColumns}
+                loading={loading}
+                renderExpanded={(cat: any) => (
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
+                        <div>
+                            <div className="stat-label">Category Scope</div>
+                            <p style={{ marginTop: '12px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '15px', color: 'var(--text-main)', lineHeight: '1.6' }}>
+                                {cat.description}
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                            <div className="stat-label">Management Actions</div>
+                            <button onClick={(e) => { e.stopPropagation(); startEditCategory(cat); }} className="btn btn-primary" style={{ width: '100%' }}><Edit3 size={18} /> Modify Classification</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }} className="btn btn-secondary text-error" style={{ width: '100%' }}><Trash2 size={18} /> Purge Category</button>
+                        </div>
+                    </div>
+                )}
+              />
            </div>
         )}
       </div>
 
       {/* Category Modal */}
-      <Modal isOpen={isCategoryModalOpen} onClose={resetCategoryForm} title={editingCategory ? "Edit Category" : "Create New Category"} width="900px">
+      <Modal isOpen={isCategoryModalOpen} onClose={resetCategoryForm} title={editingCategory ? "Refine Business Category" : "Establish New Service Domain"} width="800px">
         <form onSubmit={handleCreateOrUpdateCategory} className="premium-form-layout">
           <div className="form-grid-2">
             <div className="form-group">
                 <label className="form-label">Category Name</label>
-                <div className="input-with-icon">
-                    <Tag size={18} className="input-icon" />
+                <div className="search-bar">
+                    <Tag size={18} className="text-muted" />
                     <input 
                         type="text" 
-                        className="input-field pl-10" 
-                        placeholder="e.g., Plumbing, Electrical" 
+                        placeholder="e.g. Mechanical, Electrical" 
                         value={categoryName} 
                         onChange={e => setCategoryName(e.target.value)} 
                         required 
@@ -318,16 +285,21 @@ const ServicesPage: React.FC = () => {
                 </div>
             </div>
             <div className="form-group">
-                <label className="form-label">Internal Identifier</label>
-                <input type="text" className="input-field" disabled value={editingCategory ? `CAT-${editingCategory.id+100}` : 'Auto-generated'} />
+                <label className="form-label">Internal Classification</label>
+                <div className="search-bar" style={{ background: 'var(--surface-muted)' }}>
+                    <Info size={18} className="text-muted" />
+                    <input type="text" disabled value={editingCategory ? `CAT-${editingCategory.id+100}` : 'To be generated'} />
+                </div>
             </div>
           </div>
           
           <div className="form-group">
-            <label className="form-label">Professional Description</label>
+            <label className="form-label">Domain Description</label>
             <textarea 
-                className="input-field textarea-field" 
-                placeholder="Briefly describe what this category covers..." 
+                style={{ width: '100%', padding: '16px', border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--surface-muted)', fontSize: '15px', fontWeight: '500', outline: 'none', transition: 'all 0.2s' }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.background = 'white'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = 'var(--surface-muted)'; }}
+                placeholder="Detail the scope of services covered under this category..." 
                 value={categoryDescription} 
                 onChange={e => setCategoryDescription(e.target.value)}
                 rows={4}
@@ -335,30 +307,30 @@ const ServicesPage: React.FC = () => {
           </div>
 
           <div className="modal-footer-actions">
-            <button type="button" onClick={resetCategoryForm} className="btn btn-secondary">Discard Changes</button>
-            <button type="submit" className="btn btn-primary" style={{ minWidth: '200px' }}>
-                {editingCategory ? "Update Category Details" : "Create Master Category"}
+            <button type="button" onClick={resetCategoryForm} className="btn btn-secondary">Discard</button>
+            <button type="submit" className="btn btn-primary" style={{ minWidth: '220px' }}>
+                {editingCategory ? "Update Classification" : "Confirm Category"}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Service Modal */}
-      <Modal isOpen={isItemModalOpen} onClose={resetItemForm} title={editingItem ? "Refine Service Details" : "Add Catalog Service"} width="900px">
+      <Modal isOpen={isItemModalOpen} onClose={resetItemForm} title={editingItem ? "Refine Service Specification" : "Publish New Catalog Offering"} width="900px">
         <form onSubmit={handleCreateOrUpdateItem} className="premium-form-layout">
           <div className="form-grid-2">
               {!editingItem && (
                 <div className="form-group">
-                    <label className="form-label">Target Category</label>
-                    <div className="input-with-icon">
-                        <Layers size={18} className="input-icon" />
+                    <label className="form-label">Master Classification</label>
+                    <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)', height: '48px' }}>
+                        <Layers size={18} className="text-muted" style={{ marginRight: '12px' }} />
                         <select 
-                            className="input-field pl-10" 
+                            style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: '600', outline: 'none' }}
                             value={newItem.categoryId} 
                             onChange={e => setNewItem({...newItem, categoryId: e.target.value})}
                             required
                         >
-                            <option value="">Select a category...</option>
+                            <option value="">Choose service domain...</option>
                             {categories.map(cat => (
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
@@ -367,13 +339,12 @@ const ServicesPage: React.FC = () => {
                 </div>
               )}
               <div className="form-group">
-                <label className="form-label">Service Name</label>
-                <div className="input-with-icon">
-                    <Package size={18} className="input-icon" />
+                <label className="form-label">Service Title</label>
+                <div className="search-bar">
+                    <Package size={18} className="text-muted" />
                     <input 
                         type="text" 
-                        className="input-field pl-10" 
-                        placeholder="e.g., Industrial Pipe Repair" 
+                        placeholder="e.g. Standard Inspection, Premium Repair" 
                         value={newItem.name} 
                         onChange={e => setNewItem({...newItem, name: e.target.value})} 
                         required 
@@ -385,8 +356,10 @@ const ServicesPage: React.FC = () => {
           <div className="form-group">
             <label className="form-label">Service Scope & Description</label>
             <textarea 
-                className="input-field textarea-field" 
-                placeholder="Detail what is included in this service..." 
+                style={{ width: '100%', padding: '16px', border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--surface-muted)', fontSize: '15px', fontWeight: '500', outline: 'none', transition: 'all 0.2s' }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.background = 'white'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.background = 'var(--surface-muted)'; }}
+                placeholder="Provide a detailed breakdown of what this service offering entails..." 
                 value={newItem.description} 
                 onChange={e => setNewItem({...newItem, description: e.target.value})} 
                 required 
@@ -394,15 +367,14 @@ const ServicesPage: React.FC = () => {
             />
           </div>
 
-          <div className="form-group" style={{ maxWidth: '300px' }}>
-            <label className="form-label">Base Rate (₹)</label>
-            <div className="input-with-icon">
-                <IndianRupee size={18} className="input-icon" />
+          <div className="form-group" style={{ maxWidth: '320px' }}>
+            <label className="form-label">Standard Base Rate (₹)</label>
+            <div className="search-bar">
+                <IndianRupee size={18} className="text-muted" />
                 <input 
                     type="number" 
                     step="0.01"
                     min="0"
-                    className="input-field pl-10" 
                     placeholder="0.00" 
                     value={newItem.basePrice} 
                     onChange={e => setNewItem({...newItem, basePrice: Math.max(0, Number(e.target.value))})} 
@@ -412,9 +384,9 @@ const ServicesPage: React.FC = () => {
           </div>
 
           <div className="modal-footer-actions">
-            <button type="button" onClick={resetItemForm} className="btn btn-secondary">Cancel</button>
-            <button type="submit" className="btn btn-primary" style={{ minWidth: '200px' }}>
-                {editingItem ? "Save Modifications" : "Add to Catalog"}
+            <button type="button" onClick={resetItemForm} className="btn btn-secondary">Discard</button>
+            <button type="submit" className="btn btn-primary" style={{ minWidth: '220px' }}>
+                {editingItem ? "Save Modifications" : "Publish to Catalog"}
             </button>
           </div>
         </form>

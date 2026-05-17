@@ -26,18 +26,18 @@ const Login: React.FC = () => {
     setError(null);
     
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const data: any = await api.post('/auth/login', { email, password });
       
       dispatch(setCredentials({
-          accessToken: response.data.access_token,
-          refreshToken: response.data.refresh_token,
-          role: response.data.role,
-          user: response.data.user || { name: 'User', phone: '', email: email },
-          customerId: response.data.customerId
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
+          role: data.role,
+          user: data.user || { name: 'User', phone: '', email: email },
+          customerId: data.customerId
       }));
 
-      if (response.data.workerId) {
-        localStorage.setItem('worker_id', response.data.workerId);
+      if (data.workerId) {
+        localStorage.setItem('worker_id', data.workerId.toString());
       }
       navigate('/dashboard', { replace: true });
     } catch (err: any) {

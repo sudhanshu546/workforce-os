@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static com.workforce.os.common.util.MessageConstants.UNAUTHORIZED;
+
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
@@ -21,6 +23,15 @@ public class InventoryService {
     @Transactional
     public Material createMaterial(Material material) {
         material.setTenantId(TenantContext.getCurrentTenant());
+        if (material.getSku() == null || material.getSku().isEmpty()) {
+            material.setSku("MAT-" + System.currentTimeMillis());
+        }
+        if (material.getMinThreshold() == null) {
+            material.setMinThreshold(0.0);
+        }
+        if (material.getPrice() == null) {
+            material.setPrice(0.0);
+        }
         return materialRepository.save(material);
     }
 
@@ -28,14 +39,15 @@ public class InventoryService {
     public Material updateMaterial(Long id, Material details) {
         Material material = materialRepository.findById(id).orElseThrow();
         if (!material.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException(UNAUTHORIZED);
         }
         material.setName(details.getName());
-        material.setSku(details.getSku());
+        material.setDescription(details.getDescription());
+        material.setSku(details.getSku() != null ? details.getSku() : material.getSku());
         material.setQuantity(details.getQuantity());
-        material.setMinThreshold(details.getMinThreshold());
+        material.setMinThreshold(details.getMinThreshold() != null ? details.getMinThreshold() : 0.0);
         material.setUnit(details.getUnit());
-        material.setPrice(details.getPrice());
+        material.setPrice(details.getPrice() != null ? details.getPrice() : 0.0);
         return materialRepository.save(material);
     }
 
@@ -49,7 +61,7 @@ public class InventoryService {
     public void deleteMaterial(Long id) {
         Material material = materialRepository.findById(id).orElseThrow();
         if (!material.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException(UNAUTHORIZED);
         }
         materialRepository.delete(material);
     }

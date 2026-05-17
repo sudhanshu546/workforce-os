@@ -22,6 +22,8 @@ public class Material extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
+    private String description;
+
     private String sku;
 
     private Double quantity;

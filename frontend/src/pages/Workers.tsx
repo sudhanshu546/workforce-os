@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   UserPlus, Search, ShieldCheck, Mail, Phone, Briefcase, Plus, Star, X, 
   Loader2, Edit3, Trash2, Filter, CheckCircle, AlertCircle, Award,
-  Calendar, IndianRupee, User
+  Calendar, IndianRupee, User, MapPin
 } from 'lucide-react';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { Layout } from '../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../components/Pagination';
+import { ExpandableRowTable } from '../components/ExpandableRowTable';
 
 const Workers: React.FC = () => {
   const [workers, setWorkers] = useState<any[]>([]);
@@ -52,8 +53,8 @@ const Workers: React.FC = () => {
 
   const fetchServices = async () => {
     try {
-        const response = await api.get('/services'); // Assumed endpoint
-        setServices(response.data);
+        const data: any = await api.get('/services/items');
+        setServices(data || []);
     } catch (err) {
         console.error('Error fetching services:', err);
     }
@@ -76,20 +77,9 @@ const Workers: React.FC = () => {
   const fetchWorkers = async (page: number) => {
     try {
       setLoading(true);
-      const response = await api.get(`/workers?page=${page}&size=${pageSize}`);
-      const { content, totalPages } = response.data;
-      
-      // Fetch skills for each worker
-      const workersWithSkills = await Promise.all(content.map(async (worker: any) => {
-        try {
-            const skillsResponse = await api.get(`/workers/${worker.id}/skills`);
-            return { ...worker, skills: skillsResponse.data };
-        } catch (e) {
-            return { ...worker, skills: [] };
-        }
-      }));
-      setWorkers(workersWithSkills);
-      setTotalPages(totalPages);
+      const data: any = await api.get(`/workers?page=${page}&size=${pageSize}`);
+      setWorkers(data.content || []);
+      setTotalPages(data.totalPages || 0);
     } catch (err) {
       console.error('Error fetching workers:', err);
     } finally {
@@ -141,33 +131,12 @@ const Workers: React.FC = () => {
     }
   };
 
-  const handleAddSkill = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post(`/workers/${selectedWorker.id}/skills`, newSkill);
-      setNewSkill({ skillName: '', proficiencyLevel: 'INTERMEDIATE' });
-      setIsSkillModalOpen(false);
-      fetchWorkers(currentPage);
-    } catch (err) {
-      console.error('Adding skill failed:', err);
-    }
-  };
-
-  const handleRemoveSkill = async (skillId: number) => {
-    try {
-      await api.delete(`/workers/skills/${skillId}`);
-      fetchWorkers(currentPage);
-    } catch (err) {
-      console.error('Removing skill failed:', err);
-    }
-  };
-
   const openEditModal = (worker: any) => {
     setSelectedWorker(worker);
     setEditData({
-        name: worker.user?.name,
-        email: worker.user?.email,
-        phone: worker.user?.phone,
+        name: worker.name,
+        email: worker.email,
+        phone: worker.phone,
         designation: worker.designation,
         salaryAmount: worker.salaryAmount,
         status: worker.status
@@ -177,206 +146,195 @@ const Workers: React.FC = () => {
 
   const filteredWorkers = workers.filter(worker => {
     const matchesSearch = 
-        worker.user?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         worker.designation.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || worker.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
+  const columns = [
+    { header: 'Expert Identity', accessor: (worker: any) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '18px' }}>{worker.name[0]}</div>
+            <div>
+                <div style={{ fontWeight: '700', color: 'var(--text-h)' }}>{worker.name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>{worker.designation}</div>
+            </div>
+        </div>
+    )},
+    { header: 'Direct Contact', accessor: (worker: any) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600' }}><Phone size={14} className="text-muted" /> {worker.phone}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}><Mail size={14} /> {worker.email}</div>
+        </div>
+    )},
+    { header: 'Operational Status', accessor: (worker: any) => <span className={`badge ${worker.status === 'ACTIVE' ? 'badge-success' : 'badge-primary'}`}>{worker.status}</span> },
+    { header: 'Staff Since', accessor: (worker: any) => <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>{new Date(worker.joiningDate || Date.now()).toLocaleDateString()}</span> }
+  ];
+
   return (
     <Layout>
-      <div className="workforce-container">
-        <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
+      <div className="workforce-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-h)', marginBottom: '8px' }}>Workforce Management</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Manage your team, skills, and assignments.</p>
+            <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Expert Workforce</h1>
+            <p className="text-muted">Direct oversight of field technicians, skill matrices, and employment records.</p>
           </div>
-          <button 
-            onClick={() => setIsOnboardModalOpen(true)}
-            className="btn btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <UserPlus size={18} /> Onboard Worker
+          <button onClick={() => setIsOnboardModalOpen(true)} className="btn btn-primary">
+            <UserPlus size={20} /> Onboard New Expert
           </button>
         </header>
 
-        <div className="filter-bar card" style={{ padding: '16px', marginBottom: '24px', display: 'flex', gap: '16px' }}>
-          <div className="search-bar" style={{ flex: 1 }}>
-            <Search size={18} />
+        <div className="filter-bar" style={{ marginBottom: '24px' }}>
+          <div className="search-bar">
+            <Search size={18} className="text-muted" />
             <input 
                 type="text" 
-                placeholder="Search workers by name or designation..." 
+                placeholder="Search by name, role or ID..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="filter-select-wrapper">
-            <Filter size={18} className="filter-icon" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <Filter size={18} className="text-muted" />
             <select 
-                className="input-field" 
-                style={{ paddingLeft: '40px', width: '200px' }}
+                style={{ border: 'none', background: 'transparent', height: '44px', fontWeight: '600', color: 'var(--text-h)', outline: 'none', minWidth: '160px' }}
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
             >
                 <option value="ALL">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
+                <option value="ACTIVE">Active Staff</option>
+                <option value="INACTIVE">Former Staff</option>
             </select>
           </div>
         </div>
 
-        {loading ? (
-            <div className="empty-state">
-                <Loader2 className="animate-spin empty-state-icon" size={48} />
-                <p>Loading your team...</p>
-            </div>
-        ) : filteredWorkers.length > 0 ? (
-            <div className="worker-grid">
-                {filteredWorkers.map((worker) => (
-                    <div key={worker.id} className="card worker-card">
-                        <div className="worker-card-header">
-                            <div className="worker-avatar-large">
-                                {worker.user?.name.charAt(0)}
-                            </div>
-                            <div className="worker-status-badge">
-                                <span className={`badge ${worker.status === 'ACTIVE' ? 'badge-success' : 'badge-primary'}`}>
-                                    {worker.status}
-                                </span>
-                            </div>
+        <ExpandableRowTable 
+            data={filteredWorkers}
+            columns={columns}
+            loading={loading}
+            renderExpanded={(worker: any) => (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '40px' }}>
+                    <div>
+                        <div className="stat-label">Service Specialization</div>
+                        <div className="services-container" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '16px' }}>
+                            {services.map(service => {
+                                const isChecked = worker.supportedServices?.some((s: any) => s.id === service.id);
+                                return (
+                                    <label key={service.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', cursor: 'pointer', background: isChecked ? 'var(--primary-light)' : 'white', padding: '10px 16px', borderRadius: '12px', border: '1.5px solid', borderColor: isChecked ? 'var(--primary)' : 'var(--border)', transition: 'all 0.2s' }}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isChecked}
+                                            style={{ width: '18px', height: '18px' }}
+                                            onChange={() => {
+                                                setSelectedWorker(worker);
+                                                handleToggleService(worker.id, service);
+                                            }}
+                                        />
+                                        <span style={{ fontWeight: isChecked ? '800' : '500', color: isChecked ? 'var(--primary)' : 'var(--text-main)' }}>{service.name}</span>
+                                    </label>
+                                );
+                            })}
                         </div>
+                    </div>
 
-                        <div className="worker-details">
-                            <h3 className="worker-name">{worker.user?.name}</h3>
-                            <p className="worker-designation">{worker.designation}</p>
-                            
-                            <div className="worker-contact-info">
-                                <div className="contact-item">
-                                    <Mail size={14} /> <span>{worker.user?.email}</span>
-                                </div>
-                                <div className="contact-item">
-                                    <Phone size={14} /> <span>{worker.user?.phone}</span>
-                                </div>
-                            </div>
-
-                            <div className="worker-services-section">
-                                <div className="section-header">
-                                    <span>Supported Services</span>
-                                </div>
-                                <div className="services-container" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>
-                                    {services.map(service => {
-                                        const isChecked = worker.supportedServices?.some((s: any) => s.id === service.id);
-                                        return (
-                                            <label key={service.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer' }}>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={isChecked}
-                                                    onChange={() => {
-                                                        setSelectedWorker(worker);
-                                                        handleToggleService(worker.id, service);
-                                                    }}
-                                                />
-                                                {service.name}
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="worker-card-footer">
-                            <div className="verification-status">
-                                <ShieldCheck size={16} className="text-success" />
-                                <span>Verified Team Member</span>
-                            </div>
-                            <div className="worker-actions">
-                                <button className="nav-icon-btn" onClick={() => openEditModal(worker)}><Edit3 size={16} /></button>
-                                <button className="nav-icon-btn text-error" onClick={() => handleDeleteWorker(worker.id)}><Trash2 size={16} /></button>
+                    <div>
+                        <div className="stat-label">Payroll Information</div>
+                        <div className="card" style={{ marginTop: '16px', padding: '24px', background: '#1e293b', color: 'white' }}>
+                            <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>CURRENT SALARY ({worker.salaryType})</div>
+                            <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)' }}>₹{worker.salaryAmount?.toLocaleString()}</div>
+                            <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                                <ShieldCheck size={16} className="text-success" /> System Verified Profile
                             </div>
                         </div>
                     </div>
-                ))}
-            </div>
-        ) : (
-            <div className="empty-state card">
-                <UserPlus className="empty-state-icon" size={48} />
-                <h3>No Workers Found</h3>
-                <p>Start building your team by onboarding your first worker.</p>
-                <button onClick={() => setIsOnboardModalOpen(true)} className="btn btn-primary" style={{ marginTop: '20px' }}>
-                    <Plus size={18} /> Onboard Now
-                </button>
-            </div>
-        )}
 
-        <Pagination 
-            currentPage={currentPage} 
-            totalPages={totalPages} 
-            onPageChange={setCurrentPage} 
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                        <div className="stat-label">Admin Actions</div>
+                        <button onClick={(e) => { e.stopPropagation(); openEditModal(worker); }} className="btn btn-primary" style={{ width: '100%' }}>
+                            <Edit3 size={18} /> Modify Employment
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteWorker(worker.id); }} className="btn btn-secondary text-error" style={{ width: '100%' }}>
+                            <Trash2 size={18} /> Terminate Contract
+                        </button>
+                    </div>
+                </div>
+            )}
         />
+
+        <div style={{ marginTop: '24px' }}>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
       </div>
 
       {/* Onboarding Modal */}
       <Modal isOpen={isOnboardModalOpen} onClose={() => setIsOnboardModalOpen(false)} title="Onboard New Team Member" width="900px">
         <form onSubmit={handleOnboard} className="premium-form-layout">
-          <div className="form-grid">
+          <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             <div className="form-group">
               <label className="form-label">Full Name</label>
-              <div className="input-with-icon">
-                  <User size={18} className="input-icon" />
-                  <input type="text" className="input-field pl-10" placeholder="John Doe" value={onboardData.name} onChange={e => setOnboardData({...onboardData, name: e.target.value})} required />
+              <div className="search-bar">
+                  <User size={18} className="text-muted" />
+                  <input type="text" placeholder="John Doe" value={onboardData.name} onChange={e => setOnboardData({...onboardData, name: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
               <label className="form-label">Email Address</label>
-              <div className="input-with-icon">
-                  <Mail size={18} className="input-icon" />
-                  <input type="email" className="input-field pl-10" placeholder="john@example.com" value={onboardData.email} onChange={e => setOnboardData({...onboardData, email: e.target.value})} required />
+              <div className="search-bar">
+                  <Mail size={18} className="text-muted" />
+                  <input type="email" placeholder="john@example.com" value={onboardData.email} onChange={e => setOnboardData({...onboardData, email: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
               <label className="form-label">Phone Number</label>
-              <div className="input-with-icon">
-                  <Phone size={18} className="input-icon" />
-                  <input type="tel" className="input-field pl-10" placeholder="+91 00000 00000" value={onboardData.phone} onChange={e => setOnboardData({...onboardData, phone: e.target.value})} required />
+              <div className="search-bar">
+                  <Phone size={18} className="text-muted" />
+                  <input type="tel" placeholder="+91 00000 00000" value={onboardData.phone} onChange={e => setOnboardData({...onboardData, phone: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
               <label className="form-label">Designation</label>
-              <div className="input-with-icon">
-                  <Briefcase size={18} className="input-icon" />
-                  <input type="text" className="input-field pl-10" placeholder="AC Technician" value={onboardData.designation} onChange={e => setOnboardData({...onboardData, designation: e.target.value})} required />
+              <div className="search-bar">
+                  <Briefcase size={18} className="text-muted" />
+                  <input type="text" placeholder="AC Technician" value={onboardData.designation} onChange={e => setOnboardData({...onboardData, designation: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
               <label className="form-label">Access Password</label>
-              <input type="password" className="input-field" placeholder="••••••••" value={onboardData.password} onChange={e => setOnboardData({...onboardData, password: e.target.value})} required />
+              <div className="search-bar">
+                  <ShieldCheck size={18} className="text-muted" />
+                  <input type="password" placeholder="••••••••" value={onboardData.password} onChange={e => setOnboardData({...onboardData, password: e.target.value})} required />
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">Joining Date</label>
-              <div className="input-with-icon">
-                  <Calendar size={18} className="input-icon" />
-                  <input type="date" className="input-field pl-10" value={onboardData.joiningDate} onChange={e => setOnboardData({...onboardData, joiningDate: e.target.value})} required />
+              <div className="search-bar">
+                  <Calendar size={18} className="text-muted" />
+                  <input type="date" value={onboardData.joiningDate} onChange={e => setOnboardData({...onboardData, joiningDate: e.target.value})} required />
               </div>
             </div>
             <div className="form-group">
               <label className="form-label">Salary Type</label>
-              <select className="input-field" value={onboardData.salaryType} onChange={e => setOnboardData({...onboardData, salaryType: e.target.value})}>
-                <option value="MONTHLY">Monthly</option>
-                <option value="WEEKLY">Weekly</option>
-                <option value="HOURLY">Hourly</option>
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)', height: '48px' }}>
+                <select style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: '600', outline: 'none' }} value={onboardData.salaryType} onChange={e => setOnboardData({...onboardData, salaryType: e.target.value})}>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="WEEKLY">Weekly</option>
+                    <option value="HOURLY">Hourly</option>
+                </select>
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">Salary Amount (₹)</label>
-              <div className="input-with-icon">
-                  <IndianRupee size={18} className="input-icon" />
-                  <input type="number" className="input-field pl-10" placeholder="0.00" value={onboardData.salaryAmount} onChange={e => setOnboardData({...onboardData, salaryAmount: Number(e.target.value)})} required />
+              <div className="search-bar">
+                  <IndianRupee size={18} className="text-muted" />
+                  <input type="number" placeholder="0.00" value={onboardData.salaryAmount} onChange={e => setOnboardData({...onboardData, salaryAmount: Number(e.target.value)})} required />
               </div>
             </div>
           </div>
           <div className="modal-footer-actions">
-            <button type="button" onClick={() => setIsOnboardModalOpen(false)} className="btn btn-secondary">Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={submitting} style={{ minWidth: '200px' }}>
-                {submitting ? <Loader2 className="animate-spin" /> : 'Complete Onboarding'}
+            <button type="button" onClick={() => setIsOnboardModalOpen(false)} className="btn btn-secondary">Discard</button>
+            <button type="submit" className="btn btn-primary" disabled={submitting} style={{ minWidth: '220px' }}>
+                {submitting ? <Loader2 className="animate-spin" /> : 'Confirm Onboarding'}
             </button>
           </div>
         </form>
@@ -385,298 +343,47 @@ const Workers: React.FC = () => {
       {/* Edit Worker Modal */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Update Team Member Info" width="900px">
           <form onSubmit={handleUpdateWorker} className="premium-form-layout">
-            <div className="form-grid">
+            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 <div className="form-group">
                     <label className="form-label">Full Name</label>
-                    <input type="text" className="input-field" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} />
+                    <div className="search-bar"><input type="text" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} /></div>
                 </div>
                 <div className="form-group">
                     <label className="form-label">Designation</label>
-                    <input type="text" className="input-field" value={editData.designation} onChange={e => setEditData({...editData, designation: e.target.value})} />
+                    <div className="search-bar"><input type="text" value={editData.designation} onChange={e => setEditData({...editData, designation: e.target.value})} /></div>
                 </div>
                 <div className="form-group">
                     <label className="form-label">Salary Amount (₹)</label>
-                    <div className="input-with-icon">
-                        <IndianRupee size={18} className="input-icon" />
-                        <input type="number" className="input-field pl-10" value={editData.salaryAmount} onChange={e => setEditData({...editData, salaryAmount: Number(e.target.value)})} />
+                    <div className="search-bar">
+                        <IndianRupee size={18} className="text-muted" />
+                        <input type="number" value={editData.salaryAmount} onChange={e => setEditData({...editData, salaryAmount: Number(e.target.value)})} />
                     </div>
                 </div>
                 <div className="form-group">
-                    <label className="form-label">Status</label>
-                    <select className="input-field" value={editData.status} onChange={e => setEditData({...editData, status: e.target.value})}>
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
-                    </select>
+                    <label className="form-label">Active Status</label>
+                    <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)', height: '48px' }}>
+                        <select style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: '600', outline: 'none' }} value={editData.status} onChange={e => setEditData({...editData, status: e.target.value})}>
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div className="modal-footer-actions">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn btn-secondary">Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={submitting} style={{ minWidth: '200px' }}>
-                    {submitting ? <Loader2 className="animate-spin" /> : 'Update Member'}
+                    {submitting ? <Loader2 className="animate-spin" /> : 'Save Changes'}
                 </button>
             </div>
           </form>
       </Modal>
 
-      {/* Skill Modal */}
-      <Modal isOpen={isSkillModalOpen} onClose={() => setIsSkillModalOpen(false)} title={`Manage Skills for ${selectedWorker?.user?.name}`} width="900px">
-        <form onSubmit={handleAddSkill} className="premium-form-layout">
-          <div className="form-grid">
-            <div className="form-group">
-                <label className="form-label">Skill Name</label>
-                <div className="input-with-icon">
-                    <Award size={18} className="input-icon" />
-                    <input type="text" className="input-field pl-10" placeholder="e.g. AC Repair, Plumbing" value={newSkill.skillName} onChange={e => setNewSkill({...newSkill, skillName: e.target.value})} required />
-                </div>
-            </div>
-            <div className="form-group">
-                <label className="form-label">Proficiency Level</label>
-                <select className="input-field" value={newSkill.proficiencyLevel} onChange={e => setNewSkill({...newSkill, proficiencyLevel: e.target.value})}>
-                <option value="BEGINNER">Beginner</option>
-                <option value="INTERMEDIATE">Intermediate</option>
-                <option value="EXPERT">Expert</option>
-                </select>
-            </div>
-          </div>
-          <div className="modal-footer-actions">
-              <button type="button" onClick={() => setIsSkillModalOpen(false)} className="btn btn-secondary">Cancel</button>
-              <button type="submit" className="btn btn-primary" style={{ minWidth: '200px' }}>Add Skill & Endorse</button>
-          </div>
-        </form>
-      </Modal>
-
       <style>{`
-        .workforce-container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .premium-form-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            padding: 8px 4px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
-        }
-
-        .modal-footer-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 16px;
-            margin-top: 16px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border);
-        }
-
-        .worker-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 24px;
-        }
-
-        .worker-card {
-            padding: 0;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .worker-card-header {
-            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-            height: 80px;
-            position: relative;
-            margin-bottom: 40px;
-        }
-
-        .worker-avatar-large {
-            width: 72px;
-            height: 72px;
-            background: white;
-            border: 4px solid white;
-            border-radius: 16px;
-            position: absolute;
-            bottom: -36px;
-            left: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            font-weight: 800;
-            color: var(--primary);
-            box-shadow: var(--shadow);
-        }
-
-        .worker-status-badge {
-            position: absolute;
-            bottom: -20px;
-            right: 24px;
-        }
-
-        .worker-details {
-            padding: 0 24px 24px;
-            flex: 1;
-        }
-
-        .worker-name {
-            font-size: 20px;
-            font-weight: 800;
-            color: var(--text-h);
-            margin-bottom: 4px;
-        }
-
-        .worker-designation {
-            color: var(--text-muted);
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 20px;
-        }
-
-        .worker-contact-info {
-            display: grid;
-            gap: 8px;
-            margin-bottom: 24px;
-            padding: 16px;
-            background: #f8fafc;
-            border-radius: 12px;
-        }
-
-        .contact-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        .worker-skills-section {
-            margin-bottom: 8px;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .add-skill-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 11px;
-        }
-
-        .skills-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .skill-chip {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-
-        .remove-skill-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 2px;
-            display: flex;
-            margin-left: 4px;
-        }
-
-        .remove-skill-btn:hover {
-            color: var(--error);
-        }
-
-        .no-skills {
-            font-style: italic;
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-
-        .worker-card-footer {
-            padding: 16px 24px;
-            background: #f8fafc;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .verification-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-
-        .worker-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .input-with-icon {
-            position: relative;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-        }
-
-        .pl-10 {
-            padding-left: 40px !important;
-        }
-
-        @media (max-width: 768px) {
-            .worker-grid {
-                grid-template-columns: 1fr;
-            }
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        .workforce-container { max-width: 1400px; margin: 0 auto; }
+        .premium-form-layout { display: flex; flex-direction: column; gap: 32px; padding: 8px 4px; }
+        .form-label { display: block; font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        .modal-footer-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 16px; padding-top: 24px; border-top: 1px solid var(--border); }
+        .stat-label { font-size: 11px; font-weight: 900; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
       `}</style>
     </Layout>
   );

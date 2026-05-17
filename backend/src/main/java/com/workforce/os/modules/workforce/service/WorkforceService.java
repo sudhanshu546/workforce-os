@@ -9,13 +9,15 @@ import com.workforce.os.modules.workforce.domain.WorkerProfile;
 import com.workforce.os.modules.workforce.domain.WorkerSkill;
 import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
 import com.workforce.os.modules.workforce.repository.WorkerSkillRepository;
-import com.workforce.os.modules.workforce.web.WorkerOnboardingRequest;
+import com.workforce.os.modules.workforce.dto.WorkerOnboardingRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
+import static com.workforce.os.common.util.MessageConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -41,14 +43,14 @@ public class WorkforceService {
         
         // Set worker role
         var workerRole = roleRepository.findByName("WORKER")
-                .orElseThrow(() -> new RuntimeException("Default role WORKER not found"));
+                .orElseThrow(() -> new RuntimeException(WORKER_ROLE_NOT_FOUND));
         user.setRole(workerRole);
         
         User savedUser = userRepository.save(user);
 
         // Find Organization by tenantId
         var organization = organizationRepository.findByTenantId(tenantId)
-                .orElseThrow(() -> new RuntimeException("Organization not found for tenant: " + tenantId));
+                .orElseThrow(() -> new RuntimeException(ORGANIZATION_NOT_FOUND));
 
         // Create Worker Profile
         WorkerProfile profile = new WorkerProfile();
@@ -70,7 +72,7 @@ public class WorkforceService {
     @Transactional
     public WorkerSkill addSkill(Long workerId, String skillName, String proficiencyLevel) {
         WorkerProfile worker = workerProfileRepository.findById(workerId)
-                .orElseThrow(() -> new RuntimeException("Worker not found"));
+                .orElseThrow(() -> new RuntimeException(WORKER_NOT_FOUND));
         
         WorkerSkill skill = new WorkerSkill();
         skill.setWorker(worker);
@@ -83,10 +85,10 @@ public class WorkforceService {
     @Transactional
     public WorkerProfile updateWorker(Long id, WorkerOnboardingRequest request, String tenantId) {
         WorkerProfile profile = workerProfileRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Worker not found"));
+                .orElseThrow(() -> new RuntimeException(WORKER_NOT_FOUND));
         
         if (!profile.getTenantId().equals(tenantId)) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException(UNAUTHORIZED);
         }
 
         User user = profile.getUser();
@@ -107,10 +109,10 @@ public class WorkforceService {
     @Transactional
     public void deleteWorker(Long id, String tenantId) {
         WorkerProfile profile = workerProfileRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Worker not found"));
+                .orElseThrow(() -> new RuntimeException(WORKER_NOT_FOUND));
         
         if (!profile.getTenantId().equals(tenantId)) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException(UNAUTHORIZED);
         }
 
         // Skill deletion is handled by JPA if cascade is set, or manually
@@ -123,7 +125,7 @@ public class WorkforceService {
 
     public List<WorkerSkill> getWorkerSkills(Long workerId) {
         WorkerProfile worker = workerProfileRepository.findById(workerId)
-                .orElseThrow(() -> new RuntimeException("Worker not found"));
+                .orElseThrow(() -> new RuntimeException(WORKER_NOT_FOUND));
         return workerSkillRepository.findAllByWorker(worker);
     }
 
@@ -134,6 +136,6 @@ public class WorkforceService {
 
     public WorkerProfile getWorkerProfileByEmail(String email) {
         return workerProfileRepository.findByUserEmail(email)
-                .orElseThrow(() -> new RuntimeException("Worker profile not found for: " + email));
+                .orElseThrow(() -> new RuntimeException(WORKER_PROFILE_NOT_FOUND));
     }
 }

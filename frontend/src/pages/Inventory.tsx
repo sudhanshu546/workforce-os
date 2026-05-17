@@ -7,6 +7,8 @@ import {
 import { Layout } from '../components/Layout';
 import Modal from '../components/Modal';
 import api from '../services/api';
+import { ExpandableRowTable } from '../components/ExpandableRowTable';
+import { Pagination } from '../components/Pagination';
 
 const Inventory: React.FC = () => {
   const [materials, setMaterials] = useState<any[]>([]);
@@ -19,10 +21,12 @@ const Inventory: React.FC = () => {
   // Form State
   const [formData, setFormData] = useState({
     name: '',
+    description: '',
     sku: '',
     quantity: 0,
     unit: 'PCS',
-    price: 0
+    unitPrice: 0,
+    minQuantity: 0
   });
 
   useEffect(() => {
@@ -31,8 +35,8 @@ const Inventory: React.FC = () => {
 
   const fetchInventory = async () => {
     try {
-      const response = await api.get('/inventory/materials');
-      setMaterials(response.data);
+      const data: any = await api.get('/inventory/materials');
+      setMaterials(data || []);
     } catch (err) {
       console.error('Failed to fetch inventory');
     } finally {
@@ -45,14 +49,16 @@ const Inventory: React.FC = () => {
       setEditingMaterial(material);
       setFormData({
         name: material.name,
-        sku: material.sku,
+        description: material.description || '',
+        sku: material.sku || '',
         quantity: material.quantity,
         unit: material.unit,
-        price: material.price
+        unitPrice: material.unitPrice,
+        minQuantity: material.minQuantity || 0
       });
     } else {
       setEditingMaterial(null);
-      setFormData({ name: '', sku: '', quantity: 0, unit: 'PCS', price: 0 });
+      setFormData({ name: '', description: '', sku: '', quantity: 0, unit: 'PCS', unitPrice: 0, minQuantity: 0 });
     }
     setIsModalOpen(true);
   };
@@ -87,157 +93,174 @@ const Inventory: React.FC = () => {
 
   const filteredMaterials = materials.filter(m => 
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    m.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    (m.sku && m.sku.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const totalValue = materials.reduce((sum, m) => sum + (m.price * m.quantity), 0);
-  const lowStockItems = materials.filter(m => m.quantity < 10).length;
+  const totalValue = materials.reduce((sum, m) => sum + (m.totalValue || 0), 0);
+  const lowStockItems = materials.filter(m => m.quantity <= (m.minQuantity || 0)).length;
+
+  const columns = [
+    { header: 'Asset Item', accessor: (m: any) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '36px', height: '36px', background: 'var(--surface-muted)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Package size={18} className="text-muted"/></div>
+            <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-h)' }}>{m.name}</div>
+        </div>
+    )},
+    { header: 'Reference', accessor: (m: any) => <span className="id-tag">{m.sku}</span> },
+    { header: 'Current Stock', accessor: (m: any) => (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontWeight: '800', color: m.quantity <= (m.minQuantity || 0) ? 'var(--error)' : 'var(--text-h)' }}>{m.quantity} {m.unit}</span>
+            {m.quantity <= (m.minQuantity || 0) && <span style={{ fontSize: '10px', color: 'var(--error)', fontWeight: '800', textTransform: 'uppercase' }}>Alert</span>}
+        </div>
+    )},
+    { header: 'Unit Rate', accessor: (m: any) => <span style={{ fontWeight: '700' }}>₹{(m.unitPrice || 0).toFixed(2)}</span> },
+    { header: 'Inventory Value', accessor: (m: any) => <span style={{ fontWeight: '800', color: 'var(--primary)' }}>₹{(m.totalValue || 0).toFixed(2)}</span> }
+  ];
 
   return (
     <Layout>
-      <div className="inventory-container">
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="inventory-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontSize: '32px', fontWeight: '900', color: 'var(--text-h)', letterSpacing: '-0.02em' }}>Master Inventory</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '16px', fontWeight: '500' }}>Manage supplies, parts, and stock levels across your organization.</p>
+            <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Asset Inventory</h1>
+            <p className="text-muted">Manage service parts, equipment, and consumables across all field teams.</p>
           </div>
-          <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ gap: '10px', padding: '14px 28px', borderRadius: '16px' }}>
-            <Plus size={20} /> Add New Supply
+          <button onClick={() => handleOpenModal()} className="btn btn-primary">
+            <Plus size={20} /> Provision Item
           </button>
         </header>
 
-        <div className="stats-grid" style={{ marginBottom: '40px' }}>
-            <div className="stat-card-premium">
-                <div className="icon-box" style={{ backgroundColor: 'rgba(79, 70, 229, 0.1)', color: 'var(--primary)' }}>
-                    <Package size={24} />
-                </div>
-                <span className="label">Total Items</span>
-                <div className="value">{materials.length}</div>
-                <div className="trend trend-up">SKUs Managed</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+            <div className="mini-stat">
+                <span className="stat-label">Total Managed SKUs</span>
+                <span className="stat-value">{materials.length}</span>
             </div>
-            <div className="stat-card-premium">
-                <div className="icon-box" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--accent)' }}>
-                    <AlertCircle size={24} />
-                </div>
-                <span className="label">Low Stock</span>
-                <div className="value" style={{ color: lowStockItems > 0 ? '#ef4444' : 'inherit' }}>{lowStockItems}</div>
-                <div className="trend">Requires Attention</div>
+            <div className="mini-stat">
+                <span className="stat-label">Estimated Stock Worth</span>
+                <span className="stat-value text-success">₹{totalValue.toLocaleString()}</span>
             </div>
-            <div className="stat-card-premium">
-                <div className="icon-box" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
-                    <IndianRupee size={24} />
-                </div>
-                <span className="label">Inventory Value</span>
-                <div className="value">₹{totalValue.toLocaleString()}</div>
-                <div className="trend">Total Asset Worth</div>
+            <div className="mini-stat">
+                <span className="stat-label">Critical Shortages</span>
+                <span className="stat-value" style={{ color: lowStockItems > 0 ? 'var(--error)' : 'inherit' }}>{lowStockItems} Items</span>
             </div>
         </div>
 
-        <div className="premium-table-container">
-            <div style={{ padding: '24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div className="search-bar" style={{ maxWidth: '400px', flex: 1 }}>
-                    <Search size={18} style={{ position: 'absolute', marginLeft: '14px', color: 'var(--text-muted)' }} />
-                    <input 
-                        type="text" 
-                        placeholder="Search by name or SKU..." 
-                        className="input-field" 
-                        style={{ paddingLeft: '44px' }}
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
+        <div className="filter-bar" style={{ marginBottom: '24px' }}>
+          <div className="search-bar">
+            <Search size={18} className="text-muted" />
+            <input 
+                type="text" 
+                placeholder="Search inventory..." 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <ExpandableRowTable 
+            data={filteredMaterials}
+            columns={columns}
+            loading={loading}
+            renderExpanded={(m: any) => (
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
+                    <div>
+                        <div className="stat-label">Material Specifications</div>
+                        <div style={{ marginTop: '12px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <div style={{ marginBottom: '16px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Description</span>
+                                <p style={{ fontSize: '15px', color: 'var(--text-main)', marginTop: '4px', lineHeight: '1.6' }}>{m.description || 'No additional specifications provided for this item.'}</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '24px' }}>
+                                <div>
+                                    <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>SKU Code</span>
+                                    <div style={{ fontWeight: '700', color: 'var(--primary)', marginTop: '2px' }}>{m.sku}</div>
+                                </div>
+                                <div>
+                                    <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Min. Level</span>
+                                    <div style={{ fontWeight: '700', color: 'var(--text-h)', marginTop: '2px' }}>{m.minQuantity} {m.unit}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                        <div className="stat-label">Asset Control</div>
+                        <button onClick={(e) => { e.stopPropagation(); handleOpenModal(m); }} className="btn btn-primary" style={{ width: '100%' }}>
+                            <Edit3 size={18} /> Modify Definition
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="btn btn-secondary text-error" style={{ width: '100%' }}>
+                            <Trash2 size={18} /> Decommission Item
+                        </button>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn-icon"><Filter size={20}/></button>
-                    <button className="btn-icon"><BarChart2 size={20}/></button>
-                </div>
-            </div>
-            <table className="premium-table">
-                <thead>
-                    <tr>
-                        <th>Item Details</th>
-                        <th>SKU / ID</th>
-                        <th>Stock Level</th>
-                        <th>Unit Price</th>
-                        <th>Status</th>
-                        <th style={{ textAlign: 'right' }}>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {loading ? (
-                        <tr><td colSpan={6} style={{ padding: '80px', textAlign: 'center' }}><Loader2 className="animate-spin" size={32} /></td></tr>
-                    ) : filteredMaterials.map(m => (
-                        <tr key={m.id}>
-                            <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div className="cat-icon-thumb" style={{ width: '40px', height: '40px' }}><Package size={20}/></div>
-                                    <span style={{ fontWeight: '750', fontSize: '15px' }}>{m.name}</span>
-                                </div>
-                            </td>
-                            <td><span className="id-tag">{m.sku}</span></td>
-                            <td>
-                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontWeight: '800', color: m.quantity < 10 ? '#ef4444' : 'var(--text-h)' }}>{m.quantity} {m.unit}</span>
-                                    {m.quantity < 10 && <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: '700' }}>CRITICAL LOW</span>}
-                                </div>
-                            </td>
-                            <td><span style={{ fontWeight: '800' }}>₹{m.price.toFixed(2)}</span></td>
-                            <td>
-                                <span className={`badge ${m.quantity > 0 ? 'badge-success' : 'badge-secondary'}`}>
-                                    {m.quantity > 0 ? 'In Stock' : 'Out of Stock'}
-                                </span>
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                    <button onClick={() => handleOpenModal(m)} className="btn-icon"><Edit3 size={18} /></button>
-                                    <button onClick={() => handleDelete(m.id)} className="btn-icon text-error"><Trash2 size={18} /></button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            )}
+        />
+        
+        <div style={{ marginTop: '24px' }}>
+            <Pagination currentPage={0} totalPages={1} onPageChange={() => {}} />
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingMaterial ? "Edit Inventory Item" : "Add New Supply Item"} width="900px">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingMaterial ? "Refine Supply Specification" : "Provision New Stock Item"} width="900px">
         <form onSubmit={handleSubmit} className="premium-form-layout">
           <div className="form-grid-standard">
             <div className="form-group">
-                <label className="form-label">Item Name</label>
-                <div className="input-with-icon">
-                    <Package size={18} className="input-icon" />
-                    <input type="text" className="input-field pl-10" placeholder="e.g. Copper Pipe 1/2 inch" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+                <label className="form-label">Material Identity</label>
+                <div className="search-bar">
+                    <Package size={18} className="text-muted" />
+                    <input type="text" placeholder="e.g. Industrial Copper Grade A" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
                 </div>
             </div>
             <div className="form-group">
-                <label className="form-label">SKU / Part Number</label>
-                <div className="input-with-icon">
-                    <Tag size={18} className="input-icon" />
-                    <input type="text" className="input-field pl-10" placeholder="e.g. CP-12-STD" value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} required />
+                <label className="form-label">Usage Notes / Description</label>
+                <div className="search-bar">
+                    <input type="text" placeholder="Brief application details..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+                </div>
+            </div>
+          </div>
+
+          <div className="form-grid-standard" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <div className="form-group">
+                <label className="form-label">SKU / Tracking Code</label>
+                <div className="search-bar">
+                    <Tag size={18} className="text-muted" />
+                    <input type="text" placeholder="Auto-generated if empty" value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} />
+                </div>
+            </div>
+            <div className="form-group">
+                <label className="form-label">Unit of Measure</label>
+                <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)', height: '48px' }}>
+                    <Layers size={18} className="text-muted" style={{ marginRight: '12px' }} />
+                    <select style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: '600', outline: 'none' }} value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})}>
+                        <option value="PCS">Individual Pieces (PCS)</option>
+                        <option value="MTRS">Linear Meters (MTRS)</option>
+                        <option value="KG">Weight in Kilograms (KG)</option>
+                        <option value="PKT">Standard Packets (PKT)</option>
+                        <option value="LTR">Volume in Liters (LTR)</option>
+                    </select>
                 </div>
             </div>
           </div>
 
           <div className="form-grid-standard" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
             <div className="form-group">
-                <label className="form-label">Initial Quantity</label>
-                <input type="number" className="input-field" value={formData.quantity} onChange={e => setFormData({...formData, quantity: Number(e.target.value)})} required />
+                <label className="form-label">Opening Stock</label>
+                <div className="search-bar">
+                    <input type="number" value={formData.quantity} onChange={e => setFormData({...formData, quantity: Number(e.target.value)})} required />
+                </div>
             </div>
             <div className="form-group">
-                <label className="form-label">Unit of Measure</label>
-                <select className="input-field" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})}>
-                    <option value="PCS">Pieces (PCS)</option>
-                    <option value="MTRS">Meters (MTRS)</option>
-                    <option value="KG">Kilograms (KG)</option>
-                    <option value="PKT">Packets (PKT)</option>
-                    <option value="LTR">Liters (LTR)</option>
-                </select>
+                <label className="form-label">Restock Alert Level</label>
+                <div className="search-bar">
+                    <AlertCircle size={18} className="text-muted" />
+                    <input type="number" value={formData.minQuantity} onChange={e => setFormData({...formData, minQuantity: Number(e.target.value)})} />
+                </div>
             </div>
             <div className="form-group">
-                <label className="form-label">Unit Price (₹)</label>
-                <div className="input-with-icon">
-                    <IndianRupee size={18} className="input-icon" />
-                    <input type="number" step="0.01" className="input-field pl-10" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} required />
+                <label className="form-label">Purchase Rate (₹)</label>
+                <div className="search-bar">
+                    <IndianRupee size={18} className="text-muted" />
+                    <input type="number" step="0.01" value={formData.unitPrice} onChange={e => setFormData({...formData, unitPrice: Number(e.target.value)})} required />
                 </div>
             </div>
           </div>
@@ -245,7 +268,7 @@ const Inventory: React.FC = () => {
           <div className="modal-footer-actions">
               <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-secondary">Discard</button>
               <button type="submit" className="btn btn-primary" disabled={submitting} style={{ minWidth: '220px' }}>
-                  {submitting ? <Loader2 className="animate-spin" /> : editingMaterial ? "Update Supply Info" : "Add to Master Stock"}
+                  {submitting ? <Loader2 className="animate-spin" /> : editingMaterial ? "Save Specifications" : "Register Stock"}
               </button>
           </div>
         </form>

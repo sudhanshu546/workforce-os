@@ -29,6 +29,9 @@ public class Invoice extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private InvoiceStatus status;
 
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<InvoiceItem> items = new java.util.ArrayList<>();
+
     public enum InvoiceStatus {
         DRAFT, ISSUED, PAID, CANCELLED
     }

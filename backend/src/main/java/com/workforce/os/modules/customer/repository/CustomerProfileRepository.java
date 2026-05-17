@@ -8,5 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface CustomerProfileRepository extends JpaRepository<CustomerProfile, Long> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer"})
     Optional<CustomerProfile> findByCustomerId(Long customerId);
 }
