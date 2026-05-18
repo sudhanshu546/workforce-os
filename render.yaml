@@ -1,0 +1,58 @@
+services:
+  # 1. Main Application (Backend + Bundled Frontend)
+  - type: web
+    name: workforce-app
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free # Change to starter or higher for production
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: /api
+      - key: DATABASE_URL # Paste your existing Postgres Internal Database URL here in Render Dashboard
+        sync: false
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: workforce-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: workforce-redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: workforce-redis
+          property: password
+      - key: SPRING_RABBITMQ_HOST
+        fromService:
+          type: private
+          name: workforce-rabbitmq
+          property: host
+      - key: SPRING_RABBITMQ_PORT
+        value: 5672
+      - key: SPRING_RABBITMQ_USERNAME
+        value: guest
+      - key: SPRING_RABBITMQ_PASSWORD
+        sync: false # Set this manually in Render Dashboard for security
+      - key: JWT_SECRET
+        generateValue: true
+
+  # 2. RabbitMQ (Private Service)
+  - type: private
+    name: workforce-rabbitmq
+    env: docker
+    dockerContext: .
+    dockerfilePath: Dockerfile.rabbitmq
+    plan: starter # Requires at least starter plan for Private Services
+    disk:
+      name: rabbitmq-data
+      mountPath: /var/lib/rabbitmq
+      sizeGB: 1
+
+# Redis is a first-class citizen in Render
+redis:
+  - name: workforce-redis
+    plan: free
+    ipAllowList: [] # Only allow internal traffic

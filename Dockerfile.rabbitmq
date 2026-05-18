@@ -1,0 +1,8 @@
+FROM rabbitmq:3-management-alpine
+
+# Use a custom config if needed, but the default is usually fine for basic usage
+# We expose 5672 for AMQP and 15672 for the Management UI
+EXPOSE 5672 15672
+
+# Enable management plugin by default
+RUN rabbitmq-plugins enable --offline rabbitmq_management

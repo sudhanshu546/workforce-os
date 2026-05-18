@@ -1,0 +1,28 @@
+# Build artifacts
+**/target/
+**/dist/
+**/node_modules/
+**/build/
+
+# Local configuration
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose*.yml
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
