@@ -1,5 +1,6 @@
 package com.workforce.os.modules.workforce.service;
 
+import com.workforce.os.common.service.BaseService;
 import com.workforce.os.modules.identity.domain.User;
 import com.workforce.os.modules.identity.repository.RoleRepository;
 import com.workforce.os.modules.identity.repository.UserRepository;
@@ -7,10 +8,16 @@ import com.workforce.os.modules.organization.repository.BranchRepository;
 import com.workforce.os.modules.organization.repository.OrganizationRepository;
 import com.workforce.os.modules.workforce.domain.WorkerProfile;
 import com.workforce.os.modules.workforce.domain.WorkerSkill;
+import com.workforce.os.modules.workforce.dto.WorkerProfileDTO;
+import com.workforce.os.modules.workforce.mapper.WorkerMapper;
 import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
 import com.workforce.os.modules.workforce.repository.WorkerSkillRepository;
 import com.workforce.os.modules.workforce.dto.WorkerOnboardingRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +28,7 @@ import static com.workforce.os.common.util.MessageConstants.*;
 
 @Service
 @RequiredArgsConstructor
-public class WorkforceService {
+public class WorkforceService extends BaseService {
     private final WorkerProfileRepository workerProfileRepository;
     private final WorkerSkillRepository workerSkillRepository;
     private final UserRepository userRepository;
@@ -29,9 +36,17 @@ public class WorkforceService {
     private final OrganizationRepository organizationRepository;
     private final BranchRepository branchRepository;
     private final PasswordEncoder passwordEncoder;
+    private final WorkerMapper workerMapper;
+
+    @Cacheable(value = "workers", key = "T(com.workforce.os.common.context.TenantContext).getCurrentTenant() + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
+    public Page<WorkerProfileDTO> getWorkers(Pageable pageable) {
+        return workerProfileRepository.findByTenantId(getTenantId(), pageable)
+                .map(workerMapper::toDTO);
+    }
 
     @Transactional
-    public WorkerProfile onboardWorker(WorkerOnboardingRequest request, String tenantId) {
+    @CacheEvict(value = "workers", allEntries = true)
+    public WorkerProfile onboardWorker(WorkerOnboardingRequest request) {
         // Create User
         User user = new User();
         user.setName(request.getName());
@@ -39,7 +54,7 @@ public class WorkforceService {
         user.setPhone(request.getPhone());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setStatus(User.UserStatus.ACTIVE);
-        user.setTenantId(tenantId);
+        // tenantId is automatically set by TenantEntityListener
         
         // Set worker role
         var workerRole = roleRepository.findByName("WORKER")
@@ -48,8 +63,8 @@ public class WorkforceService {
         
         User savedUser = userRepository.save(user);
 
-        // Find Organization by tenantId
-        var organization = organizationRepository.findByTenantId(tenantId)
+        // Find Organization
+        var organization = organizationRepository.findByTenantId(getTenantId())
                 .orElseThrow(() -> new RuntimeException(ORGANIZATION_NOT_FOUND));
 
         // Create Worker Profile
@@ -64,7 +79,7 @@ public class WorkforceService {
         profile.setSalaryType(request.getSalaryType());
         profile.setSalaryAmount(request.getSalaryAmount());
         profile.setStatus(WorkerProfile.WorkerStatus.ACTIVE);
-        profile.setTenantId(tenantId);
+        // tenantId is automatically set by TenantEntityListener
 
         return workerProfileRepository.save(profile);
     }
@@ -83,11 +98,12 @@ public class WorkforceService {
     }
 
     @Transactional
-    public WorkerProfile updateWorker(Long id, WorkerOnboardingRequest request, String tenantId) {
+    @CacheEvict(value = "workers", allEntries = true)
+    public WorkerProfile updateWorker(Long id, WorkerOnboardingRequest request) {
         WorkerProfile profile = workerProfileRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException(WORKER_NOT_FOUND));
         
-        if (!profile.getTenantId().equals(tenantId)) {
+        if (!profile.getTenantId().equals(getTenantId())) {
             throw new RuntimeException(UNAUTHORIZED);
         }
 
@@ -107,11 +123,12 @@ public class WorkforceService {
     }
 
     @Transactional
-    public void deleteWorker(Long id, String tenantId) {
+    @CacheEvict(value = "workers", allEntries = true)
+    public void deleteWorker(Long id) {
         WorkerProfile profile = workerProfileRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException(WORKER_NOT_FOUND));
         
-        if (!profile.getTenantId().equals(tenantId)) {
+        if (!profile.getTenantId().equals(getTenantId())) {
             throw new RuntimeException(UNAUTHORIZED);
         }
 

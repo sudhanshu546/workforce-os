@@ -16,7 +16,7 @@ COPY backend/pom.xml .
 COPY backend/src ./src
 # Copy built frontend into the expected static resource location
 COPY --from=frontend-build /app/frontend/dist ./src/main/resources/static
-RUN mvn clean package -DskipTests
+RUN mvn clean package -Dmaven.test.skip=true
 
 # Stage 3: Runtime
 FROM eclipse-temurin:17-jre-alpine

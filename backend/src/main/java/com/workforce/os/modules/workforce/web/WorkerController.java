@@ -33,8 +33,8 @@ public class WorkerController {
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<Page<WorkerProfileDTO>>> getWorkers(org.springframework.data.domain.Pageable pageable) {
-        Page<WorkerProfile> workers = workerProfileRepository.findByTenantId(TenantContext.getCurrentTenant(), pageable);
-        return ResponseEntity.ok(ApiResponse.success(workers.map(workerMapper::toDTO), "Workers retrieved successfully"));
+        Page<WorkerProfileDTO> workers = workforceService.getWorkers(pageable);
+        return ResponseEntity.ok(ApiResponse.success(workers, "Workers retrieved successfully"));
     }
 
     @GetMapping("/all")
@@ -48,21 +48,21 @@ public class WorkerController {
     @PostMapping("/onboard")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<WorkerProfileDTO>> onboardWorker(@Valid @RequestBody WorkerOnboardingRequest request) {
-        WorkerProfile profile = workforceService.onboardWorker(request, TenantContext.getCurrentTenant());
+        WorkerProfile profile = workforceService.onboardWorker(request);
         return ResponseEntity.ok(ApiResponse.success(workerMapper.toDTO(profile), "Worker onboarded successfully"));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<WorkerProfileDTO>> updateWorker(@PathVariable Long id, @Valid @RequestBody WorkerOnboardingRequest request) {
-        WorkerProfile profile = workforceService.updateWorker(id, request, TenantContext.getCurrentTenant());
+        WorkerProfile profile = workforceService.updateWorker(id, request);
         return ResponseEntity.ok(ApiResponse.success(workerMapper.toDTO(profile), "Worker updated successfully"));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteWorker(@PathVariable Long id) {
-        workforceService.deleteWorker(id, TenantContext.getCurrentTenant());
+        workforceService.deleteWorker(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Worker deleted successfully"));
     }
 

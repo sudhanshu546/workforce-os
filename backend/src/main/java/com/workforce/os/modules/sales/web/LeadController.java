@@ -33,47 +33,25 @@ public class LeadController {
     private final LeadService leadService;
     private final LeadRepository leadRepository;
     private final LeadMapper leadMapper;
-    private final QuotationRepository quotationRepository;
-    private final WorkOrderRepository workOrderRepository;
-    private final InvoiceRepository invoiceRepository;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<LeadResponseDTO>>> getLeads(Pageable pageable) {
-        Page<Lead> leads = leadRepository.findByTenantId(TenantContext.getCurrentTenant(), pageable);
-        return ResponseEntity.ok(ApiResponse.success(leads.map(this::enrichDTO), "Leads retrieved successfully"));
+        Page<LeadResponseDTO> leads = leadService.getLeads(TenantContext.getCurrentTenant(), pageable);
+        return ResponseEntity.ok(ApiResponse.success(leads, "Leads retrieved successfully"));
     }
 
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<LeadResponseDTO>>> getCustomerLeads(@PathVariable Long customerId) {
+        // Note: This specific endpoint isn't cached yet as it's less frequent than the main list
         List<Lead> leads = leadRepository.findByCustomerId(customerId);
         List<LeadResponseDTO> dtos = leads.stream()
-                .map(this::enrichDTO)
+                .map(leadMapper::toDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success(dtos, "Customer leads retrieved successfully"));
-    }
-
-    private LeadResponseDTO enrichDTO(Lead lead) {
-        LeadResponseDTO dto = leadMapper.toDTO(lead);
-
-        // Enrich with linked identifiers
-        quotationRepository.findByLeadId(lead.getId()).ifPresent(q -> {
-            dto.setQuotationId(q.getId());
-            workOrderRepository.findByQuotationId(q.getId()).ifPresent(wo -> {
-                dto.setWorkOrderId(wo.getId());
-                dto.setWorkOrderStatus(wo.getStatus().toString());
-                
-                invoiceRepository.findByWorkOrderId(wo.getId()).ifPresent(inv -> {
-                    dto.setInvoiceId(inv.getId());
-                    dto.setInvoiceStatus(inv.getStatus().toString());
-                    dto.setInvoiceAmount(inv.getTotal());
-                });
-            });
-        });
-        return dto;
     }
 
     @PostMapping
