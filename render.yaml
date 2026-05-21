@@ -7,14 +7,18 @@ services:
     plan: free # Change to starter or higher for production
     envVars:
       - key: VITE_API_BASE_URL
-        value: /api
+        value: /api/v1
       - key: VITE_RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
-      - key: DATABASE_URL # Paste your existing Postgres Internal Database URL here in Render Dashboard
+      - key: DATABASE_URL # Must be prefixed with jdbc: (e.g., jdbc:postgresql://...)
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
         sync: false
       - key: REDIS_HOST
         fromService:
