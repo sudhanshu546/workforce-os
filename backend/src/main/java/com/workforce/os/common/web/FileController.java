@@ -20,29 +20,26 @@ public class FileController {
 
     private final FileStorageService fileStorageService;
 
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, String>> uploadFile(@RequestParam("file") MultipartFile file) {
-        String fileName = fileStorageService.storeFile(file);
-        // Return the path to access the file
-        String fileUrl = "/api/v1/files/download/" + fileName;
-        return ResponseEntity.ok(Map.of("url", fileUrl));
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
+        }
+        
+        try {
+            String fileName = fileStorageService.storeFile(file);
+            String fileUrl = fileName.startsWith("http") ? fileName : "/api/v1/files/download/" + fileName;
+            return ResponseEntity.ok(Map.of("url", fileUrl));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to upload file: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/download/{fileName:.+}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
-        try {
-            Path filePath = fileStorageService.getFile(fileName);
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (resource.exists()) {
-                return ResponseEntity.ok()
-                        .contentType(MediaType.IMAGE_JPEG) // Assuming images for now
-                        .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (MalformedURLException ex) {
-            return ResponseEntity.badRequest().build();
-        }
+        Resource resource = fileStorageService.loadFileAsResource(fileName);
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG) // Assuming images for now
+                .body(resource);
     }
 }

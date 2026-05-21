@@ -48,6 +48,34 @@ services:
         sync: false # Set this manually in Render Dashboard for security
       - key: JWT_SECRET
         generateValue: true
+      - key: MESSAGING_PROVIDER
+        value: GUPSHUP
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: GUPSHUP_CLIENT_ID
+        sync: false
+      - key: GUPSHUP_CLIENT_SECRET
+        sync: false
+      - key: GUPSHUP_APP_ID
+        sync: false
+      - key: AWS_ACCESS_KEY
+        sync: false
+      - key: AWS_SECRET_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      - key: AWS_FROM_EMAIL
+        sync: false
+      - key: STORAGE_TYPE
+        value: LOCAL # Change to S3 once bucket is created
+      - key: AWS_S3_BUCKET_NAME
+        sync: false
+      - key: APPLICATION_BASE_URL
+        value: https://workforce-app.onrender.com # Update this with your actual Render URL
 
   # 2. RabbitMQ (Private Service)
   - type: private

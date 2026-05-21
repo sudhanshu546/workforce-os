@@ -1,81 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { IndianRupee, TrendingUp, Loader2, Target, BarChart3 } from 'lucide-react';
 import api from '../services/api';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
-import { Bar, Pie, Line } from 'react-chartjs-2';
-import { Loader2, TrendingUp, CheckCircle, Clock } from 'lucide-react';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
 const AnalyticsPage: React.FC = () => {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const data: any = await api.get('/analytics/owner');
-        setData(data);
-      } catch (err) {
-        console.error('Failed to fetch analytics', err);
-      } finally {
-        setLoading(false);
-      }
+    useEffect(() => {
+        fetchProfitability();
+    }, []);
+
+    const fetchProfitability = async () => {
+        setLoading(true);
+        try {
+            const response: any = await api.get('/analytics/profitability');
+            setData(response || []);
+        } catch (e) {
+            console.error('Failed to fetch analytics', e);
+        } finally {
+            setLoading(false);
+        }
     };
-    fetchAnalytics();
-  }, []);
 
-  if (loading) return <Layout><div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={48} /></div></Layout>;
+    return (
+        <Layout>
+            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <header style={{ marginBottom: '40px' }}>
+                    <h1 style={{ fontSize: '32px', fontWeight: '900' }}>Job Profitability Dashboard</h1>
+                    <p className="text-muted">Analyze the "True Profit" of each job after labor and material overheads.</p>
+                </header>
 
-  const revenueData = {
-    labels: Object.keys(data.monthlyRevenue),
-    datasets: [{
-      label: 'Monthly Revenue (₹)',
-      data: Object.values(data.monthlyRevenue),
-      backgroundColor: '#4f46e5',
-      borderRadius: 8
-    }]
-  };
-
-  const statusData = {
-    labels: Object.keys(data.tasksByStatus),
-    datasets: [{
-      data: Object.values(data.tasksByStatus),
-      backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b']
-    }]
-  };
-
-  return (
-    <Layout>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-        <header style={{ marginBottom: '40px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: '900', color: 'var(--text-h)' }}>Advanced Analytics</h1>
-            <p style={{ color: 'var(--text-muted)' }}>Data-driven insights for your industrial operations.</p>
-        </header>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
-            <div className="content-card">
-                <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Revenue Trends</h2>
-                <Bar data={revenueData} />
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div>
+                ) : (
+                    <div className="card-premium" style={{ padding: '0', overflow: 'hidden' }}>
+                        <table className="table-premium">
+                            <thead>
+                                <tr>
+                                    <th>Work Order</th>
+                                    <th>Revenue</th>
+                                    <th>Material Cost</th>
+                                    <th>Labor Cost</th>
+                                    <th>Net Profit</th>
+                                    <th>Margin</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.map(item => (
+                                    <tr key={item.workOrderId}>
+                                        <td style={{ fontWeight: '800' }}>#WO-{item.workOrderId + 1000} <span className="text-muted" style={{ fontWeight: 'normal' }}>({item.customerName})</span></td>
+                                        <td>₹{item.revenue.toFixed(2)}</td>
+                                        <td style={{ color: 'var(--error)' }}>- ₹{item.materialCost.toFixed(2)}</td>
+                                        <td style={{ color: 'var(--error)' }}>- ₹{item.estimatedLaborCost.toFixed(2)}</td>
+                                        <td style={{ fontWeight: '900', color: item.netProfit > 0 ? 'var(--success)' : 'var(--error)' }}>
+                                            ₹{item.netProfit.toFixed(2)}
+                                        </td>
+                                        <td>
+                                            <div className={`badge ${item.profitMargin > 20 ? 'badge-success' : 'badge-warning'}`}>
+                                                {item.profitMargin.toFixed(1)}%
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
-            <div className="content-card">
-                <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '24px' }}>Operational Throughput</h2>
-                <Pie data={statusData} />
-            </div>
-        </div>
-
-        <div style={{ marginTop: '24px' }} className="content-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <TrendingUp size={32} className="text-primary" />
-                <div>
-                    <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Average Worker Efficiency</div>
-                    <div style={{ fontSize: '24px', fontWeight: '900' }}>{data.averageWorkerEfficiency} hours / task</div>
-                </div>
-            </div>
-        </div>
-      </div>
-    </Layout>
-  );
+        </Layout>
+    );
 };
 
 export default AnalyticsPage;

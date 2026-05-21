@@ -40,6 +40,17 @@ const LiveOpsMap: React.FC = () => {
         }
     };
 
+    const MapAutoCenter = ({ markers }: { markers: any[] }) => {
+        const map = useMap();
+        useEffect(() => {
+            if (markers.length > 0) {
+                const bounds = L.latLngBounds(markers.map(m => [m.latitude, m.longitude]));
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            }
+        }, [markers, map]);
+        return null;
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'IN_PROGRESS': return '#4f46e5';
@@ -75,6 +86,7 @@ const LiveOpsMap: React.FC = () => {
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             />
+                            <MapAutoCenter markers={markers} />
                             {markers.map((m) => (
                                 <Marker key={m.workOrderId} position={[m.latitude, m.longitude]}>
                                     <Popup>

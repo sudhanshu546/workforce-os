@@ -45,4 +45,6 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long> {
     long countByAssignedWorkerIdAndStatus(Long workerId, WorkOrder.WorkOrderStatus status);
 
     Optional<WorkOrder> findByQuotationId(Long id);
+
+    List<WorkOrder> findByTenantIdAndStatus(String tenantId, WorkOrder.WorkOrderStatus status);
 }

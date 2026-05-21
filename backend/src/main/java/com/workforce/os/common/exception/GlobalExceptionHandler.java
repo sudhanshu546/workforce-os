@@ -17,6 +17,7 @@ import java.util.Map;
 import static com.workforce.os.common.util.MessageConstants.*;
 
 @ControllerAdvice
+@lombok.extern.slf4j.Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -58,15 +59,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex) {
-        // If it's a RuntimeException with a simple message, just return the message
-        String message = ex.getMessage();
-        if (message == null || message.isEmpty()) {
-            message = INTERNAL_SERVER_ERROR;
-        }
+        log.error("Unexpected error occurred: ", ex);
         
-        // For security/internal reasons, we might want to hide the full stack trace
-        // but for now let's just make the message cleaner if it's one of our known constants
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, message);
+        // If it's a known business or resource error, it would have been caught above.
+        // For everything else, return a generic but professional message to the frontend.
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR);
     }
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(HttpStatus status, String message) {
@@ -76,6 +73,7 @@ public class GlobalExceptionHandler {
                 .status(status.value())
                 .error(status.getReasonPhrase())
                 .message(message)
+                .success(false)
                 .build()
         );
     }
@@ -89,6 +87,7 @@ public class GlobalExceptionHandler {
         private int status;
         private String error;
         private String message;
+        private boolean success;
         private Object details;
     }
 }

@@ -47,7 +47,7 @@ public class LeadController {
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<LeadResponseDTO>>> getCustomerLeads(@PathVariable Long customerId) {
         // Note: This specific endpoint isn't cached yet as it's less frequent than the main list
-        List<Lead> leads = leadRepository.findByCustomerId(customerId);
+        List<Lead> leads = leadRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
         List<LeadResponseDTO> dtos = leads.stream()
                 .map(leadMapper::toDTO)
                 .collect(Collectors.toList());

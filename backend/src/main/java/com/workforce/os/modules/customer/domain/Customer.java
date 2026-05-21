@@ -36,6 +36,9 @@ public class Customer extends BaseEntity implements UserDetails {
     @Enumerated(EnumType.STRING)
     private CustomerStatus status;
 
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.Set<CustomerAddress> addresses = new java.util.LinkedHashSet<>();
+
     public enum CustomerStatus {
         ACTIVE, INACTIVE, PENDING_VERIFICATION
     }

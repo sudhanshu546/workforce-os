@@ -13,6 +13,7 @@ import { saveTasksOffline, getTasksOffline } from '../services/offline';
 import { ChatModal } from '../components/ChatModal';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { EXPENSE_CATEGORIES } from '../utils/constants';
+import { startLiveTracking, stopLiveTracking } from '../services/location';
 
 const Tasks: React.FC = () => {
     const [tasks, setTasks] = useState<any[]>([]);
@@ -29,6 +30,7 @@ const Tasks: React.FC = () => {
     const [materialQty, setMaterialQty] = useState(0);
     const [evidenceNote, setEvidenceNote] = useState('');
     const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+    const [evidencePreview, setEvidencePreview] = useState<string | null>(null);
     // ... existing states ...
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [currentChatId, setCurrentChatId] = useState('');
@@ -126,6 +128,17 @@ const Tasks: React.FC = () => {
         }
     }, [workerId, page]);
 
+    useEffect(() => {
+        // Start live tracking if any task is IN_PROGRESS
+        const hasActiveTask = tasks.some(t => t.status === 'IN_PROGRESS');
+        if (hasActiveTask && workerId) {
+            startLiveTracking(workerId);
+        } else {
+            stopLiveTracking();
+        }
+        return () => stopLiveTracking();
+    }, [tasks, workerId]);
+
     const handleAddMaterial = async () => {
         if (!selectedMaterial) return;
         try {
@@ -206,14 +219,12 @@ const Tasks: React.FC = () => {
 
     const updateStatus = async (taskId: number, action: 'start' | 'submit-verification') => {
         setError(null);
-        console.log(`Update status triggered: ${action} for task ${taskId}`);
         
         if (action === 'start' && !isClockedIn) {
             setError('Operational requirement: You must clock in for your shift before starting any job.');
             return;
         }
 
-        // Mandatory Evidence Check for Submission
         if (action === 'submit-verification' && (!selectedTask.evidence || selectedTask.evidence.length === 0)) {
             setError('Industry Standard: At least one photo upload is mandatory to finalize this job.');
             return;
@@ -222,13 +233,20 @@ const Tasks: React.FC = () => {
         const proceedWithUpdate = async (lat?: number, lon?: number) => {
             try {
                 const locationData = { latitude: lat, longitude: lon };
-                console.log("Calling API to update status...");
                 await api.patch(`/work-orders/${taskId}/${action}`, locationData);
-                console.log("API call successful.");
-                fetchTasks(page);
-                if (action === 'submit-verification') setIsDetailModalOpen(false);
+                
+                // Refresh data FIRST, then update the selected task in the modal
+                const updatedTasks: any = await api.get(`/work-orders/worker/${workerId}?page=${page}&size=10`);
+                setTasks(updatedTasks.content || []);
+                
+                const refreshedTask = updatedTasks.content.find((t: any) => t.id === taskId);
+                if (refreshedTask) {
+                    setSelectedTask(refreshedTask);
+                } else {
+                    // Task no longer in list (e.g. status changed), close modal
+                    setIsDetailModalOpen(false);
+                }
             } catch (err: any) {
-                console.error("API call failed:", err);
                 setError(err.message || `Technical error: Failed to ${action} task.`);
             }
         };
@@ -236,10 +254,7 @@ const Tasks: React.FC = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => proceedWithUpdate(pos.coords.latitude, pos.coords.longitude),
-                (err) => {
-                    console.error("Geo fetch failed, proceeding anyway", err);
-                    proceedWithUpdate();
-                }
+                (err) => proceedWithUpdate()
             );
         } else {
             proceedWithUpdate();
@@ -448,9 +463,14 @@ const Tasks: React.FC = () => {
                                         {selectedTask.status !== 'COMPLETED' && (
                                             <label className="upload-placeholder-standard">
                                                 <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileSelect} />
-                                                <Camera size={28} />
-                                                <span>Capture Photo</span>
-                                            </label>
+                                                {evidencePreview ? (
+                                                    <img src={evidencePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <>
+                                                        <Camera size={28} />
+                                                        <span>Capture Photo</span>
+                                                    </>
+                                                )}                                            </label>
                                         )}
                                     </div>
                                     {selectedTask.status !== 'COMPLETED' && (

@@ -62,6 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <div className="sidebar-section-title">Finance & Payroll</div>
             <Link to="/invoices" className={`nav-item ${isActive('/invoices') ? 'active' : ''}`} onClick={onClose}><Receipt size={18} /> <span>Billing / Invoices</span></Link>
             <Link to="/finance/expenses" className={`nav-item ${isActive('/finance/expenses') ? 'active' : ''}`} onClick={onClose}><IndianRupee size={18} /> <span>Expense Claims</span></Link>
+            <Link to="/finance/payroll" className={`nav-item ${isActive('/finance/payroll') ? 'active' : ''}`} onClick={onClose}><LogOut size={18} style={{ transform: 'rotate(90deg)' }} /> <span>Staff Payroll</span></Link>
             <Link to="/attendance" className={`nav-item ${isActive('/attendance') ? 'active' : ''}`} onClick={onClose}><Clock size={18} /> <span>Staff Attendance</span></Link>
           </>
         )}

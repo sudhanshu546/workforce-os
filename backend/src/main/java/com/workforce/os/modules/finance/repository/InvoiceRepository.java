@@ -17,7 +17,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     @Query("SELECT DISTINCT i FROM Invoice i " +
            "LEFT JOIN FETCH i.items " +
-           "WHERE i.tenantId = :tenantId")
+           "WHERE i.tenantId = :tenantId ORDER BY i.createdAt DESC")
     List<Invoice> findAllByTenantId(@Param("tenantId") String tenantId);
     
     Optional<Invoice> findByWorkOrderId(Long workOrderId);
@@ -26,7 +26,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     @Query("SELECT DISTINCT i FROM Invoice i " +
            "LEFT JOIN FETCH i.items " +
            "JOIN i.workOrder wo " +
-           "WHERE wo.customer.id = :customerId")
+           "WHERE wo.customer.id = :customerId ORDER BY i.createdAt DESC")
     List<Invoice> findByCustomerId(@Param("customerId") Long customerId);
     
     @Query("SELECT SUM(i.total) FROM Invoice i WHERE i.tenantId = :tenantId AND i.status = 'PAID'")

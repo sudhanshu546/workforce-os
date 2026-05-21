@@ -88,6 +88,13 @@ public class WorkerController {
         return ResponseEntity.ok(ApiResponse.success(null, "Skill removed successfully"));
     }
 
+    @PostMapping("/{id}/location")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
+    public ResponseEntity<ApiResponse<Void>> updateLocation(@PathVariable Long id, @RequestBody com.workforce.os.modules.workforce.dto.LocationUpdateDTO request) {
+        workforceService.updateWorkerLocation(id, request.getLatitude(), request.getLongitude(), request.getStatus());
+        return ResponseEntity.ok(ApiResponse.success(null, "Location updated successfully"));
+    }
+
     @Data
     public static class AddSkillRequest {
         private String skillName;

@@ -37,6 +37,23 @@ public class WorkforceService extends BaseService {
     private final BranchRepository branchRepository;
     private final PasswordEncoder passwordEncoder;
     private final WorkerMapper workerMapper;
+    private final com.workforce.os.modules.workforce.repository.WorkerLocationRepository workerLocationRepository;
+
+    @Transactional
+    public void updateWorkerLocation(Long workerId, Double lat, Double lon, String status) {
+        WorkerProfile worker = workerProfileRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException(WORKER_NOT_FOUND));
+
+        com.workforce.os.modules.workforce.domain.WorkerLocation location = com.workforce.os.modules.workforce.domain.WorkerLocation.builder()
+                .worker(worker)
+                .latitude(lat)
+                .longitude(lon)
+                .status(status != null ? status : "ACTIVE")
+                .timestamp(java.time.LocalDateTime.now())
+                .build();
+        // tenantId is set by listener
+        workerLocationRepository.save(location);
+    }
 
     @Cacheable(value = "workers", key = "T(com.workforce.os.common.context.TenantContext).getCurrentTenant() + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<WorkerProfileDTO> getWorkers(Pageable pageable) {

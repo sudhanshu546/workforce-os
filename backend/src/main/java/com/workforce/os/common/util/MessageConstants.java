@@ -58,11 +58,16 @@ public class MessageConstants {
     public static final String RESOURCE_NOT_FOUND = "Resource not found";
     public static final String ORGANIZATION_NOT_FOUND = "Organization not found";
     public static final String SERVICE_NOT_FOUND = "Service not found";
+    public static final String WORK_ORDER_NOT_FOUND = "Work Order not found";
     public static final String WORKER_NOT_FOUND = "Worker not found";
     public static final String WORKER_ROLE_NOT_FOUND = "Default role WORKER not found";
     public static final String WORKER_PROFILE_NOT_FOUND = "Worker profile not found";
     public static final String CUSTOMER_NOT_FOUND = "Customer not found";
     public static final String CUSTOMER_PROFILE_NOT_FOUND = "Customer profile not found";
+    public static final String TRACKING_NOT_FOUND = "Tracking session not found or work order does not exist";
+    public static final String TRACKING_UNAVAILABLE = "Technician is not currently sharing their location";
+    public static final String INVALID_ACTION = "This action is not allowed for the current state of the order";
+    public static final String ACCESS_DENIED = "You do not have permission to access this resource";
 
     // Notifications
     public static final String PUSH_NEW_JOB_TITLE = "New Job Assigned!";
@@ -71,6 +76,9 @@ public class MessageConstants {
     public static final String PUSH_JOB_VERIFIED_BODY = "Customer has verified your work for #WO-%d";
     public static final String PUSH_LOW_STOCK_TITLE = "Low Stock Alert!";
     public static final String PUSH_LOW_STOCK_BODY = "Material %s is running low! Current stock: %s";
+    public static final String NOTIFICATION_TRACKING_TITLE = "Technician Assigned";
+    public static final String NOTIFICATION_TRACKING_BODY_ASSIGNED = "Technician %s has been assigned to your job. Track arrival here: %s";
+    public static final String NOTIFICATION_TRACKING_BODY_STARTED = "Your technician %s is on the way! Track them here: %s";
     
     // UI Routes
     public static final String ROUTE_TASKS = "/tasks";

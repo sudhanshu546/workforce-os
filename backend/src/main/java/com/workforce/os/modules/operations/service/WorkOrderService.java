@@ -1,79 +1,117 @@
 package com.workforce.os.modules.operations.service;
 
+import com.workforce.os.common.context.TenantContext;
+import com.workforce.os.common.exception.BusinessException;
+import com.workforce.os.common.exception.ResourceNotFoundException;
 import com.workforce.os.modules.customer.repository.CustomerAddressRepository;
 import com.workforce.os.modules.inventory.domain.Material;
 import com.workforce.os.modules.inventory.repository.MaterialRepository;
 import com.workforce.os.modules.operations.domain.*;
-import com.workforce.os.common.context.TenantContext;
+import com.workforce.os.modules.operations.dto.LiveOpsMarker;
 import com.workforce.os.modules.operations.repository.*;
 import com.workforce.os.modules.sales.domain.Quotation;
 import com.workforce.os.modules.workforce.domain.WorkerProfile;
+import com.workforce.os.modules.workforce.repository.WorkerLocationRepository;
 import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
+import com.workforce.os.modules.attendance.service.AttendanceService;
+import com.workforce.os.modules.finance.service.FinanceService;
+import com.workforce.os.modules.notification.service.NotificationService;
+import com.workforce.os.modules.organization.repository.OrganizationRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.workforce.os.modules.operations.domain.WorkOrder.WorkOrderStatus.AWAITING_VERIFICATION;
 import static com.workforce.os.common.util.MessageConstants.*;
-
-import com.workforce.os.modules.operations.dto.LiveOpsMarker;
-import java.time.format.DateTimeFormatter;
-import lombok.extern.slf4j.Slf4j;
+import static com.workforce.os.modules.operations.domain.WorkOrder.WorkOrderStatus.AWAITING_VERIFICATION;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class WorkOrderService {
-    // ... rest of fields ...
+
+    private final WorkOrderRepository workOrderRepository;
+    private final WorkOrderTaskRepository workOrderTaskRepository;
+    private final WorkOrderEvidenceRepository workOrderEvidenceRepository;
+    private final WorkOrderAuditRepository workOrderAuditRepository;
+    private final WorkerProfileRepository workerProfileRepository;
+    private final WorkerLocationRepository workerLocationRepository;
+    private final AttendanceService attendanceService;
+    private final FinanceService financeService;
+    private final NotificationService notificationService;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final RabbitTemplate rabbitTemplate;
+    private final MaterialRepository materialRepository;
+    private final WorkOrderMaterialRepository workOrderMaterialRepository;
+    private final CustomerAddressRepository addressRepository;
+    private final OrganizationRepository organizationRepository;
 
     @Transactional(readOnly = true)
     public List<LiveOpsMarker> getLiveOpsMarkers() {
         String tenantId = TenantContext.getCurrentTenant();
-        // Use a repository method with JOIN FETCH to initialize entities within the transaction
-        List<WorkOrderAudit> latestAudits = workOrderAuditRepository.findLatestLocationsByTenantWithDetails(tenantId);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        return latestAudits.stream().map(audit -> {
-            WorkOrder wo = audit.getWorkOrder();
+        List<WorkOrder> activeOrders = workOrderRepository.findByTenantIdAndStatus(tenantId, WorkOrder.WorkOrderStatus.IN_PROGRESS);
+
+        return activeOrders.stream().map(wo -> {
+            Double lat = null;
+            Double lon = null;
+            String lastUpdated = "N/A";
+
+            var liveLocation = workerLocationRepository.findLatestByWorkerIdAndTenantId(wo.getAssignedWorker().getId(), tenantId);
+            if (liveLocation.isPresent() && liveLocation.get().getTimestamp().isAfter(LocalDateTime.now().minusMinutes(10))) {
+                lat = liveLocation.get().getLatitude();
+                lon = liveLocation.get().getLongitude();
+                lastUpdated = liveLocation.get().getTimestamp().format(formatter);
+            } else {
+                var audit = workOrderAuditRepository.findByWorkOrderIdOrderByTimestampDesc(wo.getId()).stream()
+                    .filter(a -> a.getLatitude() != null)
+                    .findFirst();
+                if (audit.isPresent()) {
+                    lat = audit.get().getLatitude();
+                    lon = audit.get().getLongitude();
+                    lastUpdated = audit.get().getTimestamp().format(formatter);
+                }
+            }
+
+            if (lat == null) return null;
+
             return LiveOpsMarker.builder()
                 .workOrderId(wo.getId())
                 .customerName(wo.getCustomer() != null ? wo.getCustomer().getName() : "Unknown")
                 .workerName(wo.getAssignedWorker() != null ? 
                            wo.getAssignedWorker().getUser().getName() : "Unassigned")
                 .status(wo.getStatus().name())
-                .latitude(audit.getLatitude())
-                .longitude(audit.getLongitude())
-                .lastUpdated(audit.getTimestamp().format(formatter))
+                .latitude(lat)
+                .longitude(lon)
+                .lastUpdated(lastUpdated)
                 .build();
         })
+        .filter(java.util.Objects::nonNull)
         .collect(Collectors.toList());
     }
-    private final WorkOrderRepository workOrderRepository;
-    private final WorkOrderTaskRepository workOrderTaskRepository;
-    private final WorkOrderEvidenceRepository workOrderEvidenceRepository;
-    private final WorkOrderAuditRepository workOrderAuditRepository;
-    private final WorkerProfileRepository workerProfileRepository;
-    private final com.workforce.os.modules.attendance.service.AttendanceService attendanceService;
-    private final com.workforce.os.modules.finance.service.FinanceService financeService;
-    private final com.workforce.os.modules.notification.service.NotificationService notificationService;
-    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
-    private final org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate;
 
     @Transactional
     public WorkOrder createWorkOrderFromQuotation(Quotation quotation) {
         WorkOrder workOrder = new WorkOrder();
         workOrder.setQuotation(quotation);
         workOrder.setCustomer(quotation.getLead().getCustomer());
-        workOrder.setScheduledDate(LocalDate.now().plusDays(1)); 
+        
+        addressRepository.findByCustomerIdAndIsDefaultTrue(quotation.getLead().getCustomer().getId())
+            .ifPresent(workOrder::setServiceAddress);
+
+        workOrder.setScheduledDate(LocalDate.now().plusDays(1));
         workOrder.setStatus(WorkOrder.WorkOrderStatus.PENDING_ASSIGNMENT);
         workOrder.setTenantId(quotation.getTenantId());
 
@@ -92,27 +130,33 @@ public class WorkOrderService {
 
     @Transactional
     public WorkOrder assignWorker(Long workOrderId, Long workerId) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId).orElseThrow();
-        WorkerProfile worker = workerProfileRepository.findById(workerId).orElseThrow();
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+            .orElseThrow(() -> new ResourceNotFoundException(WORK_ORDER_NOT_FOUND));
+        WorkerProfile worker = workerProfileRepository.findById(workerId)
+            .orElseThrow(() -> new ResourceNotFoundException(WORKER_NOT_FOUND));
+        
         String fromStatus = workOrder.getStatus().name();
         workOrder.setAssignedWorker(worker);
         workOrder.setStatus(WorkOrder.WorkOrderStatus.ASSIGNED);
+        
         WorkOrder saved = workOrderRepository.save(workOrder);
         createAudit(saved, fromStatus, saved.getStatus().name(), null, null, AUDIT_BY_ADMIN, "Assigned to worker: " + worker.getUser().getName());
         
         notificationService.notifyNewJob(saved);
+        notificationService.sendTrackingLink(saved);
+        
         return saved;
     }
 
     @Transactional
     public WorkOrder startWorkOrder(Long workOrderId, Double lat, Double lon) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId).orElseThrow();
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+            .orElseThrow(() -> new ResourceNotFoundException(WORK_ORDER_NOT_FOUND));
 
         if (!attendanceService.isWorkerClockedIn(workOrder.getAssignedWorker().getId())) {
-            throw new RuntimeException(CLOCK_IN_REQUIRED);
+            throw new BusinessException(CLOCK_IN_REQUIRED);
         }
 
-        // Geofencing Check (500m radius)
         verifyLocation(workOrder, lat, lon);
 
         String fromStatus = workOrder.getStatus().name();
@@ -124,8 +168,12 @@ public class WorkOrderService {
 
         WorkOrder saved = workOrderRepository.save(workOrder);
         createAudit(saved, fromStatus, saved.getStatus().name(), lat, lon, AUDIT_BY_WORKER, "Job started on-site");
+        
+        notificationService.sendTrackingLink(saved);
+        
         return saved;
     }
+
 
     @Transactional
     public WorkOrder submitForVerification(Long workOrderId, Double lat, Double lon) {
@@ -295,15 +343,6 @@ public class WorkOrderService {
     public WorkOrderRepository getWorkOrderRepository() {
         return workOrderRepository;
     }
-
-    @Autowired
-    private MaterialRepository materialRepository;
-    @Autowired
-    private WorkOrderMaterialRepository workOrderMaterialRepository;
-    @Autowired
-    private CustomerAddressRepository addressRepository;
-    @Autowired
-    private com.workforce.os.modules.organization.repository.OrganizationRepository organizationRepository;
 
     @Transactional
     public void addMaterialUsage(Long workOrderId, Long materialId, Double quantity) {

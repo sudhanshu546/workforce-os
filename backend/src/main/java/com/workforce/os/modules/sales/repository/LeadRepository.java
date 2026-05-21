@@ -12,15 +12,15 @@ import java.util.List;
 
 @Repository
 public interface LeadRepository extends JpaRepository<Lead, Long> {
-    List<Lead> findAllByTenantId(String tenantId);
+    List<Lead> findAllByTenantIdOrderByCreatedAtDesc(String tenantId);
     
     @Query("SELECT l FROM Lead l " +
            "LEFT JOIN FETCH l.customer " +
            "LEFT JOIN FETCH l.organization " +
            "LEFT JOIN FETCH l.requestedService " +
-           "WHERE l.tenantId = :tenantId")
+           "WHERE l.tenantId = :tenantId ORDER BY l.createdAt DESC")
     Page<Lead> findByTenantId(@Param("tenantId") String tenantId, Pageable pageable);
     
-    List<Lead> findByCustomerId(Long customerId);
+    List<Lead> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
     long countByTenantId(String tenantId);
 }

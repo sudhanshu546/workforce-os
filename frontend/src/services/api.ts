@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { STORAGE_KEYS, ERROR_MESSAGES } from '../utils/constants';
+import { queueAction } from './offline';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -40,6 +41,23 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+
+    // Handle Offline State: Queue POST/PATCH/DELETE requests if network is down
+    if (!navigator.onLine || error.message === 'Network Error') {
+        const method = originalRequest.method?.toUpperCase();
+        if (['POST', 'PATCH', 'DELETE'].includes(method || '')) {
+            try {
+                await queueAction(originalRequest.url || '', originalRequest.data, method);
+                if ((window as any).showToast) {
+                    (window as any).showToast('Offline: Your action has been saved and will sync when you are back online.', 'info');
+                }
+                // Return a "fake" successful response so the UI doesn't crash/show error
+                return Promise.resolve({ success: true, message: 'Queued' });
+            } catch (queueErr) {
+                console.error('Failed to queue offline action', queueErr);
+            }
+        }
+    }
     
     // Handle Token Expiration
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -77,17 +95,29 @@ api.interceptors.response.use(
 
     // Global Error Feedback
     const message = error.response?.data?.message || ERROR_MESSAGES.GENERIC;
+    const details = error.response?.data?.details;
     
     // Only show toast for non-401 errors (401 is handled by redirect/refresh)
     if (error.response?.status !== 401) {
       if ((window as any).showToast) {
-        (window as any).showToast(message, 'error');
+        // If there are validation details, show them specifically
+        if (details && typeof details === 'object') {
+          const firstError = Object.values(details)[0];
+          (window as any).showToast(`${message}: ${firstError}`, 'error');
+        } else {
+          (window as any).showToast(message, 'error');
+        }
       }
     }
     
-    console.error('[API Error]', message);
+    console.error('[API Error]', { message, status: error.response?.status, details });
     
-    return Promise.reject(error);
+    return Promise.reject({
+        message,
+        status: error.response?.status,
+        details,
+        originalError: error
+    });
   }
 );
 

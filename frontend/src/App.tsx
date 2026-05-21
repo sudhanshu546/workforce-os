@@ -22,6 +22,8 @@ import CustomerOrdersPage from './pages/CustomerOrdersPage';
 import OrderVerification from './pages/OrderVerification';
 import LiveOpsMap from './pages/LiveOpsMap';
 import ExpensesPage from './pages/ExpensesPage';
+import PayrollPage from './pages/PayrollPage';
+import PublicTrackingPage from './pages/PublicTrackingPage';
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/track/:id" element={<PublicTrackingPage />} />
+        <Route path="/tracking/:id" element={<PublicTrackingPage />} />
         
         {/* Customer Auth Routes */}
         <Route path="/customer/login" element={<CustomerLoginPage />} />
@@ -39,6 +43,7 @@ function App() {
         <Route path="/live-ops" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><LiveOpsMap /></PrivateRoute>} />
         <Route path="/invoices" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><InvoicesPage /></PrivateRoute>} />
         <Route path="/finance/expenses" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><ExpensesPage /></PrivateRoute>} />
+        <Route path="/finance/payroll" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><PayrollPage /></PrivateRoute>} />
         <Route path="/analytics" element={<PrivateRoute roles={['OWNER']}><AnalyticsPage /></PrivateRoute>} />
         <Route path="/calendar" element={<PrivateRoute roles={['OWNER']}><SchedulingCalendar /></PrivateRoute>} />
         

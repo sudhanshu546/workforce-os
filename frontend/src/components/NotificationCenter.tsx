@@ -12,29 +12,43 @@ export const NotificationCenter: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const user = useSelector((state: any) => state.auth.user);
+    const customerId = useSelector((state: any) => state.auth.customerId);
     const navigate = useNavigate();
 
     useEffect(() => {
         fetchNotifications();
         fetchUnreadCount();
 
-        if (user?.id) {
+        const userId = user?.id;
+
+        if (userId || customerId) {
             const socket = new SockJS(import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws-workforce');
             const stompClient = Stomp.over(socket);
             stompClient.debug = () => {}; // Disable logging
 
             stompClient.connect({}, () => {
-                stompClient.subscribe(`/topic/notifications/${user.id}`, () => {
-                    fetchNotifications();
-                    fetchUnreadCount();
-                });
+                // Subscribe to User notifications
+                if (userId) {
+                    stompClient.subscribe(`/topic/notifications/${userId}`, () => {
+                        fetchNotifications();
+                        fetchUnreadCount();
+                    });
+                }
+                
+                // Subscribe to Customer notifications
+                if (customerId) {
+                    stompClient.subscribe(`/topic/customer/notifications/${customerId}`, () => {
+                        fetchNotifications();
+                        fetchUnreadCount();
+                    });
+                }
             });
 
             return () => {
                 if (stompClient.connected) stompClient.disconnect(() => {});
             };
         }
-    }, [user?.id]);
+    }, [user?.id, customerId]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

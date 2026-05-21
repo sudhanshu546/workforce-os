@@ -2,6 +2,7 @@ package com.workforce.os.modules.operations.domain;
 
 import com.workforce.os.common.domain.BaseEntity;
 import com.workforce.os.modules.customer.domain.Customer;
+import com.workforce.os.modules.customer.domain.CustomerAddress;
 import com.workforce.os.modules.sales.domain.Quotation;
 import com.workforce.os.modules.workforce.domain.WorkerProfile;
 import jakarta.persistence.*;
@@ -11,7 +12,9 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -31,17 +34,21 @@ public class WorkOrder extends BaseEntity {
     private Customer customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_address_id")
+    private CustomerAddress serviceAddress;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_worker_id")
     private WorkerProfile assignedWorker;
 
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<WorkOrderTask> tasks = new java.util.LinkedHashSet<>();
+    private Set<WorkOrderTask> tasks = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<WorkOrderEvidence> evidence = new java.util.LinkedHashSet<>();
+    private Set<WorkOrderEvidence> evidence = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.Set<WorkOrderMaterial> materials = new java.util.LinkedHashSet<>();
+    private Set<WorkOrderMaterial> materials = new LinkedHashSet<>();
 
     private LocalDate scheduledDate;
     private LocalTime startTime;

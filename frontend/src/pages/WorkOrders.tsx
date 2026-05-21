@@ -167,6 +167,17 @@ const WorkOrders: React.FC = () => {
                         {wo.status === 'PENDING_ASSIGNMENT' && (
                             <button onClick={() => { setSelectedWO(wo); setIsAssignModalOpen(true); }} className="btn btn-primary" style={{ width: '100%' }}><UserPlus size={18} /> Assign Dispatch</button>
                         )}
+                        {wo.status === 'IN_PROGRESS' && (
+                            <button 
+                                onClick={() => {
+                                    const trackingUrl = `${window.location.origin}/track/${wo.id}`;
+                                    navigator.clipboard.writeText(trackingUrl);
+                                    if ((window as any).showToast) (window as any).showToast('Tracking link copied to clipboard!', 'success');
+                                }} 
+                                className="btn btn-primary" style={{ width: '100%' }}>
+                                <ArrowUpRight size={18} /> Share Tracking Link
+                            </button>
+                        )}
                         <button className="btn btn-secondary" style={{ width: '100%' }}><Eye size={18} /> Full Work Audit</button>
                     </div>
                 </div>

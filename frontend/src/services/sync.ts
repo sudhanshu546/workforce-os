@@ -7,15 +7,31 @@ export const syncOfflineData = async () => {
     
     if (pendingActions.length === 0) return;
 
+    if ((window as any).showToast) {
+        (window as any).showToast(`Reconnected! Syncing ${pendingActions.length} pending actions...`, 'info');
+    }
+
+    let successCount = 0;
     for (const action of pendingActions) {
         try {
-            await api.post(action.action, action.payload);
+            const method = action.method?.toLowerCase();
+            if (method === 'post') await api.post(action.url, action.payload);
+            else if (method === 'patch') await api.patch(action.url, action.payload);
+            else if (method === 'delete') await api.delete(action.url, { data: action.payload });
+            successCount++;
         } catch (err) {
             console.error('Failed to sync action:', action, err);
-            // Re-queue or log failure
         }
     }
-    await clearPendingActions();
+
+    if (successCount > 0) {
+        await clearPendingActions();
+        if ((window as any).showToast) {
+            (window as any).showToast(`Sync complete! ${successCount} actions synchronized.`, 'success');
+        }
+        // Reload page or trigger global refresh if needed
+        window.location.reload(); 
+    }
 };
 
 export const useNetworkStatus = () => {

@@ -27,9 +27,9 @@ export const getTasksOffline = async () => {
     return await db.getAll('tasks');
 };
 
-export const queueAction = async (action: string, payload: any) => {
+export const queueAction = async (url: string, payload: any, method: string = 'POST') => {
     const db = await initDB();
-    await db.add('pending_actions', { action, payload, timestamp: Date.now() });
+    await db.add('pending_actions', { url, payload, method, timestamp: Date.now() });
 };
 
 export const getPendingActions = async () => {
