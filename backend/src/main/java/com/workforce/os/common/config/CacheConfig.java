@@ -1,10 +1,14 @@
 package com.workforce.os.common.config;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,20 +19,52 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
 
+import org.springframework.cache.annotation.CachingConfigurerSupport;
+import org.springframework.cache.interceptor.CacheErrorHandler;
+
 @Configuration
 @EnableCaching
-public class CacheConfig {
+public class CacheConfig extends CachingConfigurerSupport {
+
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new CustomCacheErrorHandler();
+    }
+
 
     @Bean
     public RedisCacheConfiguration cacheConfiguration() {
-        // Create a dedicated ObjectMapper for Redis to handle type information correctly
         ObjectMapper objectMapper = new ObjectMapper();
+        
+        // Standard modules for Java 8 types and Parameter names
         objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.registerModule(new Jdk8Module());
+        objectMapper.registerModule(new ParameterNamesModule());
+        
+        // Use ANY visibility to ensure Jackson can access internal Spring Data fields if needed
+        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        objectMapper.findAndRegisterModules();
 
-        // Add support for Spring Data PageImpl
-        // Note: In newer Spring versions, GenericJackson2JsonRedisSerializer handles much of this,
-        // but explicit typing is still needed for generic collections inside Page.
+        // Register Spring Data Mixins (CRITICAL for handling 'Orders must not be null')
+        // We use @JsonTypeInfo(use = JsonTypeInfo.Id.NONE) inside these Mixins to disable default typing for them.
+        objectMapper.addMixIn(PageImpl.class, PageImplMixin.class);
+        objectMapper.addMixIn(org.springframework.data.domain.Page.class, PageImplMixin.class);
+        objectMapper.addMixIn(org.springframework.data.domain.PageRequest.class, PageRequestMixin.class);
+        objectMapper.addMixIn(org.springframework.data.domain.Pageable.class, PageRequestMixin.class);
+        objectMapper.addMixIn(org.springframework.data.domain.Sort.class, SortMixin.class);
+
+        // Try to load official modules as well for additional compatibility via reflection
+        try {
+            Class<?> pageModuleClass = Class.forName("org.springframework.data.web.config.SpringDataJacksonConfiguration$PageModule");
+            objectMapper.registerModule((com.fasterxml.jackson.databind.Module) pageModuleClass.getDeclaredConstructor().newInstance());
+            Class<?> sortModuleClass = Class.forName("org.springframework.data.web.config.SpringDataJacksonConfiguration$SortModule");
+            objectMapper.registerModule((com.fasterxml.jackson.databind.Module) sortModuleClass.getDeclaredConstructor().newInstance());
+        } catch (Exception e) {
+            // Logged as debug or ignored
+        }
+        
+        // Default typing is required for Redis to know which DTO class to deserialize into
         objectMapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,

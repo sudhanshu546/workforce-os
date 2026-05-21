@@ -47,17 +47,12 @@ const OrderVerification: React.FC = () => {
 
     const fetchInvoice = async (retries = 3) => {
         try {
-            console.log(`Fetching invoices for customerId: ${order.customer.id}...`);
             const res: any = await api.get(`/finance/invoices/customer/${order.customer.id}`);
-            console.log('Invoices retrieved:', res);
             const inv = res.find((i: any) => i.workOrderId === Number(orderId));
-            console.log('Filtered invoice:', inv);
             if (inv) {
                 setInvoice(inv);
                 setIsGeneratingInvoice(false);
             } else if (retries > 0 && (order?.status === 'AWAITING_PAYMENT' || order?.status === 'COMPLETED')) {
-                // Retry after 2 seconds if not found but status implies it should exist
-                console.log(`Invoice not found, retrying... (${retries} attempts left)`);
                 setTimeout(() => fetchInvoice(retries - 1), 2000);
             } else {
                 console.warn('Invoice not found after all retries');

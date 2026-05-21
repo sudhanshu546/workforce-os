@@ -2,16 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Package, Clock, CheckCircle2, ChevronRight, 
-    Search, Filter, Loader2, MapPin
+    Search, Filter, Loader2, MapPin, FileText, Receipt, IndianRupee, CheckCircle, Activity
 } from 'lucide-react';
 import api from '../services/api';
 import { Layout } from '../components/Layout';
+import { ExpandableRowTable } from '../components/ExpandableRowTable';
+import Modal from '../components/Modal';
 
 const CustomerOrdersPage: React.FC = () => {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('ALL');
     const navigate = useNavigate();
+
+    // Re-use logic for modals from Dashboard if needed, but for now focusing on Table refactor
+    // Since this page mostly navigates to verification/payment pages, we can keep the navigation logic
 
     useEffect(() => {
         fetchOrders();
@@ -70,83 +75,99 @@ const CustomerOrdersPage: React.FC = () => {
                     </div>
                 </header>
 
-                <div style={{ display: 'grid', gap: '20px' }}>
-                    {filteredOrders.map(order => {
-                        const style = getStatusStyle(order.status);
-                        return (
-                            <div 
-                                key={order.id} 
-                                className="card-premium" 
-                                style={{ 
-                                    padding: '32px', 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between', 
-                                    alignItems: 'center',
-                                    cursor: 'pointer'
-                                }}
-                                onClick={() => navigate(`/customer/orders/${order.id}/verify`)}
-                            >
-                                <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
-                                    <div style={{ 
-                                        width: '64px', 
-                                        height: '64px', 
-                                        borderRadius: '18px', 
-                                        background: 'var(--primary-light)', 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'center',
-                                        color: 'var(--primary)',
-                                        flexShrink: 0
-                                    }}>
-                                        <Package size={32} />
-                                    </div>
-                                    <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                                            <span style={{ fontWeight: '900', fontSize: '20px', color: 'var(--text-h)' }}>#WO-{order.id + 1000}</span>
-                                            <span className={`badge ${style.badge}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                {style.icon} {order.status.replace('_', ' ')}
-                                            </span>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '24px' }}>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}><Clock size={16} /> {order.scheduledDate}</span>
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}><MapPin size={16} /> {order.customer?.address || 'Site mapping in progress'}</span>
-                                        </div>
+                <ExpandableRowTable 
+                    data={filteredOrders}
+                    columns={[
+                        { 
+                            header: 'Work Order', 
+                            accessor: (order: any) => (
+                                <div>
+                                    <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-h)' }}>#WO-{order.id + 1000}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Deployment ID: {order.id}</div>
+                                </div>
+                            ) 
+                        },
+                        { 
+                            header: 'Status', 
+                            accessor: (order: any) => {
+                                const style = getStatusStyle(order.status);
+                                return (
+                                    <span className={`badge ${style.badge}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                                        {style.icon} {order.status.replace('_', ' ')}
+                                    </span>
+                                );
+                            } 
+                        },
+                        { 
+                            header: 'Schedule', 
+                            accessor: (order: any) => (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-h)' }}>{order.scheduledDate}</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}><Clock size={12} style={{ display: 'inline', marginRight: '4px' }} /> Confirmed</span>
+                                </div>
+                            ) 
+                        },
+                        { 
+                            header: 'Service Address', 
+                            accessor: (order: any) => (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '300px' }}>
+                                    <MapPin size={16} className="text-muted" />
+                                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {order.customer?.address || 'Site mapping in progress'}
+                                    </span>
+                                </div>
+                            ) 
+                        }
+                    ]}
+                    renderExpanded={(order: any) => (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
+                            <div style={{ display: 'flex', gap: '40px' }}>
+                                <div>
+                                    <div className="stat-label">Description</div>
+                                    <div style={{ marginTop: '4px', color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px' }}>
+                                        {order.description || 'Request for AC Repair. Standard service deployment.'}
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                    {order.status === 'AWAITING_VERIFICATION' && (
-                                        <span style={{ 
-                                            background: 'var(--error)', 
-                                            color: 'white', 
-                                            padding: '8px 20px', 
-                                            borderRadius: '12px', 
-                                            fontSize: '13px', 
-                                            fontWeight: '800',
-                                            animation: 'pulse 2s infinite',
-                                            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
-                                        }}>
-                                            Review Deployment
-                                        </span>
-                                    )}
-                                    {order.status === 'AWAITING_PAYMENT' && (
-                                        <button className="btn btn-primary" style={{ padding: '8px 20px' }}>Pay Now</button>
-                                    )}
-                                    <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                                        <ChevronRight size={24} />
+                                <div>
+                                    <div className="stat-label">Technician</div>
+                                    <div style={{ marginTop: '4px', fontWeight: '700' }}>
+                                        {order.assignedWorker?.user?.name || 'Assigning Expert...'}
                                     </div>
                                 </div>
                             </div>
-                        );
-                    })}
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                {order.status === 'AWAITING_VERIFICATION' && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${order.id}/verify`); }} 
+                                        className="btn btn-primary"
+                                        style={{ animation: 'pulse 2s infinite' }}
+                                    >
+                                        <CheckCircle size={16} /> Review Deployment
+                                    </button>
+                                )}
+                                {order.status === 'AWAITING_PAYMENT' && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); /* Payment logic can be added here or navigation */ }} 
+                                        className="btn btn-primary"
+                                    >
+                                        <IndianRupee size={16} /> Pay Now
+                                    </button>
+                                )}
+                                <button onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${order.id}/verify`); }} className="btn btn-secondary">
+                                    Full Details
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                />
 
-                    {filteredOrders.length === 0 && (
+                {filteredOrders.length === 0 && (
                         <div style={{ padding: '100px', textAlign: 'center', background: 'var(--surface-muted)', borderRadius: '24px', border: '1.5px dashed var(--border)' }}>
                             <Package size={64} className="text-muted" strokeWidth={1.5} style={{ marginBottom: '20px', opacity: 0.5 }} />
                             <h3 style={{ fontWeight: '800', fontSize: '20px' }}>Appointment Queue Empty</h3>
                             <p className="text-muted">You don't have any active or past service orders matching this filter.</p>
                         </div>
                     )}
-                </div>
             </div>
             <style>{`
                 @keyframes pulse {

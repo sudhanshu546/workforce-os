@@ -17,8 +17,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // Use IP address as the key for rate limiting
-        String key = request.getRemoteAddr();
+        // Use X-Forwarded-For if present (behind proxy/docker), otherwise remote address
+        String key = request.getHeader("X-Forwarded-For");
+        if (key == null || key.isEmpty()) {
+            key = request.getRemoteAddr();
+        } else {
+            // Take the first IP if multiple are present
+            key = key.split(",")[0].trim();
+        }
+        
         Bucket bucket = rateLimitService.resolveBucket(key);
         
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);

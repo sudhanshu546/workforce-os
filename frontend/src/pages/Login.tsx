@@ -51,24 +51,15 @@ const Login: React.FC = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '12px' }}>
+          <div className="auth-icon-wrapper">
             <HardHat size={32} color="#2563eb" />
           </div>
           <h1>Workforce OS</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Sign in to manage your operations</p>
+          <p className="auth-subtitle">Sign in to manage your operations</p>
         </div>
 
         {error && (
-          <div style={{ 
-            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-            color: 'var(--error)', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            marginBottom: '20px',
-            fontSize: '14px',
-            textAlign: 'center',
-            fontWeight: '500'
-          }}>
+          <div className="auth-error">
             {error}
           </div>
         )}
@@ -76,13 +67,13 @@ const Login: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="email">Email Address</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Mail className="input-icon" size={18} />
               <input
                 type="email"
                 id="email"
                 placeholder="name@company.com"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -93,13 +84,13 @@ const Login: React.FC = () => {
 
           <div className="input-group">
             <label htmlFor="password">Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
               <input
                 type="password"
                 id="password"
                 placeholder="••••••••"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -110,8 +101,7 @@ const Login: React.FC = () => {
 
           <button 
             type="submit" 
-            className="btn btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px' }}
+            className="btn btn-primary btn-block"
             disabled={loading}
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <LogIn size={20} />}
@@ -119,12 +109,12 @@ const Login: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            Are you a Customer? <a href="/customer/login" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>Login Here</a> or <a href="/customer/register" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>Register as Customer</a>
+        <div className="auth-footer">
+          <p>
+            Are you a Customer? <a href="/customer/login">Login Here</a> or <a href="/customer/register">Register as Customer</a>
           </p>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '16px' }}>
-            Don't have an organization account? <a href="/register" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>Register Organization</a>
+          <p className="footer-secondary">
+            Don't have an organization account? <a href="/register">Register Organization</a>
           </p>
         </div>
       </div>

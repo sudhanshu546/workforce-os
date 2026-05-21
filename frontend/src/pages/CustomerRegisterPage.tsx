@@ -71,24 +71,15 @@ const CustomerRegisterPage: React.FC = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(109, 40, 217, 0.1)', borderRadius: '12px' }}> {/* Style for customer */}
+          <div className="auth-icon-wrapper" style={{ background: 'rgba(109, 40, 217, 0.1)' }}>
             <UserPlus size={32} color="#7c3aed" />
           </div>
           <h1>Create Your Account</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Join our platform as a customer</p>
+          <p className="auth-subtitle">Join our platform as a customer</p>
         </div>
 
         {error && (
-          <div style={{ 
-            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-            color: 'var(--error)', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            marginBottom: '20px',
-            fontSize: '14px',
-            textAlign: 'center',
-            fontWeight: '500'
-          }}>
+          <div className="auth-error">
             {error}
           </div>
         )}
@@ -96,12 +87,12 @@ const CustomerRegisterPage: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="input-group">
             <label htmlFor="name">Full Name</label>
-            <div style={{ position: 'relative' }}>
-              <User size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <User className="input-icon" size={18} />
               <input
                 id="name"
                 placeholder="Your Full Name"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 {...register('name')}
                 required
                 disabled={loading}
@@ -112,12 +103,12 @@ const CustomerRegisterPage: React.FC = () => {
 
           <div className="input-group">
             <label htmlFor="email">Email Address</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Mail className="input-icon" size={18} />
               <input
                 id="email"
                 placeholder="your.email@example.com"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 {...register('email')}
                 required
                 disabled={loading}
@@ -128,12 +119,12 @@ const CustomerRegisterPage: React.FC = () => {
 
           <div className="input-group">
             <label htmlFor="phone">Phone Number</label>
-            <div style={{ position: 'relative' }}>
-              <Phone size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Phone className="input-icon" size={18} />
               <input
                 id="phone"
                 placeholder="+1 (555) 123-4567"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 {...register('phone')}
                 required
                 disabled={loading}
@@ -144,13 +135,13 @@ const CustomerRegisterPage: React.FC = () => {
 
           <div className="input-group">
             <label htmlFor="password">Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
               <input
                 type="password"
                 id="password"
                 placeholder="••••••••"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 {...register('password')}
                 required
                 disabled={loading}
@@ -161,13 +152,13 @@ const CustomerRegisterPage: React.FC = () => {
 
           <div className="input-group">
             <label htmlFor="confirmPassword">Confirm Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
               <input
                 type="password"
                 id="confirmPassword"
                 placeholder="••••••••"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 {...register('confirmPassword')}
                 required
                 disabled={loading}
@@ -178,8 +169,7 @@ const CustomerRegisterPage: React.FC = () => {
 
           <button 
             type="submit" 
-            className="btn btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '16px' }}
+            className="btn btn-primary btn-block"
             disabled={loading}
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
@@ -187,9 +177,9 @@ const CustomerRegisterPage: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            Already have an account? <a href="/customer/login" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>Login Here</a>
+        <div className="auth-footer">
+          <p>
+            Already have an account? <a href="/customer/login">Login Here</a>
           </p>
         </div>
       </div>

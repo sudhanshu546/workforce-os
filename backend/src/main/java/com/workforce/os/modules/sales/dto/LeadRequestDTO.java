@@ -20,6 +20,9 @@ public class LeadRequestDTO {
     @NotNull(message = "Service Item ID is required")
     private Long serviceItemId;
 
+    @NotNull(message = "Customer Address ID is required")
+    private Long customerAddressId;
+
     private String description;
     private String priority;
     private String status;

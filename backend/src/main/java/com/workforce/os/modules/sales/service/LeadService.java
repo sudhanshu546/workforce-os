@@ -2,6 +2,7 @@ package com.workforce.os.modules.sales.service;
 
 import com.workforce.os.common.service.BaseService;
 import com.workforce.os.modules.customer.domain.Customer;
+import com.workforce.os.modules.customer.repository.CustomerAddressRepository;
 import com.workforce.os.modules.customer.repository.CustomerRepository;
 import com.workforce.os.modules.finance.repository.InvoiceRepository;
 import com.workforce.os.modules.operations.repository.WorkOrderRepository;
@@ -34,11 +35,13 @@ public class LeadService extends BaseService {
     private final QuotationRepository quotationRepository;
     private final WorkOrderRepository workOrderRepository;
     private final InvoiceRepository invoiceRepository;
+    private final CustomerAddressRepository customerAddressRepository;
 
+    @Transactional(readOnly = true)
     @Cacheable(value = "leads", key = "T(com.workforce.os.common.context.TenantContext).getCurrentTenant() + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<LeadResponseDTO> getLeads(Pageable pageable) {
-        return leadRepository.findByTenantId(getTenantId(), pageable)
-                .map(this::enrichDTO);
+         Page<Lead> leads = leadRepository.findByTenantId(getTenantId(), pageable);
+        return leads.map(this::enrichDTO);
     }
 
     private LeadResponseDTO enrichDTO(Lead lead) {
@@ -60,7 +63,9 @@ public class LeadService extends BaseService {
 
     @Transactional
     @CacheEvict(value = "leads", allEntries = true)
-    public Lead createLead(String customerName, String customerPhone, String customerEmail, Long organizationId, Long serviceItemId, String description, String priority) {
+    public Lead createLead(String customerName, String customerPhone, String customerEmail, 
+                          Long organizationId, Long serviceItemId, Long customerAddressId,
+                          String description, String priority) {
         // Use email for lookup if provided, otherwise fallback to phone, scoped by tenant
         var customer = (customerEmail != null && !customerEmail.isEmpty()) 
             ? customerRepository.findByEmailAndTenantId(customerEmail, getTenantId())
@@ -73,7 +78,6 @@ public class LeadService extends BaseService {
             customer.setPhone(customerPhone);
             customer.setEmail(customerEmail != null && !customerEmail.isEmpty() ? customerEmail : customerPhone + "@workforce-os.com"); 
             customer.setStatus(ACTIVE);
-            // tenantId is automatically set by TenantEntityListener
             customer = customerRepository.save(customer);
         }
 
@@ -89,11 +93,17 @@ public class LeadService extends BaseService {
                     .orElseThrow(() -> new RuntimeException(SERVICE_NOT_FOUND));
             lead.setRequestedService(serviceItem);
         }
+
+        if (customerAddressId != null) {
+            var address = customerAddressRepository.findById(customerAddressId)
+                    .orElseThrow(() -> new RuntimeException("Address not found"));
+            lead.setCustomerAddress(address);
+        }
         
         lead.setDescription(description);
         lead.setPriority(priority != null ? priority : "MEDIUM");
         lead.setStatus(Lead.LeadStatus.NEW);
-        // lead.setTenantId(organization.getTenantId()); // Handled by TenantEntityListener
+        lead.setTenantId(organization.getTenantId());
         
         return leadRepository.save(lead);
     }

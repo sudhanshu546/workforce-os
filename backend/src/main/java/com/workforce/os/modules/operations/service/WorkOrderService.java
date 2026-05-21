@@ -38,20 +38,24 @@ public class WorkOrderService {
     @Transactional(readOnly = true)
     public List<LiveOpsMarker> getLiveOpsMarkers() {
         String tenantId = TenantContext.getCurrentTenant();
-        List<WorkOrderAudit> latestAudits = workOrderAuditRepository.findLatestLocationsByTenant(tenantId);
+        // Use a repository method with JOIN FETCH to initialize entities within the transaction
+        List<WorkOrderAudit> latestAudits = workOrderAuditRepository.findLatestLocationsByTenantWithDetails(tenantId);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        return latestAudits.stream().map(audit -> LiveOpsMarker.builder()
-                .workOrderId(audit.getWorkOrder().getId())
-                .customerName(audit.getWorkOrder().getCustomer().getName())
-                .workerName(audit.getWorkOrder().getAssignedWorker() != null ? 
-                           audit.getWorkOrder().getAssignedWorker().getUser().getName() : "Unassigned")
-                .status(audit.getWorkOrder().getStatus().name())
+        return latestAudits.stream().map(audit -> {
+            WorkOrder wo = audit.getWorkOrder();
+            return LiveOpsMarker.builder()
+                .workOrderId(wo.getId())
+                .customerName(wo.getCustomer() != null ? wo.getCustomer().getName() : "Unknown")
+                .workerName(wo.getAssignedWorker() != null ? 
+                           wo.getAssignedWorker().getUser().getName() : "Unassigned")
+                .status(wo.getStatus().name())
                 .latitude(audit.getLatitude())
                 .longitude(audit.getLongitude())
                 .lastUpdated(audit.getTimestamp().format(formatter))
-                .build())
-                .collect(Collectors.toList());
+                .build();
+        })
+        .collect(Collectors.toList());
     }
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderTaskRepository workOrderTaskRepository;
@@ -258,26 +262,32 @@ public class WorkOrderService {
         return workOrderEvidenceRepository.save(evidence);
     }
 
+    @Transactional(readOnly = true)
     public List<WorkOrderAudit> getAuditHistory(Long workOrderId) {
         return workOrderAuditRepository.findByWorkOrderIdOrderByTimestampDesc(workOrderId);
     }
 
+    @Transactional(readOnly = true)
     public List<WorkOrder> getAllWorkOrders() {
         return workOrderRepository.findAllByTenantIdOrderByCreatedAtDesc(TenantContext.getCurrentTenant());
     }
 
+    @Transactional(readOnly = true)
     public Page<WorkOrder> getAllWorkOrders(Pageable pageable) {
         return workOrderRepository.findByTenantIdOrderByCreatedAtDesc(TenantContext.getCurrentTenant(), pageable);
     }
 
+    @Transactional(readOnly = true)
     public Page<WorkOrder> getWorkerWorkOrders(Long workerId, Pageable pageable) {
         return workOrderRepository.findByAssignedWorkerIdOrderByCreatedAtDesc(workerId, pageable);
     }
 
+    @Transactional(readOnly = true)
     public Page<WorkOrder> getCustomerWorkOrders(Long customerId, Pageable pageable) {
         return workOrderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId, pageable);
     }
 
+    @Transactional(readOnly = true)
     public WorkOrder getWorkOrderById(Long id) {
         return workOrderRepository.findById(id).orElseThrow();
     }

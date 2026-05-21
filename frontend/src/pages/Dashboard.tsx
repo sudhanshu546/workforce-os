@@ -199,7 +199,7 @@ const Dashboard: React.FC = () => {
         const { orderId } = data;
 
         const options = {
-            key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_default',
+            key: import.meta.env.VITE_RAZORPAY_KEY_ID,
             amount: amount * 100,
             currency: 'INR',
             name: 'Workforce OS',
@@ -706,58 +706,104 @@ const Dashboard: React.FC = () => {
             </section>
 
             <section>
-                <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '32px' }}>Service History</h2>
-                <div className="premium-table-container">
-                    <table className="premium-table hide-mobile">
-                    <thead><tr><th>Requested Service</th><th>Provider</th><th>Current Status</th><th>Request Date</th></tr></thead>
-                    <tbody>
-                        {Array.isArray(customerRequests) && customerRequests.map((req) => (
-                        <tr key={req.id}>
-                            <td><div className="text-main" style={{ fontWeight: '750' }}>{req.requestedService?.name || 'General Inquiry'}</div><div className="text-sub">Tracking ID: SR-{req.id+500}</div></td>
-                            <td><div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px', background: '#e0e7ff', color: 'var(--primary)' }}>{req.organization?.businessName?.[0] || 'O'}</div><span style={{ fontWeight: '600' }}>{req.organization?.businessName || 'N/A'}</span></div></td>
-                            <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <span className={`badge ${req.status === 'NEW' ? 'badge-primary' : req.status === 'QUOTED' ? 'badge-warning' : req.status === 'CONVERTED' ? 'badge-success' : 'badge-secondary'}`}>{req.status}</span>
-                                    {req.status === 'QUOTED' && <button onClick={() => handleViewQuote(req.id)} className="btn-text" style={{ color: 'var(--primary)', fontWeight: '700', fontSize: '13px' }}><FileText size={14} /> Review Quote</button>}
-                                    {req.workOrderStatus === 'AWAITING_VERIFICATION' && <button onClick={() => handleVerifyWork(req.workOrderId)} className="btn-text" style={{ color: 'var(--success)', fontWeight: '700', fontSize: '13px' }}><CheckCircle size={14} /> Verify Work</button>}
-                                    {req.status === 'CONVERTED' && req.invoiceId && <button onClick={() => handleViewInvoice(req.invoiceId)} className="btn-text" style={{ color: 'var(--primary)', fontWeight: '700', fontSize: '13px' }}><Receipt size={14} /> View Invoice</button>}
-                                    {req.status === 'CONVERTED' && req.invoiceStatus === 'UNPAID' && <button onClick={() => handlePayInvoice(req.invoiceId, req.invoiceAmount)} className="btn-text" style={{ color: 'var(--success)', fontWeight: '700', fontSize: '13px' }}><IndianRupee size={14} /> Pay Now</button>}
-                                </div>
-                            </td>
-                            <td><span className="text-sub">{new Date(req.createdAt).toLocaleDateString()}</span></td>
-                        </tr>
-                        ))}
-                    </tbody>
-                    </table>
-
-                    {/* Mobile View for Customer History */}
-                    <div className="show-mobile mobile-cards-view">
-                        {Array.isArray(customerRequests) && customerRequests.map((req) => (
-                            <div key={req.id} className="mobile-card">
-                                <div className="mobile-card-header">
-                                    <span style={{ fontWeight: '800' }}>{req.requestedService?.name || 'Inquiry'}</span>
-                                    <span className={`badge ${req.status === 'NEW' ? 'badge-primary' : req.status === 'QUOTED' ? 'badge-warning' : req.status === 'CONVERTED' ? 'badge-success' : 'badge-secondary'}`}>{req.status}</span>
-                                </div>
-                                <div className="mobile-card-body">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div className="avatar" style={{ width: '24px', height: '24px', fontSize: '10px' }}>{req.organization?.businessName[0]}</div>
-                                        <span style={{ fontSize: '14px', fontWeight: '600' }}>{req.organization?.businessName}</span>
-                                    </div>
-                                    <div className="dispatch-info">
-                                        <div className="date-pill"><Calendar size={12} /> {new Date(req.createdAt).toLocaleDateString()}</div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>SR-{req.id+500}</div>
-                                    </div>
-                                </div>
-                                <div className="mobile-card-actions">
-                                    {req.status === 'QUOTED' && <button onClick={() => handleViewQuote(req.id)} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}><FileText size={16} /> Review Quote</button>}
-                                    {req.workOrderStatus === 'AWAITING_VERIFICATION' && <button onClick={() => handleVerifyWork(req.workOrderId)} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}><CheckCircle size={16} /> Verify Work</button>}
-                                    {req.status === 'CONVERTED' && req.invoiceId && <button onClick={() => handleViewInvoice(req.invoiceId)} className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center' }}><Receipt size={16} /> View Invoice</button>}
-                                    {req.status === 'CONVERTED' && req.invoiceStatus === 'UNPAID' && <button onClick={() => handlePayInvoice(req.invoiceId, req.invoiceAmount)} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}><IndianRupee size={16} /> Pay Now</button>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                <div className="card-header-flex" style={{ marginBottom: '32px' }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Activity size={28} className="text-primary" /> Service History
+                    </h2>
+                    <button className="btn btn-secondary" onClick={() => navigate('/customer/orders')}>
+                        View All Records <ChevronRight size={16} />
+                    </button>
                 </div>
+
+                <ExpandableRowTable 
+                    data={customerRequests}
+                    columns={[
+                        { 
+                            header: 'Service Detail', 
+                            accessor: (req: any) => (
+                                <div>
+                                    <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-h)' }}>{req.requestedService?.name || 'Service Inquiry'}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Ref: SR-{req.id+500}</div>
+                                </div>
+                            ) 
+                        },
+                        { 
+                            header: 'Provider', 
+                            accessor: (req: any) => (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div className="avatar" style={{ width: '32px', height: '32px', fontSize: '12px', background: '#e0e7ff', color: 'var(--primary)' }}>
+                                        {req.organization?.businessName?.[0] || 'O'}
+                                    </div>
+                                    <span style={{ fontWeight: '600', fontSize: '14px' }}>{req.organization?.businessName || 'N/A'}</span>
+                                </div>
+                            ) 
+                        },
+                        { 
+                            header: 'Status', 
+                            accessor: (req: any) => (
+                                <span className={`badge ${
+                                    req.status === 'NEW' ? 'badge-primary' : 
+                                    req.status === 'QUOTED' ? 'badge-warning' : 
+                                    req.status === 'CONVERTED' ? 'badge-success' : 
+                                    'badge-secondary'
+                                }`} style={{ fontSize: '11px' }}>
+                                    {req.status}
+                                </span>
+                            ) 
+                        },
+                        { 
+                            header: 'Requested On', 
+                            accessor: (req: any) => (
+                                <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                                    {new Date(req.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </span>
+                            ) 
+                        }
+                    ]}
+                    renderExpanded={(req: any) => (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
+                            <div style={{ display: 'flex', gap: '40px' }}>
+                                <div>
+                                    <div className="stat-label">Description</div>
+                                    <div style={{ marginTop: '4px', color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px' }}>{req.description || 'No additional notes provided.'}</div>
+                                </div>
+                                {req.priority && (
+                                    <div>
+                                        <div className="stat-label">Priority</div>
+                                        <div style={{ marginTop: '4px', fontWeight: '700' }} className={req.priority === 'HIGH' ? 'text-error' : 'text-primary'}>{req.priority}</div>
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                {req.status === 'QUOTED' && (
+                                    <button onClick={(e) => { e.stopPropagation(); handleViewQuote(req.id); }} className="btn btn-primary">
+                                        <FileText size={16} /> Review Quote
+                                    </button>
+                                )}
+                                {req.workOrderStatus === 'AWAITING_VERIFICATION' && (
+                                    <button onClick={(e) => { e.stopPropagation(); handleVerifyWork(req.workOrderId); }} className="btn btn-success">
+                                        <CheckCircle size={16} /> Verify Work
+                                    </button>
+                                )}
+                                {req.status === 'CONVERTED' && req.invoiceId && (
+                                    <>
+                                        <button onClick={(e) => { e.stopPropagation(); handleViewInvoice(req.invoiceId); }} className="btn btn-secondary">
+                                            <Receipt size={16} /> Invoice
+                                        </button>
+                                        {req.invoiceStatus === 'UNPAID' && (
+                                            <button onClick={(e) => { e.stopPropagation(); handlePayInvoice(req.invoiceId, req.invoiceAmount); }} className="btn btn-primary">
+                                                <IndianRupee size={16} /> Pay Now
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                                <button onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${req.workOrderId || ''}`); }} className="btn btn-secondary">
+                                    Full Details
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                />
             </section>
         </div>
 

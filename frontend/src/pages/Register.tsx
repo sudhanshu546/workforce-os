@@ -40,26 +40,17 @@ const Register: React.FC = () => {
 
   return (
     <div className="auth-container">
-      <div className="auth-card" style={{ maxWidth: '500px' }}>
+      <div className="auth-card" style={{ maxWidth: '540px' }}>
         <div className="auth-header">
-          <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '12px' }}>
+          <div className="auth-icon-wrapper">
             <HardHat size={32} color="#2563eb" />
           </div>
           <h1>Register Organization</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Start managing your workforce today</p>
+          <p className="auth-subtitle">Start managing your workforce today</p>
         </div>
 
         {error && (
-          <div style={{ 
-            backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-            color: 'var(--error)', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            marginBottom: '20px',
-            fontSize: '14px',
-            textAlign: 'center',
-            fontWeight: '500'
-          }}>
+          <div className="auth-error">
             {error}
           </div>
         )}
@@ -68,13 +59,13 @@ const Register: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="input-group">
               <label>Business Name</label>
-              <div style={{ position: 'relative' }}>
-                <Building2 size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <div className="input-wrapper">
+                <Building2 className="input-icon" size={18} />
                 <input
                   name="businessName"
                   type="text"
                   placeholder="AC Experts Ltd"
-                  style={{ paddingLeft: '40px' }}
+                  className="has-icon"
                   onChange={handleChange}
                   required
                 />
@@ -83,19 +74,11 @@ const Register: React.FC = () => {
 
             <div className="input-group">
               <label>Business Type</label>
-              <div style={{ position: 'relative' }}>
-                <Briefcase size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <div className="input-wrapper">
+                <Briefcase className="input-icon" size={18} />
                 <select
                   name="businessType"
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px 16px 12px 40px', 
-                    border: '1px solid var(--border)', 
-                    borderRadius: '8px', 
-                    fontSize: '16px',
-                    appearance: 'none',
-                    background: 'white'
-                  }}
+                  className="has-icon"
                   onChange={handleChange}
                 >
                   <option value="ELECTRICAL">Electrical</option>
@@ -110,13 +93,13 @@ const Register: React.FC = () => {
 
           <div className="input-group">
             <label>Owner Full Name</label>
-            <div style={{ position: 'relative' }}>
-              <User size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <User className="input-icon" size={18} />
               <input
                 name="name"
                 type="text"
                 placeholder="John Doe"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 onChange={handleChange}
                 required
               />
@@ -125,13 +108,13 @@ const Register: React.FC = () => {
 
           <div className="input-group">
             <label>Work Email</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Mail className="input-icon" size={18} />
               <input
                 name="email"
                 type="email"
                 placeholder="john@company.com"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 onChange={handleChange}
                 required
               />
@@ -140,13 +123,13 @@ const Register: React.FC = () => {
 
           <div className="input-group">
             <label>Phone Number</label>
-            <div style={{ position: 'relative' }}>
-              <Phone size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Phone className="input-icon" size={18} />
               <input
                 name="phone"
                 type="tel"
                 placeholder="+1 (555) 000-0000"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 onChange={handleChange}
                 required
               />
@@ -155,13 +138,13 @@ const Register: React.FC = () => {
 
           <div className="input-group">
             <label>Create Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
               <input
                 name="password"
                 type="password"
                 placeholder="••••••••"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 onChange={handleChange}
                 required
               />
@@ -170,8 +153,7 @@ const Register: React.FC = () => {
 
           <button 
             type="submit" 
-            className="btn btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px' }}
+            className="btn btn-primary btn-block"
             disabled={loading}
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <ArrowRight size={20} />}
@@ -179,9 +161,9 @@ const Register: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            Already have an account? <Link to="/login" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>Sign In</Link>
+        <div className="auth-footer">
+          <p>
+            Already have an account? <Link to="/login">Sign In</Link>
           </p>
         </div>
       </div>

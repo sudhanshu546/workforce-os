@@ -2,7 +2,9 @@
 FROM node:22-alpine AS frontend-build
 WORKDIR /app/frontend
 ARG VITE_API_BASE_URL=/api
+ARG VITE_RAZORPAY_KEY_ID
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_RAZORPAY_KEY_ID=$VITE_RAZORPAY_KEY_ID
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./

@@ -10,4 +10,5 @@
     <include file="db/changelog/changes/002-add-performance-indexes.xml"/>
     <include file="db/changelog/changes/003-create-work-order-audits.xml"/>
     <include file="db/changelog/changes/004-add-customer-id-to-notifications.xml"/>
+    <include file="db/changelog/changes/005-add-customer-address-to-leads.xml"/>
     </databaseChangeLog>

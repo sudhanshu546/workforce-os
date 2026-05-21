@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="005-add-customer-address-to-leads" author="sudhanshu">
+        <addColumn tableName="leads">
+            <column name="customer_address_id" type="BIGINT">
+                <constraints foreignKeyName="fk_leads_customer_address" referencedTableName="customer_addresses" referencedColumnNames="id"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

@@ -62,22 +62,22 @@ const CustomerLoginPage: React.FC = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(109, 40, 217, 0.1)', borderRadius: '12px' }}> {/* Style for customer */}
+          <div className="auth-icon-wrapper" style={{ background: 'rgba(109, 40, 217, 0.1)' }}>
             <User size={32} color="#7c3aed" />
           </div>
           <h1>Customer Portal</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Sign in to manage your services</p>
+          <p className="auth-subtitle">Sign in to manage your services</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="input-group">
             <label htmlFor="email">Email Address</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Mail className="input-icon" size={18} />
               <input
                 id="email"
                 placeholder="your.email@example.com"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 {...register('email')}
                 required
                 disabled={loading}
@@ -88,13 +88,13 @@ const CustomerLoginPage: React.FC = () => {
 
           <div className="input-group">
             <label htmlFor="password">Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
               <input
                 type="password"
                 id="password"
                 placeholder="••••••••"
-                style={{ paddingLeft: '40px' }}
+                className="has-icon"
                 {...register('password')}
                 required
                 disabled={loading}
@@ -105,8 +105,7 @@ const CustomerLoginPage: React.FC = () => {
 
           <button 
             type="submit" 
-            className="btn btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px' }}
+            className="btn btn-primary btn-block"
             disabled={loading}
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <LogIn size={20} />}
@@ -114,9 +113,9 @@ const CustomerLoginPage: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-            Don't have an account? <a href="/customer/register" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>Register Now</a>
+        <div className="auth-footer">
+          <p>
+            Don't have an account? <a href="/customer/register">Register Now</a>
           </p>
         </div>
       </div>

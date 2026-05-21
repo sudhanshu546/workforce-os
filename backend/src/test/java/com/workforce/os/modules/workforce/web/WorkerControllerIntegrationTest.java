@@ -9,6 +9,7 @@ import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -39,7 +40,7 @@ public class WorkerControllerIntegrationTest {
         request.setJoiningDate(LocalDate.now());
 
         // Attempt without authentication
-        ResponseEntity<ApiResponse> response = restTemplate.postForEntity("/api/v1/workers/onboard", request, ApiResponse.class);
+        ResponseEntity<Object> response = restTemplate.postForEntity("/api/v1/workers/onboard", request, Object.class);
         
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }

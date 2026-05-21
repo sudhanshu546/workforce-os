@@ -8,6 +8,12 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         value: /api
+      - key: VITE_RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
       - key: DATABASE_URL # Paste your existing Postgres Internal Database URL here in Render Dashboard
         sync: false
       - key: REDIS_HOST

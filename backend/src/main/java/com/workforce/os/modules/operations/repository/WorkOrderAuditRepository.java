@@ -17,5 +17,5 @@ public interface WorkOrderAuditRepository extends JpaRepository<WorkOrderAudit, 
                    "LEFT JOIN FETCH wo.assignedWorker aw " +
                    "LEFT JOIN FETCH aw.user " +
                    "WHERE wa.id IN (SELECT max(a.id) FROM WorkOrderAudit a WHERE a.tenantId = ?1 AND a.latitude IS NOT NULL GROUP BY a.workOrder.id)")
-    List<WorkOrderAudit> findLatestLocationsByTenant(String tenantId);
+    List<WorkOrderAudit> findLatestLocationsByTenantWithDetails(String tenantId);
 }

@@ -478,9 +478,9 @@ const Tasks: React.FC = () => {
                                             <div key={m.id} className="checklist-item-standard" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <Tag size={18} className="text-muted" />
-                                                    <span style={{ fontWeight: '700' }}>{m.material.name}</span>
+                                                    <span style={{ fontWeight: '700' }}>{m.materialName || 'Unknown Material'}</span>
                                                 </div>
-                                                <span className="badge badge-primary">Qty: {m.quantityUsed} {m.material.unit}</span>
+                                                <span className="badge badge-primary">Qty: {m.quantityUsed} {m.unit}</span>
                                             </div>
                                         ))}
                                     </div>

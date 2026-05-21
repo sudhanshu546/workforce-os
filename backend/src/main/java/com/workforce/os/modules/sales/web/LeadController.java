@@ -38,7 +38,7 @@ public class LeadController {
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<LeadResponseDTO>>> getLeads(Pageable pageable) {
-        Page<LeadResponseDTO> leads = leadService.getLeads(TenantContext.getCurrentTenant(), pageable);
+        Page<LeadResponseDTO> leads = leadService.getLeads(pageable);
         return ResponseEntity.ok(ApiResponse.success(leads, "Leads retrieved successfully"));
     }
 
@@ -63,6 +63,7 @@ public class LeadController {
                 request.getCustomerEmail(),
                 request.getOrganizationId(),
                 request.getServiceItemId(),
+                request.getCustomerAddressId(),
                 request.getDescription(),
                 request.getPriority()
         );

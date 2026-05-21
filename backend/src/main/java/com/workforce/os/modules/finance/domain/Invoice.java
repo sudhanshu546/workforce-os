@@ -6,10 +6,13 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.hibernate.annotations.BatchSize;
+
 @Getter
 @Setter
 @Entity
 @Table(name = "invoices")
+@BatchSize(size = 20)
 public class Invoice extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,6 +33,7 @@ public class Invoice extends BaseEntity {
     private InvoiceStatus status;
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 20)
     private java.util.List<InvoiceItem> items = new java.util.ArrayList<>();
 
     public enum InvoiceStatus {

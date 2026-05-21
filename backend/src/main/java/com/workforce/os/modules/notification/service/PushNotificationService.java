@@ -11,7 +11,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.security.Security;
 import java.util.HashMap;
 import java.util.List;

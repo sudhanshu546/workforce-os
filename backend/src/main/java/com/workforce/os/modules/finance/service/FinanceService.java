@@ -33,14 +33,17 @@ public class FinanceService {
         return pdfService;
     }
 
+    @Transactional(readOnly = true)
     public List<Invoice> getAllInvoices() {
         return invoiceRepository.findAllByTenantId(TenantContext.getCurrentTenant());
     }
 
+    @Transactional(readOnly = true)
     public List<Invoice> getInvoicesByCustomer(Long customerId) {
         return invoiceRepository.findByCustomerId(customerId);
     }
 
+    @Transactional(readOnly = true)
     public Invoice getInvoiceById(Long id) {
         return invoiceRepository.findById(id).orElseThrow();
     }
