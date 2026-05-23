@@ -1,5 +1,6 @@
 package com.workforce.os.modules.notification.service;
 
+import com.workforce.os.common.service.PdfReportService;
 import com.workforce.os.modules.identity.domain.User;
 import com.workforce.os.modules.identity.repository.UserRepository;
 import com.workforce.os.modules.inventory.domain.Material;
@@ -15,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import static com.workforce.os.common.util.MessageConstants.*;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +34,8 @@ public class NotificationService {
 
     @org.springframework.beans.factory.annotation.Value("${application.base-url}")
     private String baseUrl;
+
+    private final PdfReportService pdfReportService;
 
     @Transactional
     public void createNotification(Long userId, String title, String body, String route, String tenantId) {
@@ -65,6 +70,23 @@ public class NotificationService {
         messagingTemplate.convertAndSend("/topic/customer/notifications/" + customer.getId(), "NEW_NOTIFICATION");
         
         log.info("In-app notification created for customer: {}", customer.getEmail());
+    }
+
+    public void sendProofOfService(WorkOrder workOrder) {
+        if (workOrder.getCustomer() != null && workOrder.getCustomer().getEmail() != null) {
+            Map<String, Object> vars = new HashMap<>();
+            vars.put("workOrder", workOrder);
+            
+            byte[] pdf = pdfReportService.generatePdf("finance/proof-of-service", vars);
+            
+            // Note: Since emailService is currently MOCKED, we log the action. 
+            // When AWS SES is active, add multipart support to send the attachment.
+            emailService.sendEmail(workOrder.getCustomer().getEmail(), 
+                "Proof of Service - WO-" + (workOrder.getId() + 1000),
+                "Please find attached your Proof of Service report.");
+            
+            log.info("Proof of Service PDF generated for Order #{}", workOrder.getId());
+        }
     }
 
     public void sendLowStockAlert(Material material) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, Trash2, CheckCircle2, Loader2, X, Navigation } from 'lucide-react';
+import { MapPin, Plus, Trash2, CheckCircle2, X, Navigation, Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import Modal from '../components/Modal';
 import api from '../services/api';
@@ -62,7 +63,7 @@ const CustomerAddressPage: React.FC = () => {
     fetchAddresses();
   };
 
-  if (loading) return <Layout><div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div></Layout>;
+  if (loading) return <Layout><LoadingSpinner /></Layout>;
 
   return (
     <Layout>

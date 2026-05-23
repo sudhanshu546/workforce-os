@@ -62,6 +62,23 @@ const OrderVerification: React.FC = () => {
         }
     };
 
+    const downloadProofPdf = async () => {
+        try {
+            const response = await api.get(`/finance/work-orders/${orderId}/proof-pdf`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response as any]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `proof-of-service-${Number(orderId) + 1000}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (e) {
+            alert('Failed to download PDF');
+        }
+    };
+
     const handleVerify = async () => {
         setVerifying(true);
         try {
@@ -131,9 +148,20 @@ const OrderVerification: React.FC = () => {
                     <div className="verification-main">
                         {/* Evidence Section */}
                         <section className="verification-section card">
-                            <div className="section-header">
-                                <Camera size={20} />
-                                <h2>Work Site Evidence</h2>
+                            <div className="section-header" style={{ justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <Camera size={20} />
+                                    <h2>Work Site Evidence</h2>
+                                </div>
+                                <a 
+                                    href={`${import.meta.env.VITE_API_BASE_URL}/finance/work-orders/${orderId}/proof-pdf`} 
+                                    className="btn btn-secondary"
+                                    style={{ textDecoration: 'none', padding: '8px 16px', fontSize: '13px' }}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <FileText size={16} /> Download Proof PDF
+                                </a>
                             </div>
                             <div className="evidence-grid">
                                 {order.evidence?.map((ev: any) => (

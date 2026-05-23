@@ -7,14 +7,18 @@ import com.workforce.os.modules.finance.dto.InvoiceResponseDTO;
 import com.workforce.os.modules.finance.dto.PaymentResponseDTO;
 import com.workforce.os.modules.finance.mapper.FinanceMapper;
 import com.workforce.os.modules.finance.service.FinanceService;
+import com.workforce.os.modules.operations.domain.WorkOrder;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -36,11 +40,27 @@ public class FinanceController {
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
     public ResponseEntity<byte[]> downloadInvoicePdf(@PathVariable Long id) {
         Invoice invoice = financeService.getInvoiceById(id);
-        // Industry recommendation: Verify customer ownership if role is CUSTOMER
         byte[] pdfBytes = financeService.getPdfService().generateInvoicePdf(invoice);
         
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=invoice-" + invoice.getInvoiceNumber() + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
+    }
+
+    @GetMapping("/work-orders/{id}/proof-pdf")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<byte[]> downloadProofOfServicePdf(@PathVariable Long id) {
+        WorkOrder workOrder = financeService.getWorkOrderRepository().findById(id)
+                .orElseThrow(() -> new com.workforce.os.common.exception.ResourceNotFoundException("Work Order not found"));
+        
+        java.util.Map<String, Object> vars = new java.util.HashMap<>();
+        vars.put("workOrder", workOrder);
+        
+        byte[] pdfBytes = financeService.getPdfService().generatePdf("finance/proof-of-service", vars);
+        
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=proof-of-service-" + (workOrder.getId() + 1000) + ".pdf")
                 .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
                 .body(pdfBytes);
     }
@@ -69,19 +89,19 @@ public class FinanceController {
 
     @PostMapping("/invoices/{id}/payment-order")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
-    public ResponseEntity<ApiResponse<java.util.Map<String, String>>> createPaymentOrder(@PathVariable Long id) throws Exception {
+    public ResponseEntity<ApiResponse<Map<String, String>>> createPaymentOrder(@PathVariable Long id) throws Exception {
         String orderId = financeService.createPaymentOrder(id);
-        java.util.Map<String, String> response = new java.util.HashMap<>();
+        Map<String, String> response = new HashMap<>();
         response.put("orderId", orderId);
         return ResponseEntity.ok(ApiResponse.success(response, "Payment order created"));
     }
 
     @PostMapping("/work-orders/{workOrderId}/payment-order")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
-    public ResponseEntity<ApiResponse<java.util.Map<String, String>>> createPaymentOrderByWorkOrder(@PathVariable Long workOrderId) throws Exception {
+    public ResponseEntity<ApiResponse<Map<String, String>>> createPaymentOrderByWorkOrder(@PathVariable Long workOrderId) throws Exception {
         Invoice invoice = financeService.getOrCreateInvoice(workOrderId);
         String orderId = financeService.createPaymentOrder(invoice.getId());
-        java.util.Map<String, String> response = new java.util.HashMap<>();
+        Map<String, String> response = new HashMap<>();
         response.put("orderId", orderId);
         response.put("invoiceId", invoice.getId().toString());
         return ResponseEntity.ok(ApiResponse.success(response, "Payment order created with auto-generated invoice"));

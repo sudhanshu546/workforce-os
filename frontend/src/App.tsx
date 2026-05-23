@@ -24,6 +24,7 @@ import LiveOpsMap from './pages/LiveOpsMap';
 import ExpensesPage from './pages/ExpensesPage';
 import PayrollPage from './pages/PayrollPage';
 import PublicTrackingPage from './pages/PublicTrackingPage';
+import SupportPage from './pages/SupportPage';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/track/:id" element={<PublicTrackingPage />} />
         <Route path="/tracking/:id" element={<PublicTrackingPage />} />
+        <Route path="/support" element={<PrivateRoute><SupportPage /></PrivateRoute>} />
         
         {/* Customer Auth Routes */}
         <Route path="/customer/login" element={<CustomerLoginPage />} />

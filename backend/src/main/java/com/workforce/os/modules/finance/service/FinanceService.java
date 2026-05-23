@@ -11,6 +11,7 @@ import com.workforce.os.modules.operations.domain.WorkOrder;
 import com.workforce.os.modules.operations.domain.WorkOrder.WorkOrderStatus;
 import com.workforce.os.modules.operations.repository.WorkOrderRepository;
 import com.workforce.os.modules.sales.domain.Quotation;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import static com.workforce.os.common.util.MessageConstants.PAYMENT_VERIFICATION
 
 @Service
 @RequiredArgsConstructor
+@Getter
 public class FinanceService {
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;

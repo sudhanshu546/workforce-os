@@ -144,9 +144,15 @@ body {
   font-size: 14px;
 }
 
-.premium-table tr:hover td {
-  background: #fcfdfe;
+/* Zebra Striping */
+.zebra-table tbody tr:nth-child(even) {
+  background-color: #fcfdfe;
 }
+
+.zebra-table tr:hover:not(.row-active) td {
+  background-color: #f1f5f9;
+}
+
 
 /* Sidebar Elements */
 .sidebar-header {

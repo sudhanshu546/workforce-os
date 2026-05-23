@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { IndianRupee, TrendingUp, Loader2, Target, BarChart3 } from 'lucide-react';
+import { IndianRupee, TrendingUp, Target, BarChart3 } from 'lucide-react';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import api from '../services/api';
 
 const AnalyticsPage: React.FC = () => {
@@ -32,7 +33,7 @@ const AnalyticsPage: React.FC = () => {
                 </header>
 
                 {loading ? (
-                    <div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div>
+                    <LoadingSpinner />
                 ) : (
                     <div className="card-premium" style={{ padding: '0', overflow: 'hidden' }}>
                         <table className="table-premium">

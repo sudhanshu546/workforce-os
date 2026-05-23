@@ -22,6 +22,18 @@ public class PdfService {
         
         String htmlContent = templateEngine.process("finance/invoice", context);
         
+        return runPdfGeneration(htmlContent);
+    }
+
+    public byte[] generatePdf(String templateName, java.util.Map<String, Object> variables) {
+        Context context = new Context();
+        context.setVariables(variables);
+        String htmlContent = templateEngine.process(templateName, context);
+        
+        return runPdfGeneration(htmlContent);
+    }
+
+    private byte[] runPdfGeneration(String htmlContent) {
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.withHtmlContent(htmlContent, "/");

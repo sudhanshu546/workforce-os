@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Proof of Service</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; padding: 20px; color: #333; }
+        .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 20px; margin-bottom: 20px; }
+        .section { margin-bottom: 30px; }
+        .grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .evidence-img { width: 200px; height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { padding: 8px 0; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Proof of Service</h1>
+        <p>Job Reference: #WO-<span th:text="${workOrder.id + 1000}"></span></p>
+        <p>Completed on: <span th:text="${#temporals.format(workOrder.completionDate, 'dd-MM-yyyy')}"></span></p>
+    </div>
+
+    <div class="section">
+        <h3>Customer Details</h3>
+        <p th:text="${workOrder.customer.name}"></p>
+        <p th:text="${workOrder.serviceAddress.street}"></p>
+    </div>
+
+    <div class="section">
+        <h3>Completed Tasks</h3>
+        <ul class="task-list">
+            <li class="task-item" th:each="task : ${workOrder.tasks}" th:text="${task.description}"></li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h3>Evidence Photos</h3>
+        <div class="grid">
+            <img class="evidence-img" th:each="ev : ${workOrder.evidence}" th:src="${ev.imageUrl}" alt="Evidence" />
+        </div>
+    </div>
+</body>
+</html>

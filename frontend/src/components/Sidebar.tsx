@@ -2,7 +2,7 @@ import {
   Users, Briefcase, Clock, LayoutDashboard, 
   UserCircle, FileText, Settings, LogOut, HardHat, CheckSquare,
   MapPin, Tag, X, Receipt, Package, TrendingUp, Calendar as CalendarIcon, Map,
-  IndianRupee
+  IndianRupee, MessageSquare
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { STORAGE_KEYS, ROLES } from '../utils/constants';
@@ -76,6 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <Link to="/customer/profile" className={`nav-item ${isActive('/customer/profile') ? 'active' : ''}`} onClick={onClose}><UserCircle size={20} /> My Profile</Link>
             <Link to="/customer/orders" className={`nav-item ${isActive('/customer/orders') ? 'active' : ''}`} onClick={onClose}><Briefcase size={20} /> My Orders</Link>
             <Link to="/customer/addresses" className={`nav-item ${isActive('/customer/addresses') ? 'active' : ''}`} onClick={onClose}><MapPin size={20} /> My Addresses</Link>
+            <Link to="/support" className={`nav-item ${isActive('/support') ? 'active' : ''}`} onClick={onClose}><MessageSquare size={20} /> Support Center</Link>
           </>
         )}
       </nav>

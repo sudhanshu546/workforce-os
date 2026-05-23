@@ -6,10 +6,10 @@ import {
   Square, 
   Coffee, 
   CheckCircle2,
-  Calendar,
-  Loader2
+  Calendar
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import api from '../services/api';
 import { Pagination } from '../components/Pagination';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
@@ -112,7 +112,7 @@ const AttendanceTracker: React.FC = () => {
     { header: 'Duration', accessor: (log: any) => <span style={{ fontWeight: '800', color: 'var(--primary)' }}>{log.totalHours ? `${log.totalHours.toFixed(2)} hrs` : '--'}</span> }
   ];
 
-  if (loading) return <Layout><div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div></Layout>;
+  if (loading) return <Layout><LoadingSpinner /></Layout>;
 
   if (role === 'OWNER') {
     return (
