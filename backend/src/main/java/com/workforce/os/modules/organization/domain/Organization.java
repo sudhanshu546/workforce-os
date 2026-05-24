@@ -27,6 +27,10 @@ public class Organization extends BaseEntity {
 
     private String logoUrl;
 
+    private String primaryColor;
+
+    private String secondaryColor;
+
     @Enumerated(EnumType.STRING)
     private OrganizationStatus status;
 

@@ -25,6 +25,8 @@ import ExpensesPage from './pages/ExpensesPage';
 import PayrollPage from './pages/PayrollPage';
 import PublicTrackingPage from './pages/PublicTrackingPage';
 import SupportPage from './pages/SupportPage';
+import Settings from './pages/Settings';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 function App() {
   return (
@@ -35,6 +37,7 @@ function App() {
         <Route path="/track/:id" element={<PublicTrackingPage />} />
         <Route path="/tracking/:id" element={<PublicTrackingPage />} />
         <Route path="/support" element={<PrivateRoute><SupportPage /></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Settings /></PrivateRoute>} />
         
         {/* Customer Auth Routes */}
         <Route path="/customer/login" element={<CustomerLoginPage />} />
@@ -68,6 +71,7 @@ function App() {
         
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      <PWAInstallPrompt />
     </Router>
   );
 }

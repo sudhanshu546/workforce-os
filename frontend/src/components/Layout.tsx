@@ -3,11 +3,13 @@ import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { useNetworkStatus } from '../services/sync';
+import { useBranding } from '../services/branding';
 import { WifiOff } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isOnline = useNetworkStatus();
+  useBranding();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => setIsSidebarOpen(false);

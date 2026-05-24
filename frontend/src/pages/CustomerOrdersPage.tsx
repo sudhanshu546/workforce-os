@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Package, Clock, CheckCircle2, ChevronRight, 
-    Search, Filter, Loader2, MapPin, FileText, Receipt, IndianRupee, CheckCircle, Activity
+    Search, Filter, Loader2, MapPin, FileText, Receipt, IndianRupee, CheckCircle, Activity, Star
 } from 'lucide-react';
 import api from '../services/api';
 import { Layout } from '../components/Layout';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
 import Modal from '../components/Modal';
+import { ReviewModal } from '../components/ReviewModal';
 
 const CustomerOrdersPage: React.FC = () => {
     const [orders, setOrders] = useState<any[]>([]);
@@ -15,8 +16,9 @@ const CustomerOrdersPage: React.FC = () => {
     const [filter, setFilter] = useState('ALL');
     const navigate = useNavigate();
 
-    // Re-use logic for modals from Dashboard if needed, but for now focusing on Table refactor
-    // Since this page mostly navigates to verification/payment pages, we can keep the navigation logic
+    // Review Modal State
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     useEffect(() => {
         fetchOrders();
@@ -43,6 +45,13 @@ const CustomerOrdersPage: React.FC = () => {
             case 'AWAITING_PAYMENT': return { badge: 'badge-error', icon: <Package size={14} /> };
             default: return { badge: 'badge-secondary', icon: <Clock size={14} /> };
         }
+    };
+
+    const handleReviewSuccess = () => {
+        if ((window as any).showToast) {
+            (window as any).showToast('Thank you! Your review has been submitted.', 'success');
+        }
+        fetchOrders();
     };
 
     const filteredOrders = orders.filter(o => filter === 'ALL' || o.status === filter);
@@ -153,6 +162,19 @@ const CustomerOrdersPage: React.FC = () => {
                                         <IndianRupee size={16} /> Pay Now
                                     </button>
                                 )}
+                                {order.status === 'COMPLETED' && (
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setSelectedOrder(order);
+                                            setIsReviewModalOpen(true);
+                                        }} 
+                                        className="btn btn-primary"
+                                        style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                                    >
+                                        <Star size={16} /> Rate Service
+                                    </button>
+                                )}
                                 <button onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${order.id}/verify`); }} className="btn btn-secondary">
                                     Full Details
                                 </button>
@@ -160,6 +182,16 @@ const CustomerOrdersPage: React.FC = () => {
                         </div>
                     )}
                 />
+
+                {isReviewModalOpen && selectedOrder && (
+                    <ReviewModal 
+                        isOpen={isReviewModalOpen}
+                        onClose={() => setIsReviewModalOpen(false)}
+                        workOrderId={selectedOrder.id}
+                        workerName={selectedOrder.assignedWorker?.user?.name || 'Technician'}
+                        onSuccess={handleReviewSuccess}
+                    />
+                )}
 
                 {filteredOrders.length === 0 && (
                         <div style={{ padding: '100px', textAlign: 'center', background: 'var(--surface-muted)', borderRadius: '24px', border: '1.5px dashed var(--border)' }}>

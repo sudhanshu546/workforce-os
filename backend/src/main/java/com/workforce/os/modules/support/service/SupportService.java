@@ -62,6 +62,11 @@ public class SupportService {
     }
 
     @Transactional(readOnly = true)
+    public List<TicketComment> getTicketComments(Long ticketId) {
+        return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId);
+    }
+
+    @Transactional(readOnly = true)
     public List<SupportTicket> getCustomerTickets(Long customerId) {
         return supportRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }

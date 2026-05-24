@@ -25,6 +25,9 @@ import static com.workforce.os.common.util.MessageConstants.*;
 
 import com.workforce.os.modules.operations.dto.LiveOpsMarker;
 
+import com.workforce.os.modules.operations.service.DispatchService;
+import com.workforce.os.modules.operations.dto.WorkerRecommendation;
+
 @RestController
 @RequestMapping("/api/v1/work-orders")
 @RequiredArgsConstructor
@@ -35,6 +38,16 @@ public class WorkOrderController {
     private final com.workforce.os.modules.customer.repository.CustomerAddressRepository addressRepository;
     private final com.workforce.os.modules.organization.repository.OrganizationRepository organizationRepository;
     private final com.workforce.os.modules.finance.repository.InvoiceRepository invoiceRepository;
+    private final DispatchService dispatchService;
+
+    @GetMapping("/{id}/recommendations")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<List<WorkerRecommendation>>> getSmartRecommendations(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(
+            dispatchService.getSmartRecommendations(id),
+            "Smart recommendations retrieved"
+        ));
+    }
 
     @GetMapping("/live-ops")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")

@@ -24,6 +24,7 @@ const InvoicesPage: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -37,6 +38,29 @@ const InvoicesPage: React.FC = () => {
       console.error('Failed to fetch invoices');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async (invoice: any) => {
+    setDownloadingId(invoice.id);
+    try {
+      const response = await api.get(`/finance/invoices/${invoice.id}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response as any]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `invoice-${invoice.invoiceNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      if ((window as any).showToast) (window as any).showToast('Failed to generate PDF', 'error');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -191,8 +215,15 @@ const InvoicesPage: React.FC = () => {
                                     <CreditCard size={18} /> Record Collection
                                 </button>
                             )}
-                            <button className="btn btn-secondary" style={{ flex: 1 }}><Download size={18} /> Export</button>
-                            <button className="btn btn-secondary" style={{ flex: 1 }}><Printer size={18} /> Print</button>
+                            <button 
+                                onClick={() => handleDownloadPdf(inv)} 
+                                className="btn btn-secondary" 
+                                style={{ flex: 1 }}
+                                disabled={downloadingId === inv.id}
+                            >
+                                {downloadingId === inv.id ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+                                {downloadingId === inv.id ? 'Generating...' : 'Download PDF'}
+                            </button>
                         </div>
                     </div>
                 </div>

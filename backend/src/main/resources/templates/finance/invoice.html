@@ -13,9 +13,17 @@
 </head>
 <body>
     <div class="header">
-        <h1>Invoice</h1>
-        <p>Invoice #: <span th:text="${invoice.invoiceNumber}"></span></p>
-        <p>Date: <span th:text="${#temporals.format(invoice.createdAt, 'dd-MM-yyyy')}"></span></p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div th:if="${organization != null}">
+                <img th:if="${organization.logoUrl != null}" th:src="${organization.logoUrl}" style="max-height: 80px;"/>
+                <h1 th:if="${organization.logoUrl == null}" th:text="${organization.businessName}"></h1>
+            </div>
+            <div style="text-align: right;">
+                <h1 th:if="${organization != null and organization.logoUrl != null}">Invoice</h1>
+                <p>Invoice #: <span th:text="${invoice.invoiceNumber}"></span></p>
+                <p>Date: <span th:text="${#temporals.format(invoice.createdAt, 'dd-MM-yyyy')}"></span></p>
+            </div>
+        </div>
     </div>
     
     <h3>Client: <span th:text="${invoice.workOrder.customer.name}"></span></h3>

@@ -15,10 +15,15 @@ import java.io.OutputStream;
 public class PdfService {
 
     private final TemplateEngine templateEngine;
+    private final com.workforce.os.modules.organization.repository.OrganizationRepository organizationRepository;
 
     public byte[] generateInvoicePdf(Invoice invoice) {
         Context context = new Context();
         context.setVariable("invoice", invoice);
+        
+        // Add Organization Branding
+        organizationRepository.findByTenantId(invoice.getTenantId())
+                .ifPresent(org -> context.setVariable("organization", org));
         
         String htmlContent = templateEngine.process("finance/invoice", context);
         

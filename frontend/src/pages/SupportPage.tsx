@@ -3,8 +3,9 @@ import { Layout } from '../components/Layout';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
 import api from '../services/api';
-import { Plus, MessageSquare, AlertCircle, Camera } from 'lucide-react';
+import { Plus, MessageSquare, AlertCircle, Camera, Clock } from 'lucide-react';
 import Modal from '../components/Modal';
+import { SupportConversation } from '../components/SupportConversation';
 
 const SupportPage: React.FC = () => {
     const [tickets, setTickets] = useState<any[]>([]);
@@ -54,9 +55,35 @@ const SupportPage: React.FC = () => {
                         { header: 'Priority', accessor: (t: any) => <span style={{ fontWeight: 700, color: t.priority === 'URGENT' ? 'var(--error)' : 'var(--text-main)' }}>{t.priority}</span> }
                     ]}
                     renderExpanded={(t: any) => (
-                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
-                            <p style={{ marginBottom: '16px' }}>{t.description}</p>
-                            <button className="btn btn-secondary">View Conversation</button>
+                        <div style={{ padding: '24px', background: '#f8fafc', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
+                                <div style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    <h4 style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px' }}>Request Details</h4>
+                                    <p style={{ fontSize: '15px', color: 'var(--text-h)', lineHeight: '1.6', marginBottom: '16px' }}>{t.description}</p>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                                            <Clock size={14} className="text-muted" /> 
+                                            <span style={{ color: 'var(--text-muted)' }}>Created:</span>
+                                            <span style={{ fontWeight: '700' }}>{new Date(t.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        {t.workOrder && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                                                <AlertCircle size={14} className="text-muted" /> 
+                                                <span style={{ color: 'var(--text-muted)' }}>Linked Job:</span>
+                                                <span style={{ fontWeight: '700' }}>#WO-{t.workOrder.id + 1000}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                        <MessageSquare size={14} /> Conversation Thread
+                                    </div>
+                                    <SupportConversation ticketId={t.id} />
+                                </div>
+                            </div>
                         </div>
                     )}
                 />

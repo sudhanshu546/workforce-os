@@ -27,4 +27,22 @@ public class OrganizationService {
         
         return organizationRepository.save(organization);
     }
+
+    @Transactional
+    public Organization updateBranding(String tenantId, String logoUrl, String primaryColor, String secondaryColor) {
+        Organization organization = organizationRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Organization not found"));
+        
+        organization.setLogoUrl(logoUrl);
+        organization.setPrimaryColor(primaryColor);
+        organization.setSecondaryColor(secondaryColor);
+        
+        return organizationRepository.save(organization);
+    }
+
+    @Transactional(readOnly = true)
+    public Organization getBranding(String tenantId) {
+        return organizationRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Organization not found"));
+    }
 }

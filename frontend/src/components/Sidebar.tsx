@@ -16,6 +16,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const isActive = (path: string) => location.pathname === path;
+  const orgLogo = localStorage.getItem('orgLogo');
   
   const role = localStorage.getItem(STORAGE_KEYS.ROLE) || ROLES.WORKER;
 
@@ -28,10 +29,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header" style={{ borderBottom: '1px solid var(--border-light)', marginBottom: '16px' }}>
         <div className="sidebar-logo">
-          <div style={{ background: 'var(--primary)', color: 'white', padding: '6px', borderRadius: '10px', display: 'flex' }}>
-            <HardHat size={22} />
-          </div>
-          <span style={{ color: 'var(--text-h)', fontWeight: '900', letterSpacing: '-0.03em' }}>Workforce<span style={{ color: 'var(--primary)' }}>OS</span></span>
+          {orgLogo ? (
+            <img src={orgLogo} alt="Logo" style={{ maxHeight: '32px', maxWidth: '120px' }} />
+          ) : (
+            <>
+              <div style={{ background: 'var(--primary)', color: 'white', padding: '6px', borderRadius: '10px', display: 'flex' }}>
+                <HardHat size={22} />
+              </div>
+              <span style={{ color: 'var(--text-h)', fontWeight: '900', letterSpacing: '-0.03em' }}>Workforce<span style={{ color: 'var(--primary)' }}>OS</span></span>
+            </>
+          )}
         </div>
         <button className="sidebar-close-btn" onClick={onClose} style={{ display: 'none' }}>
           <X size={24} />
@@ -64,6 +71,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <Link to="/finance/expenses" className={`nav-item ${isActive('/finance/expenses') ? 'active' : ''}`} onClick={onClose}><IndianRupee size={18} /> <span>Expense Claims</span></Link>
             <Link to="/finance/payroll" className={`nav-item ${isActive('/finance/payroll') ? 'active' : ''}`} onClick={onClose}><LogOut size={18} style={{ transform: 'rotate(90deg)' }} /> <span>Staff Payroll</span></Link>
             <Link to="/attendance" className={`nav-item ${isActive('/attendance') ? 'active' : ''}`} onClick={onClose}><Clock size={18} /> <span>Staff Attendance</span></Link>
+            
+            <div className="sidebar-section-title">Administration</div>
+            <Link to="/settings" className={`nav-item ${isActive('/settings') ? 'active' : ''}`} onClick={onClose}><Settings size={18} /> <span>System Settings</span></Link>
           </>
         )}
         

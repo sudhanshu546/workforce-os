@@ -61,4 +61,26 @@ public class SupportController {
             "Ticket status updated"
         ));
     }
+
+    @GetMapping("/tickets/{ticketId}/comments")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<ApiResponse<List<TicketComment>>> getTicketComments(@PathVariable Long ticketId) {
+        return ResponseEntity.ok(ApiResponse.success(
+            supportService.getTicketComments(ticketId),
+            "Comments retrieved"
+        ));
+    }
+
+    @PostMapping("/tickets/{ticketId}/comments")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<ApiResponse<TicketComment>> addComment(
+            @PathVariable Long ticketId,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal User user) {
+        
+        return ResponseEntity.ok(ApiResponse.success(
+            supportService.addComment(ticketId, user, payload.get("message")),
+            "Comment added"
+        ));
+    }
 }
