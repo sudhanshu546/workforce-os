@@ -1,5 +1,7 @@
 package com.workforce.os.modules.customer.service;
 
+import com.workforce.os.common.exception.ResourceNotFoundException;
+import com.workforce.os.common.util.MessageConstants;
 import com.workforce.os.modules.customer.domain.Customer;
 import com.workforce.os.modules.customer.domain.CustomerProfile;
 import com.workforce.os.modules.customer.dto.CustomerProfileResponse;
@@ -21,26 +23,26 @@ public class CustomerProfileService {
 
     public CustomerProfileResponse getProfile(String email) {
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.CUSTOMER_NOT_FOUND));
         CustomerProfile profile = customerProfileRepository.findByCustomerId(customer.getId())
-                .orElseThrow(() -> new RuntimeException("Customer profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.CUSTOMER_PROFILE_NOT_FOUND));
         return customerProfileMapper.toCustomerProfileResponse(profile);
     }
 
     @Transactional
     public CustomerProfileResponse updateProfile(String email, CustomerProfileUpdateRequest request) {
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.CUSTOMER_NOT_FOUND));
         CustomerProfile profile = customerProfileRepository.findByCustomerId(customer.getId())
-                .orElseThrow(() -> new RuntimeException("Customer profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.CUSTOMER_PROFILE_NOT_FOUND));
 
         customerProfileMapper.updateProfileFromRequest(request, profile);
-        
+
         if (request.getPhone() != null) {
             customer.setPhone(request.getPhone());
             customerRepository.save(customer);
         }
-        
+
         CustomerProfile savedProfile = customerProfileRepository.save(profile);
         return customerProfileMapper.toCustomerProfileResponse(savedProfile);
     }

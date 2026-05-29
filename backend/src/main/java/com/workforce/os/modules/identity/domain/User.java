@@ -32,6 +32,7 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private String phone;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 

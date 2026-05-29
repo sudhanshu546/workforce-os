@@ -17,7 +17,7 @@ public interface CustomerProfileMapper {
     CustomerProfile toCustomerProfile(CustomerProfileUpdateRequest request);
 
     @Mapping(source = "customer.email", target = "email")
-    @Mapping(source = "customer.phone", target = "number")
+    @Mapping(source = "customer.phone", target = "phone")
     @Mapping(target = "role", constant = "CUSTOMER")
     CustomerProfileResponse toCustomerProfileResponse(CustomerProfile profile);
 

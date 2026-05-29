@@ -18,7 +18,7 @@ public class WorkerOnboardingRequest {
     @NotBlank(message = "Phone number is required")
     private String phone;
 
-    private String password; // Optional for updates
+    private String password;
 
     private Long branchId;
 

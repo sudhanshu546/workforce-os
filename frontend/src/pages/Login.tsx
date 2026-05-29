@@ -2,16 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, LogIn, HardHat, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { setCredentials } from '../redux/authSlice';
 import api from '../services/api';
 
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+  });
 
   useEffect(() => {
     // Redirect if already logged in
@@ -20,25 +36,22 @@ const Login: React.FC = () => {
     }
   }, [navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: LoginFormValues) => {
     setLoading(true);
     setError(null);
     
     try {
-      const data: any = await api.post('/auth/login', { email, password });
+      const data: any = await api.post('/auth/login', values);
       
       dispatch(setCredentials({
           accessToken: data.access_token,
           refreshToken: data.refresh_token,
           role: data.role,
-          user: data.user || { name: 'User', phone: '', email: email },
+          user: data.user || { name: 'User', phone: '', email: values.email },
+          workerId: data.workerId,
           customerId: data.customerId
       }));
 
-      if (data.workerId) {
-        localStorage.setItem('worker_id', data.workerId.toString());
-      }
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid email or password');
@@ -64,22 +77,21 @@ const Login: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div className="input-group">
             <label htmlFor="email">Email Address</label>
             <div className="input-wrapper">
               <Mail className="input-icon" size={18} />
               <input
+                {...register('email')}
                 type="email"
                 id="email"
                 placeholder="name@company.com"
-                className="has-icon"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                className={`has-icon ${errors.email ? 'input-error' : ''}`}
                 disabled={loading}
               />
             </div>
+            {errors.email && <span className="error-text">{errors.email.message}</span>}
           </div>
 
           <div className="input-group">
@@ -87,16 +99,15 @@ const Login: React.FC = () => {
             <div className="input-wrapper">
               <Lock className="input-icon" size={18} />
               <input
+                {...register('password')}
                 type="password"
                 id="password"
                 placeholder="••••••••"
-                className="has-icon"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                className={`has-icon ${errors.password ? 'input-error' : ''}`}
                 disabled={loading}
               />
             </div>
+            {errors.password && <span className="error-text">{errors.password.message}</span>}
           </div>
 
           <button 

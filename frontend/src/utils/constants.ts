@@ -47,3 +47,63 @@ export const EXPENSE_STATUS = {
     REJECTED: 'REJECTED',
     REIMBURSED: 'REIMBURSED'
 };
+
+// API Endpoints
+export const API_ENDPOINTS = {
+    AUTH: {
+        LOGIN: '/auth/login',
+        REGISTER: '/auth/register',
+        REFRESH: '/auth/refresh',
+        LOGOUT: '/auth/logout',
+        ME: '/customers/me'
+    },
+    CUSTOMER: {
+        ADDRESSES: '/customers/me/addresses',
+        LEADS: '/leads/customer',
+        PROFILE: '/customers/profile'
+    },
+    ORGANIZATION: {
+        BRANDING: '/organization/branding',
+        LIST_PUBLIC: '/public/organizations'
+    },
+    OPERATIONS: {
+        WORK_ORDERS: '/work-orders',
+        TRACKING: '/public/tracking',
+        SERVICES: '/public/services/organization',
+        WORKERS: '/public/workers/organization',
+        LEADS: '/leads'
+    },
+    FINANCE: {
+        INVOICES: '/finance/invoices',
+        PAYMENTS: '/finance/payments',
+        EXPENSES: '/finance/expenses'
+    },
+    DASHBOARD: {
+        OWNER: '/dashboard/owner',
+        WORKER: '/dashboard/worker',
+        ANALYTICS: '/analytics'
+    },
+    ATTENDANCE: {
+        CLOCK_IN: '/attendance/clock-in',
+        CLOCK_OUT: '/attendance/clock-out',
+        STATUS: '/attendance/status'
+    },
+    INVENTORY: {
+        MATERIALS: '/inventory/materials',
+        LOW_STOCK: '/inventory/materials/low-stock'
+    }
+};
+
+// Common UI Strings
+export const UI_STRINGS = {
+    DASHBOARD: {
+        WELCOME: 'Business Operations Center',
+        ACTIVE_MISSIONS: 'Active assignments today',
+        NO_ASSIGNMENTS: 'Schedule Clear'
+    },
+    COMMON: {
+        LOADING: 'Retrieving data...',
+        SAVING: 'Saving changes...',
+        SUCCESS: 'Operation successful'
+    }
+};

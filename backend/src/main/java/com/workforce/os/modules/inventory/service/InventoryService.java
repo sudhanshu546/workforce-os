@@ -4,6 +4,8 @@ import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.modules.inventory.domain.Material;
 import com.workforce.os.modules.inventory.repository.MaterialRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,10 @@ public class InventoryService {
 
     public List<Material> getAllMaterials() {
         return materialRepository.findAllByTenantId(TenantContext.getCurrentTenant());
+    }
+
+    public Page<Material> getAllMaterials(Pageable pageable) {
+        return materialRepository.findAllByTenantId(TenantContext.getCurrentTenant(), pageable);
     }
 
     @Transactional
@@ -37,10 +43,9 @@ public class InventoryService {
 
     @Transactional
     public Material updateMaterial(Long id, Material details) {
-        Material material = materialRepository.findById(id).orElseThrow();
-        if (!material.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException(UNAUTHORIZED);
-        }
+        Material material = materialRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new RuntimeException("Material not found or access denied"));
+        
         material.setName(details.getName());
         material.setDescription(details.getDescription());
         material.setSku(details.getSku() != null ? details.getSku() : material.getSku());
@@ -59,10 +64,8 @@ public class InventoryService {
 
     @Transactional
     public void deleteMaterial(Long id) {
-        Material material = materialRepository.findById(id).orElseThrow();
-        if (!material.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException(UNAUTHORIZED);
-        }
+        Material material = materialRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new RuntimeException("Material not found or access denied"));
         materialRepository.delete(material);
     }
 }

@@ -1,5 +1,6 @@
 package com.workforce.os.modules.customer.service;
 
+import com.workforce.os.common.exception.BusinessException;
 import com.workforce.os.modules.customer.domain.Customer;
 import com.workforce.os.modules.customer.domain.CustomerRefreshToken;
 import com.workforce.os.modules.customer.repository.CustomerRefreshTokenRepository;
@@ -35,7 +36,7 @@ public class CustomerRefreshTokenService {
     public CustomerRefreshToken verifyExpiration(CustomerRefreshToken token) {
         if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
             refreshTokenRepository.delete(token);
-            throw new RuntimeException(REFRESH_TOKEN_EXPIRED);
+            throw new BusinessException(REFRESH_TOKEN_EXPIRED);
         }
         return token;
     }

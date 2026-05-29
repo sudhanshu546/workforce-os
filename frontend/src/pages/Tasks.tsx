@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import {
-    CheckCircle2, Circle, Clock, MapPin, Phone, Loader2, ChevronRight,
-    Camera, Save, X, AlertCircle, PlayCircle, ClipboardList, Image as ImageIcon,
-    CheckSquare, ArrowLeft, Send, Package, Tag, IndianRupee,
+    CheckCircle2, Clock, MapPin, Phone, Loader2, ChevronRight,
+    Camera, X, AlertCircle, PlayCircle, ClipboardList,
+    CheckSquare, Send, Package, Tag, IndianRupee,
     Navigation, MessageCircle, User
 } from 'lucide-react';
 import api from '../services/api';
@@ -12,17 +12,26 @@ import { Pagination } from '../components/Pagination';
 import { saveTasksOffline, getTasksOffline } from '../services/offline';
 import { ChatModal } from '../components/ChatModal';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { EXPENSE_CATEGORIES } from '../utils/constants';
+import { useToast } from '../components/ToastProvider';
+import { EXPENSE_CATEGORIES, API_ENDPOINTS } from '../utils/constants';
 import { startLiveTracking, stopLiveTracking } from '../services/location';
 
+import { useSelector } from 'react-redux';
+import type { RootState } from '../redux/store';
+
 const Tasks: React.FC = () => {
+    const showToast = useToast();
+    const { workerId, role } = useSelector((state: RootState) => state.auth);
     const [tasks, setTasks] = useState<any[]>([]);
+    // ... rest of state ...
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<any>(null);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const pageSize = 10;
     const [isClockedIn, setIsClockedIn] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
@@ -31,11 +40,8 @@ const Tasks: React.FC = () => {
     const [evidenceNote, setEvidenceNote] = useState('');
     const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
     const [evidencePreview, setEvidencePreview] = useState<string | null>(null);
-    // ... existing states ...
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [currentChatId, setCurrentChatId] = useState('');
-
-    const workerId = localStorage.getItem('worker_id');
 
     // Expense States
     const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -45,11 +51,10 @@ const Tasks: React.FC = () => {
     const [expenseFile, setExpenseFile] = useState<File | null>(null);
 
     const [materials, setMaterials] = useState<any[]>([]);
-    // ... existing materials states ...
 
     const handleAddExpense = async () => {
         if (!expenseAmount || !expenseDescription) {
-            alert('Please fill in all expense details.');
+            showToast('Please fill in all expense details.', 'info');
             return;
         }
 
@@ -65,7 +70,7 @@ const Tasks: React.FC = () => {
                 receiptUrl = uploadRes.url;
             }
 
-            await api.post('/finance/expenses', {
+            await api.post(API_ENDPOINTS.FINANCE.EXPENSES, {
                 workOrderId: selectedTask.id,
                 workerId: Number(workerId),
                 category: expenseCategory,
@@ -74,24 +79,27 @@ const Tasks: React.FC = () => {
                 receiptImageUrl: receiptUrl
             });
 
-            alert('Expense logged successfully!');
+            showToast('Expense logged successfully!', 'success');
             setIsExpenseModalOpen(false);
             setExpenseAmount('');
             setExpenseDescription('');
             setExpenseFile(null);
             fetchTasks(page);
         } catch (err) {
-            alert('Failed to log expense');
+            showToast('Failed to log expense', 'error');
         } finally {
             setUploading(false);
         }
     };
 
     const fetchTasks = async (pageNumber: number) => {
+        if (!workerId) return;
         try {
-            const data: any = await api.get(`/work-orders/worker/${workerId}?page=${pageNumber}&size=10`);
+            setLoading(true);
+            const data: any = await api.get(`${API_ENDPOINTS.OPERATIONS.WORK_ORDERS}/worker/${workerId}?page=${pageNumber}&size=10`);
             setTasks(data.content || []);
             setTotalPages(data.totalPages || 0);
+            setTotalElements(data.totalElements || 0);
             saveTasksOffline(data.content || []); // Cache locally
         } catch (err) {
             console.warn('Offline mode: Loading tasks from local cache');
@@ -104,14 +112,15 @@ const Tasks: React.FC = () => {
 
     const fetchMaterials = async () => {
         try {
-            const data: any = await api.get('/inventory/materials');
-            setMaterials(data || []);
+            const data: any = await api.get(API_ENDPOINTS.INVENTORY.MATERIALS);
+            setMaterials(data.content || []);
         } catch (e) { console.error(e); }
     };
 
     const fetchAttendanceStatus = async () => {
+        if (!workerId) return;
         try {
-            const data: any = await api.get(`/attendance/status?workerId=${workerId}`);
+            const data: any = await api.get(`${API_ENDPOINTS.ATTENDANCE.STATUS}?workerId=${workerId}`);
             setIsClockedIn(data);
         } catch (err) {
             console.error('Failed to fetch attendance');
@@ -129,10 +138,9 @@ const Tasks: React.FC = () => {
     }, [workerId, page]);
 
     useEffect(() => {
-        // Start live tracking if any task is IN_PROGRESS
         const hasActiveTask = tasks.some(t => t.status === 'IN_PROGRESS');
         if (hasActiveTask && workerId) {
-            startLiveTracking(workerId);
+            startLiveTracking(workerId.toString());
         } else {
             stopLiveTracking();
         }
@@ -142,41 +150,44 @@ const Tasks: React.FC = () => {
     const handleAddMaterial = async () => {
         if (!selectedMaterial) return;
         try {
-            await api.post(`/work-orders/${selectedTask.id}/materials`, {
+            await api.post(`${API_ENDPOINTS.OPERATIONS.WORK_ORDERS}/${selectedTask.id}/materials`, {
                 materialId: selectedMaterial.id,
                 quantity: materialQty
             });
             setIsMaterialModalOpen(false);
+            showToast('Material added successfully', 'success');
             fetchTasks(page);
-        } catch (e) { alert('Failed to add material'); }
+        } catch (e) { 
+            showToast('Failed to add material', 'error'); 
+        }
     };
 
     const handleUploadEvidence = async () => {
         if (!evidenceNote.trim() || !evidenceFile) {
-            alert('Please provide both a photo and a note.');
+            showToast('Please provide both a photo and a note.', 'info');
             return;
         }
         setUploading(true);
         try {
-            // 1. Upload the file first
             const formData = new FormData();
             formData.append('file', evidenceFile);
             const uploadRes: any = await api.post('/files/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            // 2. Save the evidence with the returned URL
-            await api.post(`/work-orders/${selectedTask.id}/evidence`, {
+            await api.post(`${API_ENDPOINTS.OPERATIONS.WORK_ORDERS}/${selectedTask.id}/evidence`, {
                 imageUrl: uploadRes.url,
                 notes: evidenceNote
             });
 
+            showToast('Evidence uploaded successfully', 'success');
             setEvidenceNote('');
             setEvidenceFile(null);
+            setEvidencePreview(null);
             fetchTasks(page);
         } catch (err) {
             console.error('Failed to upload evidence:', err);
-            alert('Technical error: Failed to upload evidence.');
+            showToast('Technical error: Failed to upload evidence.', 'error');
         } finally {
             setUploading(false);
         }
@@ -186,12 +197,15 @@ const Tasks: React.FC = () => {
         const file = event.target.files?.[0];
         if (file) {
             setEvidenceFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setEvidencePreview(reader.result as string);
+            reader.readAsDataURL(file);
         }
     };
 
     const handleNavigate = () => {
         if (!selectedTask.customer?.latitude || !selectedTask.customer?.longitude) {
-            alert('Customer location is not set. Opening destination search instead.');
+            showToast('Customer location is not set. Opening destination search instead.', 'info');
             window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedTask.customer?.address)}`, '_blank');
             return;
         }
@@ -201,10 +215,9 @@ const Tasks: React.FC = () => {
                 const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
                 const destination = `${selectedTask.customer.latitude},${selectedTask.customer.longitude}`;
                 
-                // If they are identical (within a small margin), warn the user
                 if (Math.abs(pos.coords.latitude - selectedTask.customer.latitude) < 0.0001 && 
                     Math.abs(pos.coords.longitude - selectedTask.customer.longitude) < 0.0001) {
-                    alert('You appear to be already at the customer location.');
+                    showToast('You appear to be already at the customer location.', 'info');
                 }
 
                 const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
@@ -221,40 +234,44 @@ const Tasks: React.FC = () => {
         setError(null);
         
         if (action === 'start' && !isClockedIn) {
-            setError('Operational requirement: You must clock in for your shift before starting any job.');
+            showToast('Operational requirement: You must clock in for your shift before starting any job.', 'error');
             return;
         }
 
         if (action === 'submit-verification' && (!selectedTask.evidence || selectedTask.evidence.length === 0)) {
-            setError('Industry Standard: At least one photo upload is mandatory to finalize this job.');
+            showToast('Industry Standard: At least one photo upload is mandatory to finalize this job.', 'error');
             return;
         }
 
-        const proceedWithUpdate = async (lat?: number, lon?: number) => {
+        const proceedWithUpdate = async (lat = 0.0, lon = 0.0) => {
             try {
                 const locationData = { latitude: lat, longitude: lon };
                 await api.patch(`/work-orders/${taskId}/${action}`, locationData);
                 
-                // Refresh data FIRST, then update the selected task in the modal
-                const updatedTasks: any = await api.get(`/work-orders/worker/${workerId}?page=${page}&size=10`);
-                setTasks(updatedTasks.content || []);
-                
-                const refreshedTask = updatedTasks.content.find((t: any) => t.id === taskId);
-                if (refreshedTask) {
-                    setSelectedTask(refreshedTask);
-                } else {
-                    // Task no longer in list (e.g. status changed), close modal
-                    setIsDetailModalOpen(false);
+                if (workerId) {
+                    const updatedTasks: any = await api.get(`/work-orders/worker/${workerId}?page=${page}&size=10`);
+                    setTasks(updatedTasks.content || []);
+                    
+                    const refreshedTask = updatedTasks.content.find((t: any) => t.id === taskId);
+                    if (refreshedTask) {
+                        setSelectedTask(refreshedTask);
+                        showToast(`Task ${action.replace('-', ' ')}ed successfully`, 'success');
+                    } else {
+                        setIsDetailModalOpen(false);
+                    }
                 }
             } catch (err: any) {
-                setError(err.message || `Technical error: Failed to ${action} task.`);
+                showToast(err.message || `Technical error: Failed to ${action} task.`, 'error');
             }
         };
 
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => proceedWithUpdate(pos.coords.latitude, pos.coords.longitude),
-                (err) => proceedWithUpdate()
+                () => {
+                    showToast('Location access denied. Using default coordinates.', 'info');
+                    proceedWithUpdate();
+                }
             );
         } else {
             proceedWithUpdate();
@@ -263,13 +280,8 @@ const Tasks: React.FC = () => {
 
     const toggleSubTask = async (taskId: number, currentStatus: boolean) => {
         try {
-            console.log(`Toggling task ${taskId} to ${!currentStatus}`);
             await api.patch(`/work-orders/tasks/${taskId}`, { isCompleted: !currentStatus });
-            
-            // Refresh tasks list
             fetchTasks(page);
-            
-            // Update local state directly to ensure UI reflects change immediately
             setSelectedTask((prev: any) => ({
                 ...prev,
                 tasks: prev.tasks.map((t: any) => t.id === taskId ? { ...t, completed: !currentStatus } : t)
@@ -291,7 +303,7 @@ const Tasks: React.FC = () => {
     return (
         <Layout>
             <div className="worker-tasks-container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Job Assignments</h1>
                         <p className="text-muted">Welcome back! You have {(tasks || []).filter(t => t.status !== 'COMPLETED').length} active missions today.</p>
@@ -304,16 +316,8 @@ const Tasks: React.FC = () => {
                     </div>
                 </header>
 
-                {error && (
-                    <div className="error-alert" style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '14px', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', color: '#991b1b', fontWeight: '700' }}>
-                        <AlertCircle size={24} />
-                        <span style={{ flex: 1 }}>{error}</span>
-                        <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b' }}><X size={20} /></button>
-                    </div>
-                )}
-
                 {loading ? (
-                    <div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div>
+                    <div style={{ textAlign: 'center', padding: '100px' }}><LoadingSpinner /></div>
                 ) : tasks.length === 0 ? (
                     <div style={{ padding: '100px', textAlign: 'center', background: 'var(--surface-muted)', borderRadius: '24px', border: '1.5px dashed var(--border)' }}>
                         <ClipboardList size={64} className="text-muted" strokeWidth={1} style={{ marginBottom: '20px', opacity: 0.5 }} />
@@ -364,7 +368,7 @@ const Tasks: React.FC = () => {
                     </div>
                 )}
 
-                <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+                <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
 
                 <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="Job Execution Center" width="900px">
                     {selectedTask && (
@@ -452,7 +456,7 @@ const Tasks: React.FC = () => {
                                 </div>
                                 <div className="evidence-container-standard">
                                     <div className="evidence-gallery-standard">
-                                        {selectedTask.evidence?.map((ev: any) => (
+                                        {(Array.isArray(selectedTask.evidence) ? selectedTask.evidence : []).map((ev: any) => (
                                             <div key={ev.id} className="evidence-thumb-standard">
                                                 <img src={ev.imageUrl} alt="Field site" />
                                                 <div className="evidence-overlay-standard">
@@ -470,7 +474,8 @@ const Tasks: React.FC = () => {
                                                         <Camera size={28} />
                                                         <span>Capture Photo</span>
                                                     </>
-                                                )}                                            </label>
+                                                )}
+                                            </label>
                                         )}
                                     </div>
                                     {selectedTask.status !== 'COMPLETED' && (
@@ -494,7 +499,7 @@ const Tasks: React.FC = () => {
                                 <div className="job-section-standard">
                                     <h4 className="section-title-standard">LOGGED MATERIALS</h4>
                                     <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
-                                        {selectedTask.materials.map((m: any) => (
+                                        {(Array.isArray(selectedTask.materials) ? selectedTask.materials : []).map((m: any) => (
                                             <div key={m.id} className="checklist-item-standard" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <Tag size={18} className="text-muted" />
@@ -514,7 +519,6 @@ const Tasks: React.FC = () => {
                                             <IndianRupee size={14} />
                                             <span>{((selectedTask.totalAmount || 0) + (selectedTask.materials?.reduce((acc: number, m: any) => acc + ((m.unitPriceAtUse || 0) * (m.quantityUsed || 0)), 0) || 0)).toFixed(2)}</span>
                                         </div>
-
                                 </div>
                                 <div className="value-breakdown-card">
                                     <div className="value-row">
@@ -563,7 +567,6 @@ const Tasks: React.FC = () => {
                                         <button
                                             onClick={async () => {
                                                 try {
-                                                    // Find the invoice for this work order
                                                     const data: any = await api.get('/finance/invoices');
                                                     const inv = (data || []).find((i: any) => i.workOrder?.id === selectedTask.id);
                                                     if (inv) {
@@ -573,11 +576,11 @@ const Tasks: React.FC = () => {
                                                             paymentMethod: 'CASH',
                                                             transactionReference: `CASH_COLLECTED_BY_WORKER_${workerId}`
                                                         });
-                                                        alert('Cash payment recorded successfully!');
+                                                        showToast('Cash payment recorded successfully!', 'success');
                                                         setIsDetailModalOpen(false);
                                                         fetchTasks(page);
                                                     }
-                                                } catch (e) { alert('Failed to record cash payment'); }
+                                                } catch (e) { showToast('Failed to record cash payment', 'error'); }
                                             }}
                                             className="btn btn-primary btn-lg-standard"
                                             style={{ background: 'var(--success)', color: 'white' }}
@@ -605,10 +608,13 @@ const Tasks: React.FC = () => {
                                 <select
                                     className="input-field pl-10"
                                     value={selectedMaterial?.id || ''}
-                                    onChange={e => setSelectedMaterial(materials.find(m => m.id === Number(e.target.value)))}
-                                >
-                                    <option value="">Choose material...</option>
-                                    {materials.map(m => (
+                                    onChange={e => {
+                                        const val = Number(e.target.value);
+                                        const mList = Array.isArray(materials) ? materials : [];
+                                        setSelectedMaterial(mList.find(m => m.id === val));
+                                    }}
+                                >                                    <option value="">Choose material...</option>
+                                    {(Array.isArray(materials) ? materials : []).map(m => (
                                         <option key={m.id} value={m.id}>{m.name} (Stock: {m.quantity} {m.unit})</option>
                                     ))}
                                 </select>

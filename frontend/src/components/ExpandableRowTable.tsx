@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface Column<T> {
   header: string;
@@ -27,9 +28,8 @@ export function ExpandableRowTable<T extends { id: string | number }>({
 
   if (loading) {
     return (
-        <div className="premium-table-container" style={{ padding: '100px', textAlign: 'center' }}>
-            <div className="animate-spin" style={{ width: '32px', height: '32px', border: '4px solid var(--primary-light)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto' }}></div>
-            <p style={{ marginTop: '16px', fontWeight: '600', color: 'var(--text-muted)' }}>Retrieving secure data...</p>
+        <div className="premium-table-container" style={{ padding: '60px 0' }}>
+            <LoadingSpinner />
         </div>
     );
   }
@@ -37,7 +37,7 @@ export function ExpandableRowTable<T extends { id: string | number }>({
   return (
     <div className="premium-table-container">
       <div className="table-responsive-wrapper">
-        <table className="premium-table">
+        <table className="premium-table zebra-table">
           <thead>
             <tr>
               {columns.map((col, idx) => (
@@ -52,12 +52,11 @@ export function ExpandableRowTable<T extends { id: string | number }>({
                 <tr 
                   onClick={() => toggleRow(item.id)} 
                   className={expandedRowId === item.id ? 'row-active' : ''}
-                  style={{ cursor: 'pointer' }}
                 >
                   {columns.map((col, idx) => (
                     <td key={idx}>{col.accessor(item)}</td>
                   ))}
-                  <td className="action-toggle" style={{ textAlign: 'right', paddingRight: '20px' }}>
+                  <td className="action-toggle">
                     {expandedRowId === item.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </td>
                 </tr>
@@ -77,36 +76,13 @@ export function ExpandableRowTable<T extends { id: string | number }>({
       </div>
 
       <style>{`
-        .row-active td {
-            background-color: var(--primary-light) !important;
-            border-bottom-color: var(--primary) !important;
-        }
-        
-        .expanded-cell {
-            padding: 0 !important;
-            background-color: var(--surface-muted);
-        }
+        .row-active td { background-color: var(--primary-light) !important; color: var(--primary); font-weight: 700; }
+        .expanded-cell { padding: 0 !important; background-color: var(--surface-muted); }
+        .expanded-content-anim { padding: 32px; animation: slideDown 0.3s ease-out; border-bottom: 2px solid var(--primary); }
 
-        .expanded-content-anim {
-            padding: 32px;
-            animation: slideDown 0.3s ease-out;
-            border-bottom: 2px solid var(--primary);
-            overflow-x: hidden;
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .action-toggle {
-            color: var(--text-muted);
-            transition: color 0.2s;
-        }
-
-        .row-active .action-toggle {
-            color: var(--primary);
-        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .action-toggle { text-align: right; padding-right: 20px !important; color: var(--text-muted); }
+        .row-active .action-toggle { color: var(--primary); }
       `}</style>
     </div>
   );

@@ -9,14 +9,20 @@ import Modal from '../components/Modal';
 import api from '../services/api';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
 import { Pagination } from '../components/Pagination';
+import { useToast } from '../components/ToastProvider';
 
 const Inventory: React.FC = () => {
+  const showToast = useToast();
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 10;
 
   // Form State
   const [formData, setFormData] = useState({
@@ -30,13 +36,15 @@ const Inventory: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchInventory();
-  }, []);
+    fetchInventory(page);
+  }, [page]);
 
-  const fetchInventory = async () => {
+  const fetchInventory = async (pageNumber: number) => {
     try {
-      const data: any = await api.get('/inventory/materials');
-      setMaterials(data || []);
+      const data: any = await api.get(`/inventory/materials?page=${pageNumber}&size=${pageSize}`);
+      setMaterials(data.content || []);
+      setTotalPages(data.totalPages || 0);
+      setTotalElements(data.totalElements || 0);
     } catch (err) {
       console.error('Failed to fetch inventory');
     } finally {
@@ -73,9 +81,10 @@ const Inventory: React.FC = () => {
         await api.post('/inventory/materials', formData);
       }
       setIsModalOpen(false);
-      fetchInventory();
+      fetchInventory(page);
+      showToast('Material saved successfully', 'success');
     } catch (err) {
-      alert('Failed to save material');
+      showToast('Failed to save material', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -85,19 +94,22 @@ const Inventory: React.FC = () => {
     if (!window.confirm('Are you sure you want to remove this item from inventory?')) return;
     try {
       await api.delete(`/inventory/materials/${id}`);
-      fetchInventory();
+      fetchInventory(page);
+      showToast('Material deleted successfully', 'success');
     } catch (err) {
-      alert('Failed to delete material');
+      showToast('Failed to delete material', 'error');
     }
   };
 
-  const filteredMaterials = materials.filter(m => 
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const safeMaterials = Array.isArray(materials) ? materials : [];
+
+  const filteredMaterials = safeMaterials.filter(m => 
+    (m.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
     (m.sku && m.sku.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const totalValue = materials.reduce((sum, m) => sum + (m.totalValue || 0), 0);
-  const lowStockItems = materials.filter(m => m.quantity <= (m.minQuantity || 0)).length;
+  const totalValue = safeMaterials.reduce((sum, m) => sum + (m.totalValue || 0), 0);
+  const lowStockItems = safeMaterials.filter(m => m.quantity <= (m.minQuantity || 0)).length;
 
   const columns = [
     { header: 'Asset Item', accessor: (m: any) => (
@@ -120,7 +132,7 @@ const Inventory: React.FC = () => {
   return (
     <Layout>
       <div className="inventory-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Asset Inventory</h1>
             <p className="text-muted">Manage service parts, equipment, and consumables across all field teams.</p>
@@ -133,7 +145,7 @@ const Inventory: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
             <div className="mini-stat">
                 <span className="stat-label">Total Managed SKUs</span>
-                <span className="stat-value">{materials.length}</span>
+                <span className="stat-value">{Array.isArray(materials) ? materials.length : 0}</span>
             </div>
             <div className="mini-stat">
                 <span className="stat-label">Estimated Stock Worth</span>
@@ -197,7 +209,7 @@ const Inventory: React.FC = () => {
         />
         
         <div style={{ marginTop: '24px' }}>
-            <Pagination currentPage={0} totalPages={1} onPageChange={() => {}} />
+            <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
         </div>
       </div>
 

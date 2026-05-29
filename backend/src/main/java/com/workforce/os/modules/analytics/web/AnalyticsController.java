@@ -12,15 +12,58 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import com.workforce.os.modules.analytics.dto.AnalyticsResponse;
+import com.workforce.os.modules.analytics.dto.WorkerUtilizationDTO;
+import com.workforce.os.common.context.TenantContext;
+
 @RestController
 @RequestMapping("/api/v1/analytics")
 @RequiredArgsConstructor
 public class AnalyticsController {
     private final AnalyticsService analyticsService;
 
+    @GetMapping("/worker-utilization")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ApiResponse<List<WorkerUtilizationDTO>>> getWorkerUtilization() {
+        return ResponseEntity.ok(ApiResponse.success(analyticsService.getWorkerUtilization(), "Worker utilization retrieved"));
+    }
+
     @GetMapping("/profitability")
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<List<ProfitabilityDTO>>> getProfitability() {
         return ResponseEntity.ok(ApiResponse.success(analyticsService.getJobProfitability(), "Profitability data retrieved"));
+    }
+
+    @GetMapping("/owner")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<ApiResponse<AnalyticsResponse>> getOwnerAnalytics() {
+        return ResponseEntity.ok(ApiResponse.success(analyticsService.getOwnerAnalytics(), "Owner analytics retrieved"));
+    }
+
+    @GetMapping("/report-pdf")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<byte[]> downloadPerformanceReport() {
+        String tenantId = TenantContext.getCurrentTenant();
+        AnalyticsResponse stats = analyticsService.getOwnerAnalytics();
+        List<ProfitabilityDTO> profitability = analyticsService.getJobProfitability();
+        
+        java.util.Map<String, Object> vars = new java.util.HashMap<>();
+        vars.put("stats", stats);
+        vars.put("profitability", profitability);
+        vars.put("generatedAt", java.time.LocalDateTime.now().toString());
+        
+        // Add Organization Branding
+        com.workforce.os.modules.organization.repository.OrganizationRepository orgRepo = 
+            org.springframework.web.context.ContextLoader.getCurrentWebApplicationContext().getBean(com.workforce.os.modules.organization.repository.OrganizationRepository.class);
+        orgRepo.findByTenantId(tenantId).ifPresent(org -> vars.put("organization", org));
+        
+        byte[] pdfBytes = ((com.workforce.os.modules.finance.service.FinanceService) 
+            org.springframework.web.context.ContextLoader.getCurrentWebApplicationContext().getBean("financeService"))
+            .getPdfService().generatePdf("analytics/performance-report", vars);
+            
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=performance-report.pdf")
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 }

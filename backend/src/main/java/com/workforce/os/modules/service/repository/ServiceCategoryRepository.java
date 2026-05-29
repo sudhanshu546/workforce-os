@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ServiceCategoryRepository extends JpaRepository<ServiceCategory, Long> {
     List<ServiceCategory> findAllByTenantId(String tenantId);
+    java.util.Optional<ServiceCategory> findByIdAndTenantId(Long id, String tenantId);
 }

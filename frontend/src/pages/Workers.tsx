@@ -10,16 +10,36 @@ import { Layout } from '../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../components/Pagination';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
+import { 
+  useGetWorkersQuery, 
+  useOnboardWorkerMutation, 
+  useUpdateWorkerMutation, 
+  useDeleteWorkerMutation,
+  useAssignServiceToWorkerMutation,
+  useRemoveServiceFromWorkerMutation
+} from '../redux/workforceApi';
+import { useGetServiceItemsQuery } from '../redux/servicesApi';
 
 const Workers: React.FC = () => {
-  const [workers, setWorkers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const pageSize = 10;
   
+  // RTK Query Hooks
+  const { 
+    data: workerData, 
+    isLoading: loadingWorkers, 
+    error: workerError,
+    isError: isWorkerError 
+  } = useGetWorkersQuery({ page: currentPage, size: pageSize });
+  const { data: serviceData } = useGetServiceItemsQuery();
+  
+  const [onboardWorker] = useOnboardWorkerMutation();
+  const [updateWorker] = useUpdateWorkerMutation();
+  const [deleteWorker] = useDeleteWorkerMutation();
+  const [assignService] = useAssignServiceToWorkerMutation();
+  const [removeService] = useRemoveServiceFromWorkerMutation();
+
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
-  const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
@@ -35,55 +55,26 @@ const Workers: React.FC = () => {
 
   const [selectedWorker, setSelectedWorker] = useState<any>(null);
   const [editData, setEditData] = useState<any>({});
-  const [newSkill, setNewSkill] = useState({ skillName: '', proficiencyLevel: 'INTERMEDIATE' });
 
   const navigate = useNavigate();
   const role = localStorage.getItem('role');
 
-  const [services, setServices] = useState<any[]>([]);
-
   useEffect(() => {
     if (role !== 'OWNER' && role !== 'MANAGER') {
       navigate('/dashboard');
-      return;
     }
-    fetchWorkers(currentPage);
-    fetchServices();
-  }, [role, navigate, currentPage, statusFilter]);
+  }, [role, navigate]);
 
-  const fetchServices = async () => {
+  const handleToggleService = async (workerId: number, service: any, worker: any) => {
     try {
-        const data: any = await api.get('/services/items');
-        setServices(data || []);
-    } catch (err) {
-        console.error('Error fetching services:', err);
-    }
-  };
-
-  const handleToggleService = async (workerId: number, service: any) => {
-    try {
-        const isAssigned = selectedWorker.supportedServices.some((s: any) => s.id === service.id);
+        const isAssigned = worker.supportedServices.some((s: any) => s.id === service.id);
         if (isAssigned) {
-            await api.delete(`/workers/${workerId}/services/${service.id}`);
+            await removeService({ workerId, serviceId: service.id }).unwrap();
         } else {
-            await api.post(`/workers/${workerId}/services/${service.id}`);
+            await assignService({ workerId, serviceId: service.id }).unwrap();
         }
-        fetchWorkers(currentPage);
     } catch (err) {
         console.error('Service assignment failed:', err);
-    }
-  };
-
-  const fetchWorkers = async (page: number) => {
-    try {
-      setLoading(true);
-      const data: any = await api.get(`/workers?page=${page}&size=${pageSize}`);
-      setWorkers(data.content || []);
-      setTotalPages(data.totalPages || 0);
-    } catch (err) {
-      console.error('Error fetching workers:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -91,14 +82,13 @@ const Workers: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.post('/workers/onboard', onboardData);
+      await onboardWorker(onboardData).unwrap();
       setIsOnboardModalOpen(false);
       setOnboardData({
         name: '', email: '', phone: '', password: '',
         designation: '', joiningDate: new Date().toISOString().split('T')[0],
         salaryType: 'MONTHLY', salaryAmount: 0
       });
-      fetchWorkers(0);
     } catch (err) {
       console.error('Onboarding failed:', err);
     } finally {
@@ -110,9 +100,8 @@ const Workers: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-        await api.put(`/workers/${selectedWorker.id}`, editData);
+        await updateWorker({ id: selectedWorker.id, body: editData }).unwrap();
         setIsEditModalOpen(false);
-        fetchWorkers(currentPage);
     } catch (err) {
         console.error('Update failed:', err);
     } finally {
@@ -123,8 +112,7 @@ const Workers: React.FC = () => {
   const handleDeleteWorker = async (id: number) => {
     if (window.confirm('Are you sure you want to remove this worker from the organization? This action cannot be undone.')) {
         try {
-            await api.delete(`/workers/${id}`);
-            fetchWorkers(currentPage);
+            await deleteWorker(id).unwrap();
         } catch (err) {
             console.error('Deletion failed:', err);
         }
@@ -144,7 +132,10 @@ const Workers: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const filteredWorkers = workers.filter(worker => {
+  const workers = workerData?.content || [];
+  const services = serviceData?.content || serviceData || [];
+
+  const filteredWorkers = workers.filter((worker: any) => {
     const matchesSearch = 
         worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         worker.designation.toLowerCase().includes(searchQuery.toLowerCase());
@@ -175,7 +166,7 @@ const Workers: React.FC = () => {
   return (
     <Layout>
       <div className="workforce-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Expert Workforce</h1>
             <p className="text-muted">Direct oversight of field technicians, skill matrices, and employment records.</p>
@@ -184,6 +175,16 @@ const Workers: React.FC = () => {
             <UserPlus size={20} /> Onboard New Expert
           </button>
         </header>
+
+        {isWorkerError && (
+          <div className="card" style={{ background: '#fef2f2', border: '1px solid #fee2e2', padding: '20px', marginBottom: '24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+             <AlertCircle color="#ef4444" />
+             <div>
+                <div style={{ fontWeight: '800', color: '#991b1b' }}>Failed to load field staff</div>
+                <div style={{ fontSize: '14px', color: '#b91c1c' }}>{(workerError as any)?.data?.message || 'The server returned an unexpected response. Please verify your connection.'}</div>
+             </div>
+          </div>
+        )}
 
         <div className="filter-bar" style={{ marginBottom: '24px' }}>
           <div className="search-bar">
@@ -209,61 +210,62 @@ const Workers: React.FC = () => {
           </div>
         </div>
 
-        <ExpandableRowTable 
-            data={filteredWorkers}
-            columns={columns}
-            loading={loading}
-            renderExpanded={(worker: any) => (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '40px' }}>
-                    <div>
-                        <div className="stat-label">Service Specialization</div>
-                        <div className="services-container" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '16px' }}>
-                            {services.map(service => {
-                                const isChecked = worker.supportedServices?.some((s: any) => s.id === service.id);
-                                return (
-                                    <label key={service.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', cursor: 'pointer', background: isChecked ? 'var(--primary-light)' : 'white', padding: '10px 16px', borderRadius: '12px', border: '1.5px solid', borderColor: isChecked ? 'var(--primary)' : 'var(--border)', transition: 'all 0.2s' }}>
-                                        <input 
-                                            type="checkbox" 
-                                            checked={isChecked}
-                                            style={{ width: '18px', height: '18px' }}
-                                            onChange={() => {
-                                                setSelectedWorker(worker);
-                                                handleToggleService(worker.id, service);
-                                            }}
-                                        />
-                                        <span style={{ fontWeight: isChecked ? '800' : '500', color: isChecked ? 'var(--primary)' : 'var(--text-main)' }}>{service.name}</span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div>
-                        <div className="stat-label">Payroll Information</div>
-                        <div className="card" style={{ marginTop: '16px', padding: '24px', background: '#1e293b', color: 'white' }}>
-                            <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>CURRENT SALARY ({worker.salaryType})</div>
-                            <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)' }}>₹{worker.salaryAmount?.toLocaleString()}</div>
-                            <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                                <ShieldCheck size={16} className="text-success" /> System Verified Profile
+        <div className="stable-table-container">
+          <div className="table-content-area">
+            <ExpandableRowTable 
+                data={filteredWorkers}
+                columns={columns}
+                loading={loadingWorkers}
+                renderExpanded={(worker: any) => (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '40px' }}>
+                        <div>
+                            <div className="stat-label">Service Specialization</div>
+                            <div className="services-container" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '16px' }}>
+                                {services.map((service: any) => {
+                                    const isChecked = worker.supportedServices?.some((s: any) => s.id === service.id);
+                                    return (
+                                        <label key={service.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', cursor: 'pointer', background: isChecked ? 'var(--primary-light)' : 'white', padding: '10px 16px', borderRadius: '12px', border: '1.5px solid', borderColor: isChecked ? 'var(--primary)' : 'var(--border)', transition: 'all 0.2s' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isChecked}
+                                                style={{ width: '18px', height: '18px' }}
+                                                onChange={() => handleToggleService(worker.id, service, worker)}
+                                            />
+                                            <span style={{ fontWeight: isChecked ? '800' : '500', color: isChecked ? 'var(--primary)' : 'var(--text-main)' }}>{service.name}</span>
+                                        </label>
+                                    );
+                                })}
                             </div>
                         </div>
-                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
-                        <div className="stat-label">Admin Actions</div>
-                        <button onClick={(e) => { e.stopPropagation(); openEditModal(worker); }} className="btn btn-primary" style={{ width: '100%' }}>
-                            <Edit3 size={18} /> Modify Employment
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteWorker(worker.id); }} className="btn btn-secondary text-error" style={{ width: '100%' }}>
-                            <Trash2 size={18} /> Terminate Contract
-                        </button>
-                    </div>
-                </div>
-            )}
-        />
+                        <div>
+                            <div className="stat-label">Payroll Information</div>
+                            <div className="card" style={{ marginTop: '16px', padding: '24px', background: '#1e293b', color: 'white' }}>
+                                <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>CURRENT SALARY ({worker.salaryType})</div>
+                                <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)' }}>₹{worker.salaryAmount?.toLocaleString()}</div>
+                                <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                                    <ShieldCheck size={16} className="text-success" /> System Verified Profile
+                                </div>
+                            </div>
+                        </div>
 
-        <div style={{ marginTop: '24px' }}>
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                            <div className="stat-label">Admin Actions</div>
+                            <button onClick={(e) => { e.stopPropagation(); openEditModal(worker); }} className="btn btn-primary" style={{ width: '100%' }}>
+                                <Edit3 size={18} /> Modify Employment
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteWorker(worker.id); }} className="btn btn-secondary text-error" style={{ width: '100%' }}>
+                                <Trash2 size={18} /> Terminate Contract
+                            </button>
+                        </div>
+                    </div>
+                )}
+            />
+          </div>
+
+          <div style={{ marginTop: '24px' }}>
+              <Pagination currentPage={currentPage} totalPages={workerData?.totalPages || 0} pageSize={pageSize} totalElements={workerData?.totalElements || 0} onPageChange={setCurrentPage} />
+          </div>
         </div>
       </div>
 

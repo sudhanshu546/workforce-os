@@ -3,6 +3,7 @@ import { Layout } from '../components/Layout';
 import Modal from '../components/Modal';
 import api from '../services/api';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
+import { Pagination } from '../components/Pagination';
 import { 
   Plus, Trash2, Loader2, Tag, Layers, 
   Search, Edit3, Package, AlertCircle, Filter, 
@@ -14,6 +15,10 @@ const ServicesPage: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 10;
   
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -30,18 +35,23 @@ const ServicesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchData();
-  }, [filterCategory]);
+    fetchData(page);
+  }, [filterCategory, page]);
 
-  const fetchData = async () => {
+  const fetchData = async (pageNumber: number) => {
     try {
       setLoading(true);
-      const [catRes, itemRes]: any = await Promise.all([
-        api.get('/services/categories'),
-        api.get(filterCategory === 'all' ? '/services/items' : `/services/items?categoryId=${filterCategory}`)
-      ]);
-      setCategories(catRes || []);
-      setItems(itemRes || []);
+      const categories: any = await api.get('/services/categories');
+      setCategories(categories || []);
+
+      const itemUrl = filterCategory === 'all' 
+        ? `/services/items?page=${pageNumber}&size=${pageSize}` 
+        : `/services/items?categoryId=${filterCategory}&page=${pageNumber}&size=${pageSize}`;
+      
+      const pageData: any = await api.get(itemUrl);
+      setItems(pageData.content || []);
+      setTotalPages(pageData.totalPages || 0);
+      setTotalElements(pageData.totalElements || 0);
     } catch (err) {
       console.error('Failed to fetch services', err);
       setCategories([]);
@@ -61,7 +71,7 @@ const ServicesPage: React.FC = () => {
         await api.post('/services/categories', payload);
       }
       resetCategoryForm();
-      fetchData();
+      fetchData(page);
     } catch (err) {
       console.error('Error saving category', err);
     }
@@ -79,7 +89,7 @@ const ServicesPage: React.FC = () => {
         try {
             await api.delete(`/services/categories/${id}`);
             if (filterCategory === String(id)) setFilterCategory('all');
-            fetchData();
+            fetchData(page);
         } catch (err) {
             console.error('Error deleting category', err);
         }
@@ -99,7 +109,7 @@ const ServicesPage: React.FC = () => {
         await api.post(`/services/items?categoryId=${newItem.categoryId}`, newItem);
       }
       resetItemForm();
-      fetchData();
+      fetchData(page);
     } catch (err) {
       console.error('Error saving item', err);
     }
@@ -115,7 +125,7 @@ const ServicesPage: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this service?')) {
         try {
             await api.delete(`/services/items/${id}`);
-            fetchData();
+            fetchData(page);
         } catch (err) {
             console.error('Error deleting item', err);
         }
@@ -140,7 +150,9 @@ const ServicesPage: React.FC = () => {
     setIsItemModalOpen(true);
   };
 
-  const filteredItems = (items || []).filter(item => 
+  const safeItems = Array.isArray(items) ? items : [];
+
+  const filteredItems = safeItems.filter(item => 
     (item?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (item?.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -161,7 +173,7 @@ const ServicesPage: React.FC = () => {
   return (
     <Layout>
       <div className="services-container">
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Service Catalog</h1>
               <p className="text-muted">Maintain your master list of service offerings and department categories.</p>
@@ -238,32 +250,43 @@ const ServicesPage: React.FC = () => {
                     <p className="text-muted">No services found matching your criteria.</p>
                 </div>
             )}
+            
+            <div style={{ marginTop: '32px' }}>
+                <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
+            </div>
           </div>
         )}
 
         {activeTab === 'categories' && (
            <div className="tab-content">
-              <ExpandableRowTable 
-                data={categories}
-                columns={categoryColumns}
-                loading={loading}
-                renderExpanded={(cat: any) => (
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
-                        <div>
-                            <div className="stat-label">Category Scope</div>
-                            <p style={{ marginTop: '12px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '15px', color: 'var(--text-main)', lineHeight: '1.6' }}>
-                                {cat.description}
-                            </p>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
-                            <div className="stat-label">Management Actions</div>
-                            <button onClick={(e) => { e.stopPropagation(); startEditCategory(cat); }} className="btn btn-primary" style={{ width: '100%' }}><Edit3 size={18} /> Modify Classification</button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }} className="btn btn-secondary text-error" style={{ width: '100%' }}><Trash2 size={18} /> Purge Category</button>
-                        </div>
-                    </div>
-                )}
-              />
-           </div>
+              <div className="stable-table-container">
+                <div className="table-content-area">
+                  <ExpandableRowTable
+                   data={categories}
+                   columns={categoryColumns}
+                   loading={loading}
+                   renderExpanded={(cat: any) => (
+                       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
+                           <div>
+                               <div className="stat-label">Category Scope</div>
+                               <p style={{ marginTop: '12px', background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '15px', color: 'var(--text-main)', lineHeight: '1.6' }}>
+                                   {cat.description}
+                               </p>
+                           </div>
+                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                               <div className="stat-label">Management Actions</div>
+                               <button onClick={(e) => { e.stopPropagation(); startEditCategory(cat); }} className="btn btn-primary" style={{ width: '100%' }}><Edit3 size={18} /> Modify Classification</button>
+                               <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }} className="btn btn-secondary text-error" style={{ width: '100%' }}><Trash2 size={18} /> Purge Category</button>
+                           </div>
+                       </div>
+                   )}
+                 />
+                </div>
+
+                <div style={{ marginTop: '32px' }}>
+                    <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
+                </div>
+              </div>           </div>
         )}
       </div>
 

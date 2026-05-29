@@ -2,32 +2,44 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Package, Clock, CheckCircle2, ChevronRight, 
-    Search, Filter, Loader2, MapPin, FileText, Receipt, IndianRupee, CheckCircle, Activity
+    Search, Filter, Loader2, MapPin, FileText, Receipt, IndianRupee, CheckCircle, Activity, Star
 } from 'lucide-react';
 import api from '../services/api';
 import { Layout } from '../components/Layout';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
+import { Pagination } from '../components/Pagination';
 import Modal from '../components/Modal';
+import { ReviewModal } from '../components/ReviewModal';
+import { useToast } from '../components/ToastProvider';
 
 const CustomerOrdersPage: React.FC = () => {
+    const showToast = useToast();
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('ALL');
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const pageSize = 10;
     const navigate = useNavigate();
 
-    // Re-use logic for modals from Dashboard if needed, but for now focusing on Table refactor
-    // Since this page mostly navigates to verification/payment pages, we can keep the navigation logic
+    // Review Modal State
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     useEffect(() => {
-        fetchOrders();
-    }, []);
+        fetchOrders(page);
+    }, [page]);
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (pageNumber: number) => {
         try {
             const customerId = localStorage.getItem('customerId');
             if (!customerId) return;
-            const response: any = await api.get(`/work-orders/customer/${customerId}`);
-            setOrders(response.content || []);
+            setLoading(true);
+            const data: any = await api.get(`/work-orders/customer/${customerId}?page=${pageNumber}&size=${pageSize}`);
+            setOrders(data.content || []);
+            setTotalPages(data.totalPages || 0);
+            setTotalElements(data.totalElements || 0);
         } catch (err) {
             console.error('Failed to fetch orders');
         } finally {
@@ -45,6 +57,11 @@ const CustomerOrdersPage: React.FC = () => {
         }
     };
 
+    const handleReviewSuccess = () => {
+        showToast('Thank you! Your review has been submitted.', 'success');
+        fetchOrders(page);
+    };
+
     const filteredOrders = orders.filter(o => filter === 'ALL' || o.status === filter);
 
     if (loading) return <Layout><div style={{ textAlign: 'center', padding: '100px' }}><Loader2 className="animate-spin" size={40} color="var(--primary)" /></div></Layout>;
@@ -52,7 +69,7 @@ const CustomerOrdersPage: React.FC = () => {
     return (
         <Layout>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>My Service History</h1>
                         <p className="text-muted">Track live technician deployments and manage your service records.</p>
@@ -153,6 +170,19 @@ const CustomerOrdersPage: React.FC = () => {
                                         <IndianRupee size={16} /> Pay Now
                                     </button>
                                 )}
+                                {order.status === 'COMPLETED' && (
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setSelectedOrder(order);
+                                            setIsReviewModalOpen(true);
+                                        }} 
+                                        className="btn btn-primary"
+                                        style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                                    >
+                                        <Star size={16} /> Rate Service
+                                    </button>
+                                )}
                                 <button onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${order.id}/verify`); }} className="btn btn-secondary">
                                     Full Details
                                 </button>
@@ -160,6 +190,20 @@ const CustomerOrdersPage: React.FC = () => {
                         </div>
                     )}
                 />
+
+                <div style={{ marginTop: '24px' }}>
+                    <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
+                </div>
+
+                {isReviewModalOpen && selectedOrder && (
+                    <ReviewModal 
+                        isOpen={isReviewModalOpen}
+                        onClose={() => setIsReviewModalOpen(false)}
+                        workOrderId={selectedOrder.id}
+                        workerName={selectedOrder.assignedWorker?.user?.name || 'Technician'}
+                        onSuccess={handleReviewSuccess}
+                    />
+                )}
 
                 {filteredOrders.length === 0 && (
                         <div style={{ padding: '100px', textAlign: 'center', background: 'var(--surface-muted)', borderRadius: '24px', border: '1.5px dashed var(--border)' }}>

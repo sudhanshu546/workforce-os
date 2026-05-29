@@ -19,6 +19,7 @@ const Leads: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const pageSize = 10;
   
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
@@ -64,6 +65,7 @@ const Leads: React.FC = () => {
       const data: any = await api.get(`/leads?page=${page}&size=${pageSize}`);
       setLeads(data.content || []);
       setTotalPages(data.totalPages || 0);
+      setTotalElements(data.totalElements || 0);
     } catch (err) {
       console.error('Error fetching leads:', err);
     } finally {
@@ -73,7 +75,7 @@ const Leads: React.FC = () => {
 
   const fetchServices = async () => {
     try {
-      const data: any = await api.get('/services/items');
+      const data: any = await api.get('/services/items/all');
       setServices(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch services', err);
@@ -216,7 +218,7 @@ const Leads: React.FC = () => {
   return (
     <Layout>
       <div className="leads-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Revenue Pipeline</h1>
             <p className="text-muted">Qualified opportunities waiting for service estimation and dispatch.</p>
@@ -251,52 +253,56 @@ const Leads: React.FC = () => {
           </div>
         </div>
 
-        <ExpandableRowTable 
-            data={filteredLeads}
-            columns={columns}
-            loading={loading}
-            renderExpanded={(lead: any) => (
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
-                    <div>
-                        <div className="stat-label">Inquiry Requirements</div>
-                        <p style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '15px', color: 'var(--text-main)', marginTop: '12px', lineHeight: '1.6' }}>
-                            {lead.description}
-                        </p>
-                        <div style={{ marginTop: '20px', display: 'flex', gap: '24px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
-                                <Calendar size={16} /> Created: {new Date(lead.createdAt).toLocaleDateString()}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
-                                <Clock size={16} /> Ref ID: #LD-{lead.id + 1000}
+        <div className="stable-table-container">
+          <div className="table-content-area">
+            <ExpandableRowTable 
+                data={filteredLeads}
+                columns={columns}
+                loading={loading}
+                renderExpanded={(lead: any) => (
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
+                        <div>
+                            <div className="stat-label">Inquiry Requirements</div>
+                            <p style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '15px', color: 'var(--text-main)', marginTop: '12px', lineHeight: '1.6' }}>
+                                {lead.description}
+                            </p>
+                            <div style={{ marginTop: '20px', display: 'flex', gap: '24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
+                                    <Calendar size={16} /> Created: {new Date(lead.createdAt).toLocaleDateString()}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
+                                    <Clock size={16} /> Ref ID: #LD-{lead.id + 1000}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
-                        <div className="stat-label">Pipeline Actions</div>
-                        {(lead.status === 'NEW' || lead.status === 'CONTACTED') && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                            <div className="stat-label">Pipeline Actions</div>
+                            {(lead.status === 'NEW' || lead.status === 'CONTACTED') && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setIsQuotationModalOpen(true); }}
+                                    className="btn btn-primary"
+                                    style={{ width: '100%' }}
+                                >
+                                    <FileText size={18} /> Construct Estimate
+                                </button>
+                            )}
                             <button 
-                                onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setIsQuotationModalOpen(true); }}
-                                className="btn btn-primary"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
+                                className="btn btn-secondary text-error" 
                                 style={{ width: '100%' }}
                             >
-                                <FileText size={18} /> Construct Estimate
+                                <Trash2 size={18} /> Archive Opportunity
                             </button>
-                        )}
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
-                            className="btn btn-secondary text-error" 
-                            style={{ width: '100%' }}
-                        >
-                            <Trash2 size={18} /> Archive Opportunity
-                        </button>
+                        </div>
                     </div>
-                </div>
-            )}
-        />
-        
-        <div style={{ marginTop: '24px' }}>
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                )}
+            />
+          </div>
+          
+          <div style={{ marginTop: '24px' }}>
+              <Pagination currentPage={currentPage} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setCurrentPage} />
+          </div>
         </div>
       </div>
 

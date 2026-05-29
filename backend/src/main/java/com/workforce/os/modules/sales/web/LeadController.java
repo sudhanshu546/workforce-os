@@ -39,7 +39,7 @@ public class LeadController {
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Page<LeadResponseDTO>>> getLeads(Pageable pageable) {
         Page<LeadResponseDTO> leads = leadService.getLeads(pageable);
-        return ResponseEntity.ok(ApiResponse.success(leads, "Leads retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success(leads, LEADS_RETRIEVED));
     }
 
     @GetMapping("/customer/{customerId}")
@@ -51,7 +51,7 @@ public class LeadController {
         List<LeadResponseDTO> dtos = leads.stream()
                 .map(leadMapper::toDTO)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success(dtos, "Customer leads retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success(dtos, LEADS_RETRIEVED));
     }
 
     @PostMapping
@@ -67,20 +67,20 @@ public class LeadController {
                 request.getDescription(),
                 request.getPriority()
         );
-        return ResponseEntity.ok(ApiResponse.success(leadMapper.toDTO(lead), "Lead created successfully"));
+        return ResponseEntity.ok(ApiResponse.success(leadMapper.toDTO(lead), LEAD_CREATED));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<LeadResponseDTO>> updateLead(@PathVariable Long id, @Valid @RequestBody LeadRequestDTO request) {
         Lead lead = leadService.updateLead(id, request.getStatus(), request.getPriority(), request.getDescription());
-        return ResponseEntity.ok(ApiResponse.success(leadMapper.toDTO(lead), "Lead updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success(leadMapper.toDTO(lead), LEAD_UPDATED));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteLead(@PathVariable Long id) {
         leadService.deleteLead(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Lead deleted successfully"));
+        return ResponseEntity.ok(ApiResponse.success(null, LEAD_DELETED));
     }
 }

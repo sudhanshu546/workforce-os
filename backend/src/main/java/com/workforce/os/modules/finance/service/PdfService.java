@@ -15,13 +15,30 @@ import java.io.OutputStream;
 public class PdfService {
 
     private final TemplateEngine templateEngine;
+    private final com.workforce.os.modules.organization.repository.OrganizationRepository organizationRepository;
 
     public byte[] generateInvoicePdf(Invoice invoice) {
         Context context = new Context();
         context.setVariable("invoice", invoice);
         
+        // Add Organization Branding
+        organizationRepository.findByTenantId(invoice.getTenantId())
+                .ifPresent(org -> context.setVariable("organization", org));
+        
         String htmlContent = templateEngine.process("finance/invoice", context);
         
+        return runPdfGeneration(htmlContent);
+    }
+
+    public byte[] generatePdf(String templateName, java.util.Map<String, Object> variables) {
+        Context context = new Context();
+        context.setVariables(variables);
+        String htmlContent = templateEngine.process(templateName, context);
+        
+        return runPdfGeneration(htmlContent);
+    }
+
+    private byte[] runPdfGeneration(String htmlContent) {
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.withHtmlContent(htmlContent, "/");

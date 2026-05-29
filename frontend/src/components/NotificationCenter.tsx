@@ -5,6 +5,7 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 export const NotificationCenter: React.FC = () => {
     const [notifications, setNotifications] = useState<any[]>([]);
@@ -15,39 +16,20 @@ export const NotificationCenter: React.FC = () => {
     const customerId = useSelector((state: any) => state.auth.customerId);
     const navigate = useNavigate();
 
+    const userId = user?.id;
+
+    // Use common hook for real-time notifications
+    useWebSocket(
+        userId ? `/topic/notifications/${userId}` : (customerId ? `/topic/customer/notifications/${customerId}` : ''),
+        () => {
+            fetchNotifications();
+            fetchUnreadCount();
+        }
+    );
+
     useEffect(() => {
         fetchNotifications();
         fetchUnreadCount();
-
-        const userId = user?.id;
-
-        if (userId || customerId) {
-            const socket = new SockJS(import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws-workforce');
-            const stompClient = Stomp.over(socket);
-            stompClient.debug = () => {}; // Disable logging
-
-            stompClient.connect({}, () => {
-                // Subscribe to User notifications
-                if (userId) {
-                    stompClient.subscribe(`/topic/notifications/${userId}`, () => {
-                        fetchNotifications();
-                        fetchUnreadCount();
-                    });
-                }
-                
-                // Subscribe to Customer notifications
-                if (customerId) {
-                    stompClient.subscribe(`/topic/customer/notifications/${customerId}`, () => {
-                        fetchNotifications();
-                        fetchUnreadCount();
-                    });
-                }
-            });
-
-            return () => {
-                if (stompClient.connected) stompClient.disconnect(() => {});
-            };
-        }
     }, [user?.id, customerId]);
 
     useEffect(() => {

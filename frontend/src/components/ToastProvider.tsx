@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { toastNotifier } from '../utils/toast-notifier';
 
 interface Toast {
   id: number;
@@ -6,7 +7,9 @@ interface Toast {
   type: 'success' | 'error' | 'info';
 }
 
-const ToastContext = createContext<any>(null);
+type ToastContextType = (message: string, type?: 'success' | 'error' | 'info') => void;
+
+const ToastContext = createContext<ToastContextType>(() => {});
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -19,9 +22,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 5000);
   }, []);
 
-  // Expose to window for global access (e.g., in api.ts)
-  React.useEffect(() => {
-    (window as any).showToast = showToast;
+  // Register the showToast function with our central notifier
+  useEffect(() => {
+    toastNotifier.subscribe(showToast);
   }, [showToast]);
 
   return (
@@ -35,12 +38,19 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             color: 'white', 
             fontWeight: '600',
             background: toast.type === 'error' ? '#ef4444' : toast.type === 'success' ? '#22c55e' : '#3b82f6',
-            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+            animation: 'slideIn 0.3s ease-out'
           }}>
             {toast.message}
           </div>
         ))}
       </div>
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
     </ToastContext.Provider>
   );
 };

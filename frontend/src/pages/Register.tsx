@@ -1,35 +1,50 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Phone, Briefcase, Building2, ArrowRight, Loader2, HardHat } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import api from '../services/api';
+import { useToast } from '../components/ToastProvider';
+
+const registerSchema = z.object({
+  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
+  businessType: z.string().min(1, 'Please select a business type'),
+  name: z.string().min(2, 'Owner name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().min(10, 'Phone number must be at least 10 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const Register: React.FC = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    businessName: '',
-    businessType: 'ELECTRICAL'
-  });
+  const showToast = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      businessType: 'ELECTRICAL'
+    }
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: RegisterFormValues) => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await api.post('/auth/register-organization', formData);
+      const response = await api.post('/auth/register-organization', values);
       localStorage.setItem('access_token', response.data.access_token);
       localStorage.setItem('refresh_token', response.data.refresh_token);
       localStorage.setItem('role', response.data.role || 'OWNER');
+      showToast('Organization registered successfully!', 'success');
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -55,21 +70,21 @@ const Register: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="input-group">
               <label>Business Name</label>
               <div className="input-wrapper">
                 <Building2 className="input-icon" size={18} />
                 <input
-                  name="businessName"
+                  {...register('businessName')}
                   type="text"
                   placeholder="AC Experts Ltd"
-                  className="has-icon"
-                  onChange={handleChange}
-                  required
+                  className={`has-icon ${errors.businessName ? 'input-error' : ''}`}
+                  disabled={loading}
                 />
               </div>
+              {errors.businessName && <span className="error-text">{errors.businessName.message}</span>}
             </div>
 
             <div className="input-group">
@@ -77,9 +92,9 @@ const Register: React.FC = () => {
               <div className="input-wrapper">
                 <Briefcase className="input-icon" size={18} />
                 <select
-                  name="businessType"
-                  className="has-icon"
-                  onChange={handleChange}
+                  {...register('businessType')}
+                  className={`has-icon ${errors.businessType ? 'input-error' : ''}`}
+                  disabled={loading}
                 >
                   <option value="ELECTRICAL">Electrical</option>
                   <option value="PLUMBING">Plumbing</option>
@@ -88,6 +103,7 @@ const Register: React.FC = () => {
                   <option value="CLEANING">Cleaning Services</option>
                 </select>
               </div>
+              {errors.businessType && <span className="error-text">{errors.businessType.message}</span>}
             </div>
           </div>
 
@@ -96,14 +112,14 @@ const Register: React.FC = () => {
             <div className="input-wrapper">
               <User className="input-icon" size={18} />
               <input
-                name="name"
+                {...register('name')}
                 type="text"
                 placeholder="John Doe"
-                className="has-icon"
-                onChange={handleChange}
-                required
+                className={`has-icon ${errors.name ? 'input-error' : ''}`}
+                disabled={loading}
               />
             </div>
+            {errors.name && <span className="error-text">{errors.name.message}</span>}
           </div>
 
           <div className="input-group">
@@ -111,14 +127,14 @@ const Register: React.FC = () => {
             <div className="input-wrapper">
               <Mail className="input-icon" size={18} />
               <input
-                name="email"
+                {...register('email')}
                 type="email"
                 placeholder="john@company.com"
-                className="has-icon"
-                onChange={handleChange}
-                required
+                className={`has-icon ${errors.email ? 'input-error' : ''}`}
+                disabled={loading}
               />
             </div>
+            {errors.email && <span className="error-text">{errors.email.message}</span>}
           </div>
 
           <div className="input-group">
@@ -126,14 +142,14 @@ const Register: React.FC = () => {
             <div className="input-wrapper">
               <Phone className="input-icon" size={18} />
               <input
-                name="phone"
+                {...register('phone')}
                 type="tel"
                 placeholder="+1 (555) 000-0000"
-                className="has-icon"
-                onChange={handleChange}
-                required
+                className={`has-icon ${errors.phone ? 'input-error' : ''}`}
+                disabled={loading}
               />
             </div>
+            {errors.phone && <span className="error-text">{errors.phone.message}</span>}
           </div>
 
           <div className="input-group">
@@ -141,14 +157,14 @@ const Register: React.FC = () => {
             <div className="input-wrapper">
               <Lock className="input-icon" size={18} />
               <input
-                name="password"
+                {...register('password')}
                 type="password"
                 placeholder="••••••••"
-                className="has-icon"
-                onChange={handleChange}
-                required
+                className={`has-icon ${errors.password ? 'input-error' : ''}`}
+                disabled={loading}
               />
             </div>
+            {errors.password && <span className="error-text">{errors.password.message}</span>}
           </div>
 
           <button 

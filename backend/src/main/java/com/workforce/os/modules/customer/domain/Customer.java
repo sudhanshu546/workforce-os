@@ -1,5 +1,6 @@
 package com.workforce.os.modules.customer.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.workforce.os.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -30,6 +31,7 @@ public class Customer extends BaseEntity implements UserDetails {
     @Column(nullable = false, unique = true)
     private String phone;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 

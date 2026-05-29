@@ -29,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
   
   const displayName = user?.name || 'User';
   const displayRole = user?.role || '';
+  const orgLogo = localStorage.getItem('orgLogo');
   
   return (
     <header className="navbar">
@@ -36,6 +37,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
         <button className="mobile-menu-btn" onClick={onMenuClick} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }}>
           <Menu size={24} />
         </button>
+        {orgLogo && (
+          <img src={orgLogo} alt="Org Logo" className="mobile-only-logo" style={{ maxHeight: '24px', marginRight: '12px', display: 'none' }} />
+        )}
         <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-muted)', padding: '0 16px', borderRadius: '12px', border: '1px solid var(--border)', width: '300px' }}>
           <Search size={18} className="text-muted" />
           <input type="text" placeholder="Quick find..." style={{ border: 'none', background: 'transparent', padding: '10px 8px', width: '100%', fontSize: '14px', outline: 'none' }} />
