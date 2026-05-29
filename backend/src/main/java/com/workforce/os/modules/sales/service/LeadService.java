@@ -1,6 +1,9 @@
 package com.workforce.os.modules.sales.service;
 
 import com.workforce.os.common.service.BaseService;
+import com.workforce.os.common.exception.BusinessException;
+import com.workforce.os.common.exception.ResourceNotFoundException;
+import com.workforce.os.common.util.MessageConstants;
 import com.workforce.os.modules.customer.domain.Customer;
 import com.workforce.os.modules.customer.repository.CustomerAddressRepository;
 import com.workforce.os.modules.customer.repository.CustomerRepository;
@@ -63,11 +66,11 @@ public class LeadService extends BaseService {
 
     @Transactional
     @CacheEvict(value = "leads", allEntries = true)
-    public Lead createLead(String customerName, String customerPhone, String customerEmail, 
+    public Lead createLead(String customerName, String customerPhone, String customerEmail,
                           Long organizationId, Long serviceItemId, Long customerAddressId,
                           String description, String priority) {
         // Use email for lookup if provided, otherwise fallback to phone, scoped by tenant
-        var customer = (customerEmail != null && !customerEmail.isEmpty()) 
+        var customer = (customerEmail != null && !customerEmail.isEmpty())
             ? customerRepository.findByEmailAndTenantId(customerEmail, getTenantId())
                 .orElseGet(() -> customerRepository.findByPhoneAndTenantId(customerPhone, getTenantId()).orElse(null))
             : customerRepository.findByPhoneAndTenantId(customerPhone, getTenantId()).orElse(null);
@@ -83,38 +86,36 @@ public class LeadService extends BaseService {
 
         Lead lead = new Lead();
         lead.setCustomer(customer);
-        
+
         var organization = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> new RuntimeException(ORGANIZATION_NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(ORGANIZATION_NOT_FOUND));
         lead.setOrganization(organization);
-        
+
         if (serviceItemId != null) {
             var serviceItem = serviceItemRepository.findById(serviceItemId)
-                    .orElseThrow(() -> new RuntimeException(SERVICE_NOT_FOUND));
+                    .orElseThrow(() -> new ResourceNotFoundException(SERVICE_NOT_FOUND));
             lead.setRequestedService(serviceItem);
         }
 
         if (customerAddressId != null) {
             var address = customerAddressRepository.findById(customerAddressId)
-                    .orElseThrow(() -> new RuntimeException("Address not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_NOT_FOUND));
             lead.setCustomerAddress(address);
         }
-        
+
         lead.setDescription(description);
         lead.setPriority(priority != null ? priority : "MEDIUM");
         lead.setStatus(Lead.LeadStatus.NEW);
         lead.setTenantId(organization.getTenantId());
-        
+
         return leadRepository.save(lead);
     }
 
     @Transactional
     @CacheEvict(value = "leads", allEntries = true)
     public Lead updateLead(Long id, String status, String priority, String description) {
-        Lead lead = leadRepository.findById(id).orElseThrow();
-        if (!lead.getTenantId().equals(getTenantId())) {
-            throw new RuntimeException(UNAUTHORIZED);
-        }
+        Lead lead = leadRepository.findByIdAndTenantId(id, getTenantId())
+                .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_NOT_FOUND));
         if (status != null) lead.setStatus(Lead.LeadStatus.valueOf(status));
         if (priority != null) lead.setPriority(priority);
         if (description != null) lead.setDescription(description);
@@ -124,10 +125,8 @@ public class LeadService extends BaseService {
     @Transactional
     @CacheEvict(value = "leads", allEntries = true)
     public void deleteLead(Long id) {
-        Lead lead = leadRepository.findById(id).orElseThrow();
-        if (!lead.getTenantId().equals(getTenantId())) {
-            throw new RuntimeException(UNAUTHORIZED);
-        }
+        Lead lead = leadRepository.findByIdAndTenantId(id, getTenantId())
+                .orElseThrow(() -> new ResourceNotFoundException(RESOURCE_NOT_FOUND));
         leadRepository.delete(lead);
     }
 }

@@ -1,5 +1,7 @@
 package com.workforce.os.modules.customer.service;
 
+import com.workforce.os.common.exception.ResourceNotFoundException;
+import com.workforce.os.common.util.MessageConstants;
 import com.workforce.os.modules.customer.domain.Customer;
 import com.workforce.os.modules.customer.domain.CustomerAddress;
 import com.workforce.os.modules.customer.dto.CustomerAddressRequest;
@@ -25,7 +27,7 @@ public class CustomerAddressService {
     @Transactional
     public CustomerAddressResponse addAddress(String email, CustomerAddressRequest request) {
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.CUSTOMER_NOT_FOUND));
 
         CustomerAddress address = customerAddressMapper.toCustomerAddress(request);
         address.setLatitude(request.getLatitude());
@@ -50,7 +52,7 @@ public class CustomerAddressService {
 
     public List<CustomerAddressResponse> getAddresses(String email) {
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.CUSTOMER_NOT_FOUND));
         return customerAddressRepository.findByCustomerId(customer.getId()).stream()
                 .map(customerAddressMapper::toCustomerAddressResponse)
                 .collect(Collectors.toList());
@@ -59,7 +61,7 @@ public class CustomerAddressService {
     @Transactional
     public CustomerAddressResponse updateAddress(Long addressId, CustomerAddressRequest request) {
         CustomerAddress address = customerAddressRepository.findById(addressId)
-                .orElseThrow(() -> new RuntimeException("Address not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
 
         if (request.isDefault()) {
             customerAddressRepository.findByCustomerId(address.getCustomer().getId()).forEach(a -> {

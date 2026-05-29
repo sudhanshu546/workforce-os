@@ -11,6 +11,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @RestController
 @RequestMapping("/api/v1/customers/me")
 @RequiredArgsConstructor
@@ -23,7 +25,7 @@ public class CustomerProfileController {
     public ResponseEntity<ApiResponse<CustomerProfileResponse>> getProfile() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return ResponseEntity.ok(ApiResponse.success(customerProfileService.getProfile(email), "Profile retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success(customerProfileService.getProfile(email), PROFILE_RETRIEVED));
     }
 
     @PutMapping
@@ -31,6 +33,6 @@ public class CustomerProfileController {
     public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateProfile(@RequestBody CustomerProfileUpdateRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return ResponseEntity.ok(ApiResponse.success(customerProfileService.updateProfile(email, request), "Profile updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success(customerProfileService.updateProfile(email, request), PROFILE_UPDATED));
     }
 }

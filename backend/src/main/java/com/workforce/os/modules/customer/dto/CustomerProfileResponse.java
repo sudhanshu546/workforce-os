@@ -6,6 +6,6 @@ import lombok.Data;
 public class CustomerProfileResponse {
     private String name;
     private String email;
-    private String number;
+    private String phone;
     private String role;
 }

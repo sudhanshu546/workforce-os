@@ -1,7 +1,9 @@
+import { UI_CONSTANTS } from '../utils/ui-constants';
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { IndianRupee, TrendingUp, Target, BarChart3, PieChart, Activity, Download, FileText, Loader2 } from 'lucide-react';
+import { IndianRupee, TrendingUp, Target, BarChart3, PieChart, Activity, Download, FileText, Loader2, Users } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useToast } from '../components/ToastProvider';
 import api from '../services/api';
 import {
     Chart as ChartJS,
@@ -30,6 +32,7 @@ ChartJS.register(
 );
 
 const AnalyticsPage: React.FC = () => {
+    const showToast = useToast();
     const [profitData, setProfitData] = useState<any[]>([]);
     const [ownerStats, setOwnerStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -56,7 +59,7 @@ const AnalyticsPage: React.FC = () => {
             window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Failed to download report:', err);
-            if ((window as any).showToast) (window as any).showToast('Failed to generate report', 'error');
+            showToast('Failed to generate report', 'error');
         } finally {
             setDownloadingReport(false);
         }
@@ -110,7 +113,7 @@ const AnalyticsPage: React.FC = () => {
     return (
         <Layout>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <header style={{ marginBottom: UI_CONSTANTS.header.marginBottom, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h1 style={{ fontSize: '32px', fontWeight: '900' }}>Business Intelligence Dashboard</h1>
                         <p className="text-muted">Real-time insights into revenue trends and job profitability.</p>
@@ -130,7 +133,7 @@ const AnalyticsPage: React.FC = () => {
                     <LoadingSpinner />
                 ) : (
                     <>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '40px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '20px' }}>
                             <div className="card-premium">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                                     <TrendingUp className="text-primary" />

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { Palette, Upload, Loader2, Save, Building, Image as ImageIcon } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../components/ToastProvider';
 
 const Settings: React.FC = () => {
+    const showToast = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [branding, setBranding] = useState({
@@ -38,14 +40,14 @@ const Settings: React.FC = () => {
         setSaving(true);
         try {
             await api.patch('/organization/branding', branding);
-            if ((window as any).showToast) (window as any).showToast('Branding updated successfully', 'success');
+            showToast('Branding updated successfully', 'success');
             
             // Apply colors immediately
             document.documentElement.style.setProperty('--primary', branding.primaryColor);
             document.documentElement.style.setProperty('--primary-hover', branding.secondaryColor);
             
         } catch (e) {
-            if ((window as any).showToast) (window as any).showToast('Failed to update branding', 'error');
+            showToast('Failed to update branding', 'error');
         } finally {
             setSaving(false);
         }
@@ -75,7 +77,7 @@ const Settings: React.FC = () => {
     return (
         <Layout>
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <header style={{ marginBottom: '40px' }}>
+                <header style={{ marginBottom: '20px' }}>
                     <h1 style={{ fontSize: '32px', fontWeight: '900' }}>System Settings</h1>
                     <p className="text-muted">Personalize your organization's presence and dashboard visuals.</p>
                 </header>

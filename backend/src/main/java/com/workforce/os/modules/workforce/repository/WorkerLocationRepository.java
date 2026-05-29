@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,5 +19,5 @@ public interface WorkerLocationRepository extends JpaRepository<WorkerLocation, 
            "(SELECT MAX(l.id) FROM WorkerLocation l WHERE l.tenantId = ?1 GROUP BY l.worker.id)")
     List<WorkerLocation> findLatestLocationsByTenant(String tenantId);
 
-    List<WorkerLocation> findByWorkerIdAndTimestampBetweenOrderByTimestampAsc(Long workerId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+    List<WorkerLocation> findByWorkerIdAndTimestampBetweenOrderByTimestampAsc(Long workerId, LocalDateTime start, LocalDateTime end);
 }

@@ -21,10 +21,27 @@ public class MessageConstants {
     public static final String LOW_STOCK_RETRIEVED = "Low stock materials retrieved successfully";
     public static final String MATERIAL_CREATED = "Material created successfully";
     public static final String MATERIAL_UPDATED = "Material updated successfully";
+    public static final String MATERIAL_DELETED = "Material deleted successfully";
     public static final String INSUFFICIENT_STOCK = "Insufficient material stock";
+
+    // Service & Catalog
+    public static final String SERVICE_ITEMS_RETRIEVED = "Service items retrieved successfully";
+    public static final String CATEGORIES_RETRIEVED = "Categories retrieved successfully";
+    public static final String SERVICE_ITEM_CREATED = "Service item created successfully";
+    public static final String SERVICE_ITEM_UPDATED = "Service item updated successfully";
+    public static final String SERVICE_ITEM_DELETED = "Service item deleted successfully";
+    public static final String CATEGORY_CREATED = "Category created successfully";
+    public static final String CATEGORY_UPDATED = "Category updated successfully";
+    public static final String CATEGORY_DELETED = "Category deleted successfully";
 
     // Operations
     public static final String WORK_ORDER_RETRIEVED = "Work order retrieved successfully";
+    public static final String RECOMMENDATIONS_RETRIEVED = "Smart recommendations retrieved successfully";
+    public static final String LIVE_OPS_RETRIEVED = "Live operations data retrieved successfully";
+    public static final String AUDIT_HISTORY_RETRIEVED = "Audit history retrieved successfully";
+    public static final String SITE_ADDRESS_PENDING = "Site address pending";
+    public static final String GENERAL_SERVICE = "General Service";
+    public static final String UNASSIGNED = "Unassigned";
     public static final String WORKER_ASSIGNED = "Worker assigned successfully";
     public static final String WORK_ORDER_STARTED = "Work order started successfully";
     public static final String SUBMITTED_FOR_VERIFICATION = "Work order submitted for verification";
@@ -69,9 +86,43 @@ public class MessageConstants {
     public static final String INVALID_ACTION = "This action is not allowed for the current state of the order";
     public static final String ACCESS_DENIED = "You do not have permission to access this resource";
 
+    // Support
+    public static final String TICKETS_RETRIEVED = "Tickets retrieved successfully";
+    public static final String TICKET_CREATED = "Ticket created successfully";
+    public static final String COMMENT_ADDED = "Comment added successfully";
+    public static final String FEEDBACK_SUBMITTED = "Feedback submitted successfully";
+    public static final String TICKET_NOT_FOUND = "Ticket not found";
+
+    // Finance
+    public static final String INVOICES_RETRIEVED = "Invoices retrieved successfully";
+    public static final String PAYMENT_ORDER_CREATED = "Payment order created successfully";
+    public static final String PAYMENT_SUCCESSFUL = "Payment processed successfully";
+    public static final String EXPENSES_RETRIEVED = "Expenses retrieved successfully";
+    public static final String PAYROLL_GENERATED = "Payroll generated successfully";
+
+    // Analytics
+    public static final String ANALYTICS_RETRIEVED = "Analytics data retrieved successfully";
+    public static final String ORGANIZATIONS_RETRIEVED = "Organizations retrieved successfully";
+    public static final String BRANDING_RETRIEVED = "Branding settings retrieved successfully";
+    public static final String BRANDING_UPDATED = "Branding settings updated successfully";
+
+    // Leads & Sales
+    public static final String LEADS_RETRIEVED = "Leads retrieved successfully";
+    public static final String LEAD_CREATED = "Lead created successfully";
+    public static final String LEAD_UPDATED = "Lead updated successfully";
+    public static final String LEAD_DELETED = "Lead deleted successfully";
+
+    // Profile
+    public static final String PROFILE_UPDATED = "Profile updated successfully";
+
+    // Identity
+    public static final String USER_PROFILE_NOT_FOUND = "User profile not found";
+
     // Notifications
-    public static final String PUSH_NEW_JOB_TITLE = "New Job Assigned!";
+    public static final String NOTIFICATIONS_RETRIEVED = "Notifications retrieved successfully";
+    public static final String MARKED_ALL_READ = "All notifications marked as read";
     public static final String PUSH_NEW_JOB_BODY = "You have been assigned to: %s for %s";
+    public static final String PUSH_NEW_JOB_TITLE = "You have been assigned to: %s for %s";
     public static final String PUSH_JOB_VERIFIED_TITLE = "Job Verified!";
     public static final String PUSH_JOB_VERIFIED_BODY = "Customer has verified your work for #WO-%d";
     public static final String PUSH_LOW_STOCK_TITLE = "Low Stock Alert!";

@@ -1,6 +1,7 @@
 package com.workforce.os.modules.customer.service;
 
 import com.workforce.os.common.context.TenantContext;
+import com.workforce.os.common.exception.BusinessException;
 import com.workforce.os.modules.customer.domain.Customer;
 import com.workforce.os.modules.customer.domain.CustomerProfile;
 import com.workforce.os.modules.customer.domain.CustomerPreference;
@@ -33,10 +34,10 @@ public class CustomerRegistrationService {
     @Transactional
     public CustomerAuthResponse registerCustomer(CustomerRegisterRequest request) {
         if (customerRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException(EMAIL_EXISTS);
+            throw new BusinessException(EMAIL_EXISTS);
         }
         if (customerRepository.existsByPhone(request.getPhone())) {
-            throw new RuntimeException(PHONE_EXISTS);
+            throw new BusinessException(PHONE_EXISTS);
         }
 
         Customer customer = customerMapper.toCustomer(request);

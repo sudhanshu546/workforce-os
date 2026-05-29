@@ -1,6 +1,8 @@
 package com.workforce.os.modules.finance.service;
 
 import com.workforce.os.common.context.TenantContext;
+import com.workforce.os.common.exception.ResourceNotFoundException;
+import com.workforce.os.common.util.MessageConstants;
 import com.workforce.os.modules.finance.domain.Expense;
 import com.workforce.os.modules.finance.domain.PayrollRecord;
 import com.workforce.os.modules.finance.dto.PayrollRecordDTO;
@@ -32,22 +34,22 @@ public class PayrollService {
         // Normalize to first of month
         LocalDate periodStart = monthYear.withDayOfMonth(1);
         LocalDate periodEnd = monthYear.withDayOfMonth(periodStart.lengthOfMonth());
-        
+
         LocalDateTime startDateTime = periodStart.atStartOfDay();
         LocalDateTime endDateTime = periodEnd.atTime(LocalTime.MAX);
 
         WorkerProfile worker = workerProfileRepository.findById(workerId)
-                .orElseThrow(() -> new RuntimeException("Worker not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.WORKER_NOT_FOUND));
 
         Double baseSalary = worker.getSalaryAmount() != null ? worker.getSalaryAmount() : 0.0;
-        
+
         // Sum approved reimbursements
-        Double approvedReimbursements = expenseRepository.sumApprovedExpensesByWorkerAndPeriod(workerId, startDateTime, endDateTime);
+        Double approvedReimbursements = expenseRepository.sumApprovedExpensesByWorkerAndPeriod(workerId, startDateTime, endDateTime);   
         if (approvedReimbursements == null) approvedReimbursements = 0.0;
 
         // Check if already exists
         Optional<PayrollRecord> existing = payrollRepository.findByWorkerIdAndMonthYear(workerId, periodStart);
-        
+
         PayrollRecord record = existing.orElse(new PayrollRecord());
         record.setWorker(worker);
         record.setMonthYear(periodStart);
@@ -65,21 +67,21 @@ public class PayrollService {
     @Transactional
     public void markAsPaid(Long payrollId) {
         PayrollRecord record = payrollRepository.findById(payrollId)
-                .orElseThrow(() -> new RuntimeException("Payroll record not found"));
-        
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
+
         record.setStatus(PayrollRecord.PayrollStatus.PAID);
         record.setPaidAt(LocalDateTime.now());
-        
+
         // Mark expenses as REIMBURSED
         LocalDateTime start = record.getMonthYear().atStartOfDay();
         LocalDateTime end = record.getMonthYear().withDayOfMonth(record.getMonthYear().lengthOfMonth()).atTime(LocalTime.MAX);
-        
+
         List<Expense> expenses = expenseRepository.findByWorkerIdAndStatusAndCreatedAtBetween(
                 record.getWorker().getId(), Expense.ExpenseStatus.APPROVED, start, end);
-        
+
         expenses.forEach(e -> e.setStatus(Expense.ExpenseStatus.REIMBURSED));
         expenseRepository.saveAll(expenses);
-        
+
         payrollRepository.save(record);
     }
 

@@ -3,6 +3,7 @@ package com.workforce.os.modules.operations.service;
 import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.common.exception.BusinessException;
 import com.workforce.os.common.exception.ResourceNotFoundException;
+import com.workforce.os.common.util.MessageConstants;
 import com.workforce.os.modules.customer.repository.CustomerAddressRepository;
 import com.workforce.os.modules.inventory.domain.Material;
 import com.workforce.os.modules.inventory.repository.MaterialRepository;
@@ -62,14 +63,14 @@ public class WorkOrderService {
         String tenantId = TenantContext.getCurrentTenant();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        List<WorkOrder> activeOrders = workOrderRepository.findByTenantIdAndStatus(tenantId, WorkOrder.WorkOrderStatus.IN_PROGRESS);
+        List<WorkOrder> activeOrders = workOrderRepository.findByTenantIdAndStatus(tenantId, WorkOrder.WorkOrderStatus.IN_PROGRESS);    
 
         return activeOrders.stream().map(wo -> {
             Double lat = null;
             Double lon = null;
             String lastUpdated = "N/A";
 
-            var liveLocation = workerLocationRepository.findLatestByWorkerIdAndTenantId(wo.getAssignedWorker().getId(), tenantId);
+            var liveLocation = workerLocationRepository.findLatestByWorkerIdAndTenantId(wo.getAssignedWorker().getId(), tenantId);      
             if (liveLocation.isPresent() && liveLocation.get().getTimestamp().isAfter(LocalDateTime.now().minusMinutes(10))) {
                 lat = liveLocation.get().getLatitude();
                 lon = liveLocation.get().getLongitude();
@@ -90,7 +91,7 @@ public class WorkOrderService {
             return LiveOpsMarker.builder()
                 .workOrderId(wo.getId())
                 .customerName(wo.getCustomer() != null ? wo.getCustomer().getName() : "Unknown")
-                .workerName(wo.getAssignedWorker() != null ? 
+                .workerName(wo.getAssignedWorker() != null ?
                            wo.getAssignedWorker().getUser().getName() : "Unassigned")
                 .status(wo.getStatus().name())
                 .latitude(lat)
@@ -107,7 +108,7 @@ public class WorkOrderService {
         WorkOrder workOrder = new WorkOrder();
         workOrder.setQuotation(quotation);
         workOrder.setCustomer(quotation.getLead().getCustomer());
-        
+
         addressRepository.findByCustomerIdAndIsDefaultTrue(quotation.getLead().getCustomer().getId())
             .ifPresent(workOrder::setServiceAddress);
 
@@ -130,28 +131,31 @@ public class WorkOrderService {
 
     @Transactional
     public WorkOrder assignWorker(Long workOrderId, Long workerId) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
-            .orElseThrow(() -> new ResourceNotFoundException(WORK_ORDER_NOT_FOUND));
+        WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
         WorkerProfile worker = workerProfileRepository.findById(workerId)
             .orElseThrow(() -> new ResourceNotFoundException(WORKER_NOT_FOUND));
         
+        // Ensure worker belongs to the same tenant
+        if (!worker.getTenantId().equals(TenantContext.getCurrentTenant())) {
+            throw new BusinessException(UNAUTHORIZED);
+        }
+
         String fromStatus = workOrder.getStatus().name();
         workOrder.setAssignedWorker(worker);
         workOrder.setStatus(WorkOrder.WorkOrderStatus.ASSIGNED);
-        
+
         WorkOrder saved = workOrderRepository.save(workOrder);
         createAudit(saved, fromStatus, saved.getStatus().name(), null, null, AUDIT_BY_ADMIN, "Assigned to worker: " + worker.getUser().getName());
-        
+
         notificationService.notifyNewJob(saved);
         notificationService.sendTrackingLink(saved);
-        
+
         return saved;
     }
 
     @Transactional
     public WorkOrder startWorkOrder(Long workOrderId, Double lat, Double lon) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
-            .orElseThrow(() -> new ResourceNotFoundException(WORK_ORDER_NOT_FOUND));
+        WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
 
         if (!attendanceService.isWorkerClockedIn(workOrder.getAssignedWorker().getId())) {
             throw new BusinessException(CLOCK_IN_REQUIRED);
@@ -163,12 +167,12 @@ public class WorkOrderService {
         workOrder.setStatus(WorkOrder.WorkOrderStatus.IN_PROGRESS);
         workOrder.setStartTime(LocalTime.now());
 
-        messagingTemplate.convertAndSend(WS_TOPIC_ORDER_PREFIX + workOrder.getCustomer().getId(), 
+        messagingTemplate.convertAndSend(WS_TOPIC_ORDER_PREFIX + workOrder.getCustomer().getId(),
             String.format(WS_MSG_JOB_STARTED, (workOrder.getId() + 1000)));
 
         WorkOrder saved = workOrderRepository.save(workOrder);
         createAudit(saved, fromStatus, saved.getStatus().name(), lat, lon, AUDIT_BY_WORKER, "Job started on-site");
-        
+
         notificationService.sendTrackingLink(saved);
         
         return saved;
@@ -177,16 +181,16 @@ public class WorkOrderService {
 
     @Transactional
     public WorkOrder submitForVerification(Long workOrderId, Double lat, Double lon) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId).orElseThrow();
-        
+        WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
+
         boolean allTasksDone = workOrder.getTasks().stream().allMatch(WorkOrderTask::isCompleted);
         if (!allTasksDone) {
-            throw new RuntimeException(TASKS_PENDING);
+            throw new BusinessException(TASKS_PENDING);
         }
 
         // Industry Standard: Mandatory Evidence
         if (workOrder.getEvidence().isEmpty()) {
-            throw new RuntimeException(EVIDENCE_REQUIRED);
+            throw new BusinessException(EVIDENCE_REQUIRED);
         }
 
         // Geofencing Check
@@ -196,43 +200,44 @@ public class WorkOrderService {
         workOrder.setStatus(AWAITING_VERIFICATION);
         workOrder.setEndTime(LocalTime.now());
 
-        messagingTemplate.convertAndSend(WS_TOPIC_ORDER_PREFIX + workOrder.getCustomer().getId(), 
+        messagingTemplate.convertAndSend(WS_TOPIC_ORDER_PREFIX + workOrder.getCustomer().getId(),
             String.format(WS_MSG_JOB_FINISHED, (workOrder.getId() + 1000)));
 
         WorkOrder saved = workOrderRepository.save(workOrder);
-        createAudit(saved, fromStatus, saved.getStatus().name(), lat, lon, AUDIT_BY_WORKER, "Job submitted for customer sign-off");
+        createAudit(saved, fromStatus, saved.getStatus().name(), lat, lon, AUDIT_BY_WORKER, "Job submitted for customer sign-off");     
         return saved;
     }
 
     @Transactional
     public WorkOrder verifyWorkOrder(Long workOrderId) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId).orElseThrow();
+        WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
+            
         if (workOrder.getStatus() != AWAITING_VERIFICATION) {
-            throw new RuntimeException(NOT_VERIFIABLE);
+            throw new BusinessException(NOT_VERIFIABLE);
         }
-        
+
         String fromStatus = workOrder.getStatus().name();
         workOrder.setStatus(WorkOrder.WorkOrderStatus.AWAITING_PAYMENT);
-        
+
         // Offload to Queue
         log.info("Sending invoice generation message to RabbitMQ for Order ID: {}", workOrder.getId());
-        rabbitTemplate.convertAndSend(com.workforce.os.common.config.RabbitMQConfig.EXCHANGE, 
-                                     com.workforce.os.common.config.RabbitMQConfig.INVOICE_ROUTING_KEY, 
+        rabbitTemplate.convertAndSend(com.workforce.os.common.config.RabbitMQConfig.EXCHANGE,
+                                     com.workforce.os.common.config.RabbitMQConfig.INVOICE_ROUTING_KEY,
                                      com.workforce.os.modules.finance.service.InvoiceGenerationMessage.builder()
                                          .workOrderId(workOrder.getId())
                                          .tenantId(workOrder.getTenantId())
                                          .build());
-        
+
         WorkOrder saved = workOrderRepository.save(workOrder);
         createAudit(saved, fromStatus, saved.getStatus().name(), null, null, AUDIT_BY_CUSTOMER, "Work verified. Invoice generation queued.");
-        
+
         notificationService.notifyJobVerified(saved);
         return saved;
     }
 
     @Transactional
     public WorkOrder updateStatus(Long workOrderId, String status) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId).orElseThrow();
+        WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
         String fromStatus = workOrder.getStatus().name();
         workOrder.setStatus(WorkOrder.WorkOrderStatus.valueOf(status));
         WorkOrder saved = workOrderRepository.save(workOrder);
@@ -240,9 +245,14 @@ public class WorkOrderService {
         return saved;
     }
 
+    private WorkOrder getWorkOrderSecurely(Long id) {
+        return workOrderRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new ResourceNotFoundException(WORK_ORDER_NOT_FOUND));
+    }
+
     private void verifyLocation(WorkOrder workOrder, Double lat, Double lon) {
         if (lat == null || lon == null) return; // Skip if location disabled by device policy for now
-        
+
         // Find default address
         var addressOpt = addressRepository.findByCustomerIdAndIsDefaultTrue(workOrder.getCustomer().getId());
         if (addressOpt.isPresent()) {
@@ -250,7 +260,7 @@ public class WorkOrderService {
             if (addr.getLatitude() != null && addr.getLongitude() != null) {
                 double distance = calculateDistance(lat, lon, addr.getLatitude(), addr.getLongitude());
                 if (distance > 500) { // 500 meters
-                    throw new RuntimeException(OUT_OF_RANGE);
+                    throw new BusinessException(OUT_OF_RANGE);
                 }
             }
         }
@@ -288,9 +298,10 @@ public class WorkOrderService {
 
     @Transactional
     public WorkOrderTask updateTaskStatus(Long taskId, boolean isCompleted) {
-        WorkOrderTask task = workOrderTaskRepository.findById(taskId).orElseThrow();
+        WorkOrderTask task = workOrderTaskRepository.findById(taskId)
+            .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
         if (task.getWorkOrder().getStatus() == WorkOrder.WorkOrderStatus.COMPLETED) {
-            throw new RuntimeException(CANNOT_MODIFY_COMPLETED);
+            throw new BusinessException(CANNOT_MODIFY_COMPLETED);
         }
         task.setCompleted(isCompleted);
         return workOrderTaskRepository.save(task);
@@ -298,9 +309,9 @@ public class WorkOrderService {
 
     @Transactional
     public WorkOrderEvidence addEvidence(Long workOrderId, String imageUrl, String notes) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId).orElseThrow();
+        WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
         if (workOrder.getStatus() == WorkOrder.WorkOrderStatus.COMPLETED) {
-            throw new RuntimeException(CANNOT_ADD_EVIDENCE_COMPLETED);
+            throw new BusinessException(CANNOT_ADD_EVIDENCE_COMPLETED);
         }
         WorkOrderEvidence evidence = new WorkOrderEvidence();
         evidence.setWorkOrder(workOrder);
@@ -312,6 +323,7 @@ public class WorkOrderService {
 
     @Transactional(readOnly = true)
     public List<WorkOrderAudit> getAuditHistory(Long workOrderId) {
+        getWorkOrderSecurely(workOrderId); // Ensure tenant has access
         return workOrderAuditRepository.findByWorkOrderIdOrderByTimestampDesc(workOrderId);
     }
 
@@ -337,7 +349,7 @@ public class WorkOrderService {
 
     @Transactional(readOnly = true)
     public WorkOrder getWorkOrderById(Long id) {
-        return workOrderRepository.findById(id).orElseThrow();
+        return getWorkOrderSecurely(id);
     }
 
     public WorkOrderRepository getWorkOrderRepository() {
@@ -346,16 +358,17 @@ public class WorkOrderService {
 
     @Transactional
     public void addMaterialUsage(Long workOrderId, Long materialId, Double quantity) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId).orElseThrow();
+        WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
         if (workOrder.getStatus() == WorkOrder.WorkOrderStatus.COMPLETED) {
-            throw new RuntimeException(CANNOT_ADD_MATERIALS_COMPLETED);
+            throw new BusinessException(CANNOT_ADD_MATERIALS_COMPLETED);
         }
-        Material material = materialRepository.findById(materialId).orElseThrow();
+        Material material = materialRepository.findById(materialId)
+            .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
 
         if (material.getQuantity() < quantity) {
-            throw new RuntimeException(INSUFFICIENT_STOCK);
+            throw new BusinessException(INSUFFICIENT_STOCK);
         }
-        
+
         WorkOrderMaterial usage = new WorkOrderMaterial();
         usage.setWorkOrder(workOrder);
         usage.setMaterial(material);

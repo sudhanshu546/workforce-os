@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LeadRepository extends JpaRepository<Lead, Long> {
@@ -21,6 +22,13 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
            "WHERE l.tenantId = :tenantId ORDER BY l.createdAt DESC")
     Page<Lead> findByTenantId(@Param("tenantId") String tenantId, Pageable pageable);
     
+    @Query("SELECT l FROM Lead l " +
+           "LEFT JOIN FETCH l.customer " +
+           "LEFT JOIN FETCH l.organization " +
+           "LEFT JOIN FETCH l.requestedService " +
+           "WHERE l.id = :id AND l.tenantId = :tenantId")
+    Optional<Lead> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") String tenantId);
+
     List<Lead> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
     long countByTenantId(String tenantId);
 }

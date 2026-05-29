@@ -31,6 +31,7 @@ import com.workforce.os.modules.operations.dto.WorkerRecommendation;
 @RestController
 @RequestMapping("/api/v1/work-orders")
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class WorkOrderController {
     private final WorkOrderService workOrderService;
     private final WorkOrderRepository workOrderRepository;
@@ -43,24 +44,27 @@ public class WorkOrderController {
     @GetMapping("/{id}/recommendations")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<WorkerRecommendation>>> getSmartRecommendations(@PathVariable Long id) {
+        log.info("Fetching smart recommendations for work order: {}", id);
         return ResponseEntity.ok(ApiResponse.success(
             dispatchService.getSmartRecommendations(id),
-            "Smart recommendations retrieved"
+            RECOMMENDATIONS_RETRIEVED
         ));
     }
 
     @GetMapping("/live-ops")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<LiveOpsMarker>>> getLiveOpsMap() {
+        log.info("Fetching live operations map data for tenant: {}", TenantContext.getCurrentTenant());
         return ResponseEntity.ok(ApiResponse.success(
             workOrderService.getLiveOpsMarkers(),
-            "Live operations data retrieved"
+            LIVE_OPS_RETRIEVED
         ));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<Page<WorkOrderResponseDTO>>> getAllWorkOrders(Pageable pageable) {
+        log.info("Fetching all work orders for tenant: {}, page: {}", TenantContext.getCurrentTenant(), pageable.getPageNumber());
         Page<WorkOrder> workOrders = workOrderService.getAllWorkOrders(pageable);
         return ResponseEntity.ok(ApiResponse.success(
             workOrders.map(this::enrichDTO),
@@ -71,16 +75,17 @@ public class WorkOrderController {
     @GetMapping("/worker/{workerId}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER') or (hasRole('WORKER'))")
     public ResponseEntity<ApiResponse<Page<WorkOrderWorkerResponse>>> getWorkerWorkOrders(@PathVariable Long workerId, Pageable pageable) {
+        log.info("Fetching work orders for worker: {}, page: {}", workerId, pageable.getPageNumber());
         // Industry recommendation: Verify that the authenticated workerId matches the PathVariable
         Page<WorkOrderWorkerResponse> result = workOrderService.getWorkerWorkOrders(workerId, pageable).map(wo -> {
             var customer = wo.getCustomer();
             var addressOpt = addressRepository.findByCustomerIdAndIsDefaultTrue(customer.getId());
 
-            String addressStr = addressOpt.map(a -> a.getStreet() + ", " + a.getCity()).orElse("Site address pending");
+            String addressStr = addressOpt.map(a -> a.getStreet() + ", " + a.getCity()).orElse(SITE_ADDRESS_PENDING);
             Double lat = addressOpt.map(a -> a.getLatitude()).orElse(12.9716); 
             Double lon = addressOpt.map(a -> a.getLongitude()).orElse(77.5946);
 
-            String serviceName = "General Service";
+            String serviceName = GENERAL_SERVICE;
             Double totalAmount = 0.0;
 
             if (wo.getQuotation() != null) {
@@ -135,6 +140,7 @@ public class WorkOrderController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER', 'CUSTOMER')")
     public ResponseEntity<ApiResponse<WorkOrderResponseDTO>> getWorkOrder(@PathVariable Long id) {
+        log.info("Fetching details for work order: {}", id);
         WorkOrder workOrder = workOrderService.getWorkOrderById(id);
         return ResponseEntity.ok(ApiResponse.success(enrichDTO(workOrder), WORK_ORDER_RETRIEVED));
     }
@@ -142,6 +148,7 @@ public class WorkOrderController {
     @GetMapping("/customer/{customerId}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER') or (hasRole('CUSTOMER'))")
     public ResponseEntity<ApiResponse<Page<WorkOrderResponseDTO>>> getCustomerWorkOrders(@PathVariable Long customerId, Pageable pageable) {
+        log.info("Fetching work orders for customer: {}, page: {}", customerId, pageable.getPageNumber());
         Page<WorkOrder> workOrders = workOrderService.getCustomerWorkOrders(customerId, pageable);
         return ResponseEntity.ok(ApiResponse.success(
             workOrders.map(this::enrichDTO),
@@ -156,7 +163,7 @@ public class WorkOrderController {
         if (wo.getAssignedWorker() != null && wo.getAssignedWorker().getUser() != null) {
             dto.setAssignedWorkerName(wo.getAssignedWorker().getUser().getName());
         } else {
-            dto.setAssignedWorkerName("Unassigned");
+            dto.setAssignedWorkerName(UNASSIGNED);
         }
 
         // Organization Name
@@ -166,7 +173,7 @@ public class WorkOrderController {
         // Customer Address
         addressRepository.findByCustomerIdAndIsDefaultTrue(wo.getCustomer().getId())
                 .ifPresent(addr -> dto.setCustomerAddress(addr.getStreet() + ", " + addr.getCity()));
-        if (dto.getCustomerAddress() == null) dto.setCustomerAddress("Site address pending");
+        if (dto.getCustomerAddress() == null) dto.setCustomerAddress(SITE_ADDRESS_PENDING);
 
         // Service Details & Amount
         if (wo.getQuotation() != null) {
@@ -180,7 +187,7 @@ public class WorkOrderController {
         invoiceRepository.findByWorkOrderId(wo.getId())
                 .ifPresent(inv -> dto.setTotalAmount(inv.getTotal()));
 
-        if (dto.getServiceName() == null) dto.setServiceName("General Service");
+        if (dto.getServiceName() == null) dto.setServiceName(GENERAL_SERVICE);
         if (dto.getTotalAmount() == null) dto.setTotalAmount(0.0);
 
         return dto;
@@ -189,23 +196,26 @@ public class WorkOrderController {
     @GetMapping("/{id}/audit")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<WorkOrderAuditDTO>>> getAuditHistory(@PathVariable Long id) {
+        log.info("Fetching audit history for work order: {}", id);
         List<WorkOrderAudit> history = workOrderService.getAuditHistory(id);
         List<WorkOrderAuditDTO> dtos = history.stream()
                 .map(workOrderMapper::toAuditDTO)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success(dtos, "Audit history retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(dtos, AUDIT_HISTORY_RETRIEVED));
     }
 
     @PatchMapping("/{id}/assign")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
-    public ResponseEntity<ApiResponse<WorkOrderResponseDTO>> assignWorker(@PathVariable Long id, @RequestBody AssignRequest request) {
+    public ResponseEntity<ApiResponse<WorkOrderResponseDTO>> assignWorker(@PathVariable Long id, @Valid @RequestBody AssignRequest request) {
+        log.info("Assigning worker: {} to work order: {}", request.getWorkerId(), id);
         WorkOrder workOrder = workOrderService.assignWorker(id, request.getWorkerId());
         return ResponseEntity.ok(ApiResponse.success(enrichDTO(workOrder), WORKER_ASSIGNED));
     }
 
     @PatchMapping("/{id}/start")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
-    public ResponseEntity<ApiResponse<WorkOrderResponseDTO>> startWorkOrder(@PathVariable Long id, @RequestBody LocationRequest location) {
+    public ResponseEntity<ApiResponse<WorkOrderResponseDTO>> startWorkOrder(@PathVariable Long id, @Valid @RequestBody LocationRequest location) {
+        log.info("Starting work order: {} at location: {}, {}", id, location.getLatitude(), location.getLongitude());
         WorkOrder workOrder = workOrderService.startWorkOrder(id, location.getLatitude(), location.getLongitude());
         return ResponseEntity.ok(ApiResponse.success(
             enrichDTO(workOrder), 
@@ -215,7 +225,8 @@ public class WorkOrderController {
 
     @PatchMapping("/{id}/submit-verification")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
-    public ResponseEntity<ApiResponse<WorkOrderResponseDTO>> submitForVerification(@PathVariable Long id, @RequestBody LocationRequest location) {
+    public ResponseEntity<ApiResponse<WorkOrderResponseDTO>> submitForVerification(@PathVariable Long id, @Valid @RequestBody LocationRequest location) {
+        log.info("Submitting work order: {} for verification at location: {}, {}", id, location.getLatitude(), location.getLongitude());
         WorkOrder workOrder = workOrderService.submitForVerification(id, location.getLatitude(), location.getLongitude());
         return ResponseEntity.ok(ApiResponse.success(
             enrichDTO(workOrder), 
@@ -226,32 +237,38 @@ public class WorkOrderController {
     @PatchMapping("/{id}/verify")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
     public ResponseEntity<ApiResponse<WorkOrderResponseDTO>> verifyWorkOrder(@PathVariable Long id) {
+        log.info("Verifying work order: {}", id);
         WorkOrder workOrder = workOrderService.verifyWorkOrder(id);
         return ResponseEntity.ok(ApiResponse.success(enrichDTO(workOrder), WORK_ORDER_VERIFIED));
     }
 
     @PatchMapping("/tasks/{taskId}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
-    public ResponseEntity<ApiResponse<Void>> updateTaskStatus(@PathVariable Long taskId, @RequestBody TaskStatusRequest request) {
+    public ResponseEntity<ApiResponse<Void>> updateTaskStatus(@PathVariable Long taskId, @Valid @RequestBody TaskStatusRequest request) {
+        log.info("Updating status for task: {} to: {}", taskId, request.isCompleted());
         workOrderService.updateTaskStatus(taskId, request.isCompleted());
         return ResponseEntity.ok(ApiResponse.success(null, TASK_STATUS_UPDATED));
     }
 
     @PostMapping("/{id}/evidence")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
-    public ResponseEntity<ApiResponse<Void>> addEvidence(@PathVariable Long id, @RequestBody EvidenceRequest request) {
+    public ResponseEntity<ApiResponse<Void>> addEvidence(@PathVariable Long id, @Valid @RequestBody EvidenceRequest request) {
+        log.info("Adding evidence to work order: {}", id);
         workOrderService.addEvidence(id, request.getImageUrl(), request.getNotes());
         return ResponseEntity.ok(ApiResponse.success(null, EVIDENCE_ADDED));
     }
 
     @Data
     public static class LocationRequest {
+        @jakarta.validation.constraints.NotNull
         private Double latitude;
+        @jakarta.validation.constraints.NotNull
         private Double longitude;
     }
 
     @Data
     public static class AssignRequest {
+        @jakarta.validation.constraints.NotNull
         private Long workerId;
     }
 
@@ -263,6 +280,7 @@ public class WorkOrderController {
 
     @Data
     public static class EvidenceRequest {
+        @jakarta.validation.constraints.NotBlank
         private String imageUrl;
         private String notes;
     }

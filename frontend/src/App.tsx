@@ -65,7 +65,6 @@ function App() {
         <Route path="/inventory" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Inventory /></PrivateRoute>} />
         <Route path="/work-orders" element={<PrivateRoute roles={['OWNER', 'MANAGER', 'WORKER']}><WorkOrders /></PrivateRoute>} />
         <Route path="/workers" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Workers /></PrivateRoute>} />
-        <Route path="/invoices" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><InvoicesPage /></PrivateRoute>} />
         <Route path="/attendance" element={<PrivateRoute><AttendanceTracker /></PrivateRoute>} />
         <Route path="/tasks" element={<PrivateRoute><Tasks /></PrivateRoute>} />
         

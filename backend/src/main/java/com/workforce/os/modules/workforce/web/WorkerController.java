@@ -4,6 +4,7 @@ import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.common.dto.ApiResponse;
 import com.workforce.os.modules.workforce.domain.WorkerProfile;
 import com.workforce.os.modules.workforce.domain.WorkerSkill;
+import com.workforce.os.modules.workforce.dto.LocationUpdateDTO;
 import com.workforce.os.modules.workforce.service.WorkforceService;
 import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
 import com.workforce.os.modules.workforce.dto.WorkerProfileDTO;
@@ -14,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +34,7 @@ public class WorkerController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
-    public ResponseEntity<ApiResponse<Page<WorkerProfileDTO>>> getWorkers(org.springframework.data.domain.Pageable pageable) {
+    public ResponseEntity<ApiResponse<Page<WorkerProfileDTO>>> getWorkers(Pageable pageable) {
         Page<WorkerProfileDTO> workers = workforceService.getWorkers(pageable);
         return ResponseEntity.ok(ApiResponse.success(workers, "Workers retrieved successfully"));
     }
@@ -90,7 +92,7 @@ public class WorkerController {
 
     @PostMapping("/{id}/location")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
-    public ResponseEntity<ApiResponse<Void>> updateLocation(@PathVariable Long id, @RequestBody com.workforce.os.modules.workforce.dto.LocationUpdateDTO request) {
+    public ResponseEntity<ApiResponse<Void>> updateLocation(@PathVariable Long id, @RequestBody LocationUpdateDTO request) {
         workforceService.updateWorkerLocation(id, request.getLatitude(), request.getLongitude(), request.getStatus());
         return ResponseEntity.ok(ApiResponse.success(null, "Location updated successfully"));
     }

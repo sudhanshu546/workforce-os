@@ -4,6 +4,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   role: string | null;
+  workerId: number | null;
   customerId: number | null;
   user: { id: number; name: string; email: string; role: string; number: string } | null;
   isAuthenticated: boolean;
@@ -14,12 +15,14 @@ interface CredentialsPayload {
   refreshToken: string;
   role: string;
   user: any;
+  workerId?: number;
   customerId?: number;
 }
 
 const storedAccessToken = localStorage.getItem('accessToken');
 const storedRefreshToken = localStorage.getItem('refreshToken');
 const storedRole = localStorage.getItem('role');
+const storedWorkerId = localStorage.getItem('worker_id');
 const storedCustomerId = localStorage.getItem('customerId');
 const storedUser = localStorage.getItem('user');
 
@@ -29,6 +32,7 @@ const initialState: AuthState = {
   accessToken: isValidToken(storedAccessToken) ? storedAccessToken : null,
   refreshToken: isValidToken(storedRefreshToken) ? storedRefreshToken : null,
   role: storedRole && storedRole !== 'undefined' ? storedRole : null,
+  workerId: storedWorkerId && storedWorkerId !== 'undefined' ? Number(storedWorkerId) : null,
   customerId: storedCustomerId && storedCustomerId !== 'undefined' ? Number(storedCustomerId) : null,
   user: (storedUser && storedUser !== 'undefined') ? JSON.parse(storedUser) : null,
   isAuthenticated: !!isValidToken(storedAccessToken),
@@ -42,12 +46,13 @@ const authSlice = createSlice({
       state,
       action: PayloadAction<CredentialsPayload>
     ) => {
-      const { accessToken, refreshToken, role, customerId, user } =
+      const { accessToken, refreshToken, role, workerId, customerId, user } =
         action.payload;
 
       state.accessToken = accessToken;
       state.refreshToken = refreshToken;
       state.role = role;
+      state.workerId = workerId ?? null;
       state.customerId = customerId ?? null;
       state.user = user;
       state.isAuthenticated = true;
@@ -57,6 +62,9 @@ const authSlice = createSlice({
       localStorage.setItem('role', role);
       localStorage.setItem('user', JSON.stringify(user));
 
+      if (workerId) {
+        localStorage.setItem('worker_id', workerId.toString());
+      }
       if (customerId) {
         localStorage.setItem('customerId', customerId.toString());
       }
@@ -74,6 +82,7 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.role = null;
+      state.workerId = null;
       state.customerId = null;
       state.user = null;
       state.isAuthenticated = false;
@@ -81,6 +90,7 @@ const authSlice = createSlice({
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('role');
+      localStorage.removeItem('worker_id');
       localStorage.removeItem('customerId');
       localStorage.removeItem('user');
     },

@@ -7,13 +7,20 @@ import {
 import api from '../services/api';
 import { Layout } from '../components/Layout';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
+import { Pagination } from '../components/Pagination';
 import Modal from '../components/Modal';
 import { ReviewModal } from '../components/ReviewModal';
+import { useToast } from '../components/ToastProvider';
 
 const CustomerOrdersPage: React.FC = () => {
+    const showToast = useToast();
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('ALL');
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const pageSize = 10;
     const navigate = useNavigate();
 
     // Review Modal State
@@ -21,15 +28,18 @@ const CustomerOrdersPage: React.FC = () => {
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     useEffect(() => {
-        fetchOrders();
-    }, []);
+        fetchOrders(page);
+    }, [page]);
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (pageNumber: number) => {
         try {
             const customerId = localStorage.getItem('customerId');
             if (!customerId) return;
-            const response: any = await api.get(`/work-orders/customer/${customerId}`);
-            setOrders(response.content || []);
+            setLoading(true);
+            const data: any = await api.get(`/work-orders/customer/${customerId}?page=${pageNumber}&size=${pageSize}`);
+            setOrders(data.content || []);
+            setTotalPages(data.totalPages || 0);
+            setTotalElements(data.totalElements || 0);
         } catch (err) {
             console.error('Failed to fetch orders');
         } finally {
@@ -48,10 +58,8 @@ const CustomerOrdersPage: React.FC = () => {
     };
 
     const handleReviewSuccess = () => {
-        if ((window as any).showToast) {
-            (window as any).showToast('Thank you! Your review has been submitted.', 'success');
-        }
-        fetchOrders();
+        showToast('Thank you! Your review has been submitted.', 'success');
+        fetchOrders(page);
     };
 
     const filteredOrders = orders.filter(o => filter === 'ALL' || o.status === filter);
@@ -61,7 +69,7 @@ const CustomerOrdersPage: React.FC = () => {
     return (
         <Layout>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>My Service History</h1>
                         <p className="text-muted">Track live technician deployments and manage your service records.</p>
@@ -182,6 +190,10 @@ const CustomerOrdersPage: React.FC = () => {
                         </div>
                     )}
                 />
+
+                <div style={{ marginTop: '24px' }}>
+                    <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
+                </div>
 
                 {isReviewModalOpen && selectedOrder && (
                     <ReviewModal 

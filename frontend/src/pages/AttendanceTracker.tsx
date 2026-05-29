@@ -10,11 +10,13 @@ import {
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useToast } from '../components/ToastProvider';
 import api from '../services/api';
 import { Pagination } from '../components/Pagination';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
 
 const AttendanceTracker: React.FC = () => {
+  const showToast = useToast();
   const [status, setStatus] = useState<'CLOCKED_OUT' | 'CLOCKED_IN' | 'ON_BREAK'>('CLOCKED_OUT');
   const [allAttendance, setAllAttendance] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
@@ -70,32 +72,61 @@ const AttendanceTracker: React.FC = () => {
 
   const handleClockIn = async (id?: number) => {
     const targetId = id || Number(workerId);
-    try {
-      await api.post('/attendance/clock-in', { 
-        workerId: targetId,
-        status: 'ON_FIELD',
-        latitude: 0,
-        longitude: 0 
-      });
-      if (role === 'OWNER') fetchOwnerData();
-      else { fetchStatus(); fetchWorkerLogs(); }
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Error clocking in');
+    
+    const proceedClockIn = async (lat = 0, lon = 0) => {
+      try {
+        await api.post('/attendance/clock-in', { 
+          workerId: targetId,
+          status: 'ON_FIELD',
+          latitude: lat,
+          longitude: lon 
+        });
+        if (role === 'OWNER') fetchOwnerData();
+        else { fetchStatus(); fetchWorkerLogs(); }
+        showToast('Clocked in successfully', 'success');
+      } catch (err: any) {
+        showToast(err.response?.data?.message || 'Error clocking in', 'error');
+      }
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => proceedClockIn(pos.coords.latitude, pos.coords.longitude),
+        () => {
+          showToast('Location access denied. Clocking in with default coordinates.', 'info');
+          proceedClockIn();
+        }
+      );
+    } else {
+      proceedClockIn();
     }
   };
 
   const handleClockOut = async (id?: number) => {
     const targetId = id || Number(workerId);
-    try {
-      await api.post('/attendance/clock-out', { 
-        workerId: targetId,
-        latitude: 0,
-        longitude: 0 
-      });
-      if (role === 'OWNER') fetchOwnerData();
-      else { fetchStatus(); fetchWorkerLogs(); }
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to clock out');
+    
+    const proceedClockOut = async (lat = 0, lon = 0) => {
+      try {
+        await api.post('/attendance/clock-out', { 
+          workerId: targetId,
+          latitude: lat,
+          longitude: lon 
+        });
+        if (role === 'OWNER') fetchOwnerData();
+        else { fetchStatus(); fetchWorkerLogs(); }
+        showToast('Clocked out successfully', 'success');
+      } catch (err: any) {
+        showToast(err.response?.data?.message || 'Failed to clock out', 'error');
+      }
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => proceedClockOut(pos.coords.latitude, pos.coords.longitude),
+        () => proceedClockOut()
+      );
+    } else {
+      proceedClockOut();
     }
   };
 
@@ -117,7 +148,7 @@ const AttendanceTracker: React.FC = () => {
   if (role === 'OWNER') {
     return (
       <Layout>
-        <header style={{ marginBottom: '40px' }}>
+        <header style={{ marginBottom: '20px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Staff Presence Ledger</h1>
           <p className="text-muted">Real-time oversight of field workforce availability and shift compliance.</p>
         </header>
@@ -208,7 +239,7 @@ const AttendanceTracker: React.FC = () => {
   return (
     <Layout>
       <div className="attendance-container" style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <header style={{ marginBottom: '40px', textAlign: 'center' }}>
+          <header style={{ marginBottom: '20px', textAlign: 'center' }}>
             <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Attendance Tracker</h1>
             <p className="text-muted">Log your daily work cycles and verify site presence.</p>
           </header>
@@ -232,7 +263,7 @@ const AttendanceTracker: React.FC = () => {
               <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-h)' }}>
                 {status === 'CLOCKED_IN' ? 'You are On-Duty' : status === 'ON_BREAK' ? 'Break in Progress' : 'Shift Not Started'}
               </h2>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600' }}>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600' }}>
                 <MapPin size={18} className="text-primary" /> Auto-detecting site location...
               </p>
 

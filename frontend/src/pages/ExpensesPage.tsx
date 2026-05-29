@@ -5,16 +5,20 @@ import {
     Clock, Eye, Loader2, Search, Filter, AlertCircle, ExternalLink,
     Briefcase, Image as ImageIcon
 } from 'lucide-react';
+import { useToast } from '../components/ToastProvider';
 import api from '../services/api';
 import { Pagination } from '../components/Pagination';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
 import { EXPENSE_STATUS, EXPENSE_CATEGORIES } from '../utils/constants';
 
 const ExpensesPage: React.FC = () => {
+    const showToast = useToast();
     const [expenses, setExpenses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const pageSize = 10;
 
     useEffect(() => {
         fetchExpenses(page);
@@ -23,9 +27,10 @@ const ExpensesPage: React.FC = () => {
     const fetchExpenses = async (pageNumber: number) => {
         setLoading(true);
         try {
-            const data: any = await api.get(`/finance/expenses?page=${pageNumber}&size=10`);
+            const data: any = await api.get(`/finance/expenses?page=${pageNumber}&size=${pageSize}`);
             setExpenses(data.content || []);
             setTotalPages(data.totalPages || 0);
+            setTotalElements(data.totalElements || 0);
         } catch (err) {
             console.error('Failed to fetch expenses');
         } finally {
@@ -37,8 +42,9 @@ const ExpensesPage: React.FC = () => {
         try {
             await api.patch(`/finance/expenses/${id}/status`, { status });
             fetchExpenses(page);
+            showToast(`Expense ${status.toLowerCase()} successfully`, 'success');
         } catch (err) {
-            alert('Failed to update status');
+            showToast('Failed to update status', 'error');
         }
     };
 
@@ -78,7 +84,7 @@ const ExpensesPage: React.FC = () => {
     return (
         <Layout>
             <div className="expenses-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-                <header style={{ marginBottom: '40px' }}>
+                <header style={{ marginBottom: '20px' }}>
                     <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Field Expenditures</h1>
                     <p className="text-muted">Audit and authorize reimbursement requests from field operations.</p>
                 </header>
@@ -145,7 +151,7 @@ const ExpensesPage: React.FC = () => {
                 />
 
                 <div style={{ marginTop: '24px' }}>
-                    <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+                    <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
                 </div>
             </div>
         </Layout>

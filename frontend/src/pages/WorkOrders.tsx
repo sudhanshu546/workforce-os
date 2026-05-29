@@ -10,67 +10,44 @@ import { Layout } from '../components/Layout';
 import Modal from '../components/Modal';
 import { Pagination } from '../components/Pagination';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
+import { useToast } from '../components/ToastProvider';
+import DispatchModal from '../components/DispatchModal';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { useGetWorkOrdersQuery } from '../redux/ordersApi';
+import { useGetAllWorkersQuery } from '../redux/workforceApi';
+
+import './WorkOrders.css';
 
 const WorkOrders: React.FC = () => {
-  const [workOrders, setWorkOrders] = useState<any[]>([]);
-  const [workers, setWorkers] = useState<any[]>([]);
-  const [recommendations, setRecommendations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingRecs, setLoadingRecs] = useState(false);
+  const showToast = useToast();
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
+  
+  // RTK Query Hooks
+  const { 
+    data: woData, 
+    isLoading: loading, 
+    error: woError,
+    isError: isWoError,
+    refetch 
+  } = useGetWorkOrdersQuery({ page, size: pageSize });
+  const { data: workersData = [] } = useGetAllWorkersQuery();
+
+  // Real-time updates
+  useWebSocket('/topic/orders', (msg) => {
+    refetch();
+    showToast(msg, 'info');
+  });
+
+  const workOrders = woData?.content || [];
+  const totalPages = woData?.totalPages || 0;
+  const totalElements = woData?.totalElements || 0;
+
   const [selectedWO, setSelectedWO] = useState<any>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [assigning, setAssigning] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-
-  useEffect(() => {
-    fetchData(page);
-  }, [page, statusFilter]);
-
-  const fetchData = async (page: number) => {
-    try {
-      setLoading(true);
-      const [woData, workersData]: any = await Promise.all([
-        api.get(`/work-orders?page=${page}&size=10`),
-        api.get('/workers/all')
-      ]);
-      setWorkOrders(woData?.content || []);
-      setTotalPages(woData?.totalPages || 0);
-      setWorkers(Array.isArray(workersData) ? workersData : []);
-    } catch (err) {
-      console.error('Failed to fetch work orders:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRecommendations = async (woId: number) => {
-    setLoadingRecs(true);
-    try {
-      const data: any = await api.get(`/work-orders/${woId}/recommendations`);
-      setRecommendations(data || []);
-    } catch (err) {
-      console.error('Failed to fetch recommendations');
-    } finally {
-      setLoadingRecs(false);
-    }
-  };
-
-  const handleAssign = async (workerId: number) => {
-    setAssigning(true);
-    try {
-      await api.patch(`/work-orders/${selectedWO.id}/assign`, { workerId });
-      setIsAssignModalOpen(false);
-      fetchData(page);
-    } catch (err) {
-      console.error('Failed to assign worker:', err);
-    } finally {
-      setAssigning(false);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -90,7 +67,7 @@ const WorkOrders: React.FC = () => {
     'CANCELLED': { label: 'Cancelled', color: 'var(--text-muted)' }
   };
 
-  const filteredWOs = workOrders.filter(wo => {
+  const filteredWOs = workOrders.filter((wo: any) => {
       const matchesSearch = wo.customer?.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           String(wo.id).includes(searchQuery);
       const matchesStatus = statusFilter === 'ALL' || wo.status === statusFilter;
@@ -109,7 +86,7 @@ const WorkOrders: React.FC = () => {
   return (
     <Layout>
       <div className="work-orders-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>Fulfillment Control</h1>
             <p className="text-muted">Manage real-time dispatch and field service operations.</p>
@@ -117,14 +94,24 @@ const WorkOrders: React.FC = () => {
           <div style={{ display: 'flex', gap: '16px' }}>
              <div className="mini-stat">
                 <span className="stat-label">Pending</span>
-                <span className="stat-value" style={{ color: 'var(--error)' }}>{workOrders.filter(w => w.status === 'PENDING_ASSIGNMENT').length}</span>
+                <span className="stat-value" style={{ color: 'var(--error)' }}>{workOrders.filter((w: any) => w.status === 'PENDING_ASSIGNMENT').length}</span>
              </div>
              <div className="mini-stat">
                 <span className="stat-label">Live</span>
-                <span className="stat-value" style={{ color: 'var(--primary)' }}>{workOrders.filter(w => w.status === 'IN_PROGRESS').length}</span>
+                <span className="stat-value" style={{ color: 'var(--primary)' }}>{workOrders.filter((w: any) => w.status === 'IN_PROGRESS').length}</span>
              </div>
           </div>
         </header>
+
+        {isWoError && (
+          <div className="card" style={{ background: '#fef2f2', border: '1px solid #fee2e2', padding: '20px', marginBottom: '24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+             <AlertCircle color="#ef4444" />
+             <div>
+                <div style={{ fontWeight: '800', color: '#991b1b' }}>Operational data unavailable</div>
+                <div style={{ fontSize: '14px', color: '#b91c1c' }}>{(woError as any)?.data?.message || 'Failed to connect to fulfillment services. Please check your network.'}</div>
+             </div>
+          </div>
+        )}
 
         <div className="filter-bar" style={{ marginBottom: '24px' }}>
           <div className="search-bar">
@@ -186,7 +173,7 @@ const WorkOrders: React.FC = () => {
                                 onClick={() => {
                                     const trackingUrl = `${window.location.origin}/track/${wo.id}`;
                                     navigator.clipboard.writeText(trackingUrl);
-                                    if ((window as any).showToast) (window as any).showToast('Tracking link copied to clipboard!', 'success');
+                                    showToast('Tracking link copied to clipboard!', 'success');
                                 }} 
                                 className="btn btn-primary" style={{ width: '100%' }}>
                                 <ArrowUpRight size={18} /> Share Tracking Link
@@ -198,125 +185,17 @@ const WorkOrders: React.FC = () => {
             )}
         />
         <div style={{ marginTop: '24px' }}>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+            <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
         </div>
       </div>
 
-      <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Technician Dispatch Control" width="950px">
-        <div className="premium-form-layout">
-            <div className="dispatch-header-card">
-                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <div className="id-badge">#WO-{selectedWO?.id + 1000}</div>
-                    <div>
-                        <div className="dispatch-customer-name">{selectedWO?.customer?.name}</div>
-                        <div className="dispatch-service-name"><Briefcase size={14}/> {selectedWO?.serviceName}</div>
-                    </div>
-                </div>
-                <button className="btn-smart-dispatch" onClick={() => fetchRecommendations(selectedWO.id)} disabled={loadingRecs}>
-                    {loadingRecs ? <Loader2 className="animate-spin" size={18}/> : <Zap size={18} fill="currentColor"/>}
-                    {loadingRecs ? 'Analyzing...' : 'Smart Suggest'}
-                </button>
-            </div>
-
-            {recommendations.length > 0 && (
-                <div className="smart-recs-container">
-                    <div className="section-title"><Award size={16}/> Top Matches (Skill & Proximity)</div>
-                    <div className="recs-grid">
-                        {recommendations.map((rec, index) => (
-                            <div key={rec.workerId} className={`rec-card ${index === 0 ? 'top-match' : ''}`} onClick={() => handleAssign(rec.workerId)}>
-                                {index === 0 && <div className="match-ribbon">Best Match</div>}
-                                <div className="rec-score">{(rec.matchScore * 100).toFixed(0)}%</div>
-                                <div className="rec-info">
-                                    <div className="rec-name">{rec.name}</div>
-                                    <div className="rec-details">
-                                        <span className="rec-distance"><Navigation size={12}/> {rec.distanceKm ? `${rec.distanceKm.toFixed(1)} km` : 'Location N/A'}</span>
-                                        {rec.skillMatch && <span className="rec-skill-badge"><ShieldCheck size={12}/> Expert</span>}
-                                    </div>
-                                    <div className="rec-updated">Last active: {rec.lastUpdated}</div>
-                                </div>
-                                <button className="rec-assign-btn">Dispatch</button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <div className="all-workers-section">
-                <div className="section-title"><Users size={16}/> All Available Technicians</div>
-                <div className="worker-selection-grid-standard">
-                {workers.map(worker => (
-                    <button 
-                    key={worker.id}
-                    onClick={() => handleAssign(worker.id)}
-                    disabled={assigning}
-                    className="worker-assign-card-standard"
-                    >
-                    <div className="avatar-box-standard">
-                        {worker.user?.name.charAt(0)}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '700', color: 'var(--text-h)', fontSize: '15px' }}>{worker.user?.name}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '8px', marginTop: '2px' }}>
-                            <span>{worker.designation}</span>
-                            <span>•</span>
-                            <span className="text-success">Ready</span>
-                        </div>
-                    </div>
-                    <div className="assign-action-standard">
-                        {assigning && selectedWO?.id === worker.id ? <Loader2 className="animate-spin" size={20} /> : <ChevronRight size={20} />}
-                    </div>
-                    </button>
-                ))}
-                </div>
-            </div>
-        </div>
-      </Modal>
-
-      <style>{`
-        .work-orders-container { max-width: 1400px; margin: 0 auto; }
-        .premium-form-layout { display: flex; flex-direction: column; gap: 24px; padding: 4px; }
-        
-        .dispatch-header-card { display: flex; justify-content: space-between; align-items: center; padding: 24px; background: #f8fafc; border-radius: 20px; border: 1px solid var(--border); }
-        .id-badge { background: var(--primary); color: white; padding: 8px 16px; border-radius: 10px; font-weight: 900; font-size: 18px; }
-        .dispatch-customer-name { font-size: 18px; font-weight: 800; color: var(--text-h); }
-        .dispatch-service-name { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; margin-top: 4px; font-weight: 600; }
-        
-        .btn-smart-dispatch { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none; padding: 12px 24px; border-radius: 14px; font-weight: 800; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3); }
-        .btn-smart-dispatch:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4); }
-        .btn-smart-dispatch:disabled { opacity: 0.7; cursor: not-allowed; }
-
-        .section-title { font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
-        
-        .smart-recs-container { animation: fadeIn 0.4s ease-out; }
-        .recs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-        .rec-card { background: white; border: 2px solid var(--border); border-radius: 18px; padding: 20px; display: flex; align-items: center; gap: 16px; position: relative; cursor: pointer; transition: all 0.2s; }
-        .rec-card:hover { border-color: var(--primary); background: var(--primary-light); }
-        .rec-card.top-match { border-color: #f59e0b; background: #fffbeb; }
-        
-        .match-ribbon { position: absolute; top: -10px; right: 10px; background: #f59e0b; color: white; font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3); }
-        
-        .rec-score { width: 50px; height: 50px; border-radius: 50%; background: white; border: 3px solid #f59e0b; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; color: #92400e; flex-shrink: 0; }
-        .top-match .rec-score { background: #f59e0b; color: white; border-color: white; }
-        
-        .rec-info { flex: 1; min-width: 0; }
-        .rec-name { font-weight: 800; font-size: 16px; color: var(--text-h); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .rec-details { display: flex; gap: 12px; margin: 4px 0; }
-        .rec-distance, .rec-skill-badge { font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
-        .rec-distance { color: var(--text-muted); }
-        .rec-skill-badge { color: #059669; }
-        .rec-updated { font-size: 10px; color: var(--text-muted); font-weight: 600; }
-        
-        .rec-assign-btn { background: var(--text-h); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; transition: all 0.2s; }
-        .rec-card:hover .rec-assign-btn { background: var(--primary); }
-
-        .worker-selection-grid-standard { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .worker-assign-card-standard { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: white; cursor: pointer; text-align: left; transition: all 0.2s; width: 100%; }
-        .worker-assign-card-standard:hover:not(:disabled) { border-color: var(--primary); background: #f8faff; }
-        .avatar-box-standard { width: 40px; height: 40px; border-radius: 10px; background: #f1f5f9; color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 768px) { .worker-selection-grid-standard { grid-template-columns: 1fr; } }
-      `}</style>
+      <DispatchModal 
+        isOpen={isAssignModalOpen} 
+        onClose={() => setIsAssignModalOpen(false)} 
+        selectedWO={selectedWO} 
+        workers={workersData} 
+        onAssigned={() => refetch()} 
+      />
     </Layout>
   );
 };

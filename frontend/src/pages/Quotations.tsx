@@ -14,6 +14,8 @@ const Quotations: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageSize = 10;
   const [submitting, setSubmitting] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,9 +35,10 @@ const Quotations: React.FC = () => {
   const fetchQuotations = async () => {
     setLoading(true);
     try {
-      const data: any = await api.get(`/quotations?page=${page}&size=10`);
+      const data: any = await api.get(`/quotations?page=${page}&size=${pageSize}`);
       setQuotations(data?.content || []);
       setTotalPages(data?.totalPages || 0);
+      setTotalElements(data?.totalElements || 0);
     } catch (err) {
       console.error('Error fetching quotations:', err);
     } finally {
@@ -99,7 +102,7 @@ const Quotations: React.FC = () => {
   return (
     <Layout>
       <div className="quotations-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Active Estimates</h1>
             <p className="text-muted">Review, authorize and dispatch professional service quotations.</p>
@@ -197,7 +200,7 @@ const Quotations: React.FC = () => {
         />
         
         <div style={{ marginTop: '24px' }}>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+            <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
         </div>
       </div>
     </Layout>

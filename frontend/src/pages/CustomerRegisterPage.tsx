@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import api from '../services/api'; // Your configured Axios instance
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../redux/authSlice'; // Your auth slice actions
+import { useToast } from '../components/ToastProvider';
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
@@ -23,6 +24,7 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const CustomerRegisterPage: React.FC = () => {
+  const showToast = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null); // State for API errors
   const navigate = useNavigate();
@@ -61,7 +63,7 @@ const CustomerRegisterPage: React.FC = () => {
     } catch (err: any) {
       // Handle errors, e.g., display a message
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
-      alert(`Registration failed: ${err.response?.data?.message || 'Please check your details and try again.'}`);
+      showToast(`Registration failed: ${err.response?.data?.message || 'Please check your details and try again.'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -188,3 +190,4 @@ const CustomerRegisterPage: React.FC = () => {
 };
 
 export default CustomerRegisterPage;
+

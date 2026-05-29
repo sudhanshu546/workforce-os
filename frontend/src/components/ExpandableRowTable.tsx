@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface Column<T> {
   header: string;
@@ -27,9 +28,8 @@ export function ExpandableRowTable<T extends { id: string | number }>({
 
   if (loading) {
     return (
-        <div className="premium-table-container" style={{ padding: '100px', textAlign: 'center' }}>
-            <div className="animate-spin" style={{ width: '32px', height: '32px', border: '4px solid var(--primary-light)', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto' }}></div>
-            <p style={{ marginTop: '16px', fontWeight: '600', color: 'var(--text-muted)' }}>Retrieving secure data...</p>
+        <div className="premium-table-container" style={{ padding: '60px 0' }}>
+            <LoadingSpinner />
         </div>
     );
   }

@@ -1,6 +1,9 @@
 package com.workforce.os.modules.service.service;
 
 import com.workforce.os.common.context.TenantContext;
+import com.workforce.os.common.exception.BusinessException;
+import com.workforce.os.common.exception.ResourceNotFoundException;
+import com.workforce.os.common.util.MessageConstants;
 import com.workforce.os.modules.service.domain.ServiceCategory;
 import com.workforce.os.modules.service.domain.ServiceItem;
 import com.workforce.os.modules.service.dto.ServiceCategoryDTO;
@@ -11,6 +14,8 @@ import com.workforce.os.modules.service.repository.ServiceItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +34,8 @@ public class ServiceCatalogService {
     @CacheEvict(value = {"serviceCategories", "serviceItems", "serviceItemsAll"}, allEntries = true)
     @Transactional
     public ServiceItemDTO createServiceItem(Long categoryId, String name, String description, Double basePrice) {
-        ServiceCategory category = categoryRepository.findById(categoryId).orElseThrow();
+        ServiceCategory category = categoryRepository.findByIdAndTenantId(categoryId, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
         ServiceItem item = new ServiceItem();
         item.setCategory(category);
         item.setName(name);
@@ -57,6 +63,12 @@ public class ServiceCatalogService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public Page<ServiceItemDTO> getItemsByCategory(Long categoryId, Pageable pageable) {
+        return itemRepository.findAllByCategoryIdAndTenantId(categoryId, TenantContext.getCurrentTenant(), pageable)
+                .map(serviceMapper::toItemDTO);
+    }
+
     @Cacheable(value = "serviceItemsAll", key = "#root.target.getCurrentTenant()")
     @Transactional(readOnly = true)
     public List<ServiceItemDTO> getAllItems() {
@@ -64,6 +76,12 @@ public class ServiceCatalogService {
                 .stream()
                 .map(serviceMapper::toItemDTO)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServiceItemDTO> getAllItems(Pageable pageable) {
+        return itemRepository.findAllByTenantId(TenantContext.getCurrentTenant(), pageable)
+                .map(serviceMapper::toItemDTO);
     }
 
     @Transactional(readOnly = true)
@@ -91,10 +109,8 @@ public class ServiceCatalogService {
     @CacheEvict(value = {"serviceCategories", "serviceItems", "serviceItemsAll"}, allEntries = true)
     @Transactional
     public ServiceCategoryDTO updateCategory(Long id, String name, String description) {
-        ServiceCategory category = categoryRepository.findById(id).orElseThrow();
-        if (!category.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException(UNAUTHORIZED);
-        }
+        ServiceCategory category = categoryRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
         category.setName(name);
         category.setDescription(description);
         return serviceMapper.toCategoryDTO(categoryRepository.save(category));
@@ -103,10 +119,8 @@ public class ServiceCatalogService {
     @CacheEvict(value = {"serviceCategories", "serviceItems", "serviceItemsAll"}, allEntries = true)
     @Transactional
     public void deleteCategory(Long id) {
-        ServiceCategory category = categoryRepository.findById(id).orElseThrow();
-        if (!category.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException(UNAUTHORIZED);
-        }
+        ServiceCategory category = categoryRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
         itemRepository.deleteAll(itemRepository.findAllByCategoryIdAndTenantId(id, TenantContext.getCurrentTenant()));
         categoryRepository.delete(category);
     }
@@ -114,10 +128,8 @@ public class ServiceCatalogService {
     @CacheEvict(value = {"serviceItems", "serviceItemsAll"}, allEntries = true)
     @Transactional
     public ServiceItemDTO updateServiceItem(Long id, String name, String description, Double basePrice) {
-        ServiceItem item = itemRepository.findById(id).orElseThrow();
-        if (!item.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException(UNAUTHORIZED);
-        }
+        ServiceItem item = itemRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
         item.setName(name);
         item.setDescription(description);
         item.setBasePrice(basePrice);
@@ -127,10 +139,8 @@ public class ServiceCatalogService {
     @CacheEvict(value = {"serviceItems", "serviceItemsAll"}, allEntries = true)
     @Transactional
     public void deleteServiceItem(Long id) {
-        ServiceItem item = itemRepository.findById(id).orElseThrow();
-        if (!item.getTenantId().equals(TenantContext.getCurrentTenant())) {
-            throw new RuntimeException(UNAUTHORIZED);
-        }
+        ServiceItem item = itemRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
         itemRepository.delete(item);
     }
 }

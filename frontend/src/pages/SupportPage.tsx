@@ -6,20 +6,29 @@ import api from '../services/api';
 import { Plus, MessageSquare, AlertCircle, Camera, Clock } from 'lucide-react';
 import Modal from '../components/Modal';
 import { SupportConversation } from '../components/SupportConversation';
+import { useToast } from '../components/ToastProvider';
+import { Pagination } from '../components/Pagination';
 
 const SupportPage: React.FC = () => {
+    const showToast = useToast();
     const [tickets, setTickets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({ title: '', description: '', workOrderId: '' });
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const pageSize = 10;
 
-    useEffect(() => { fetchTickets(); }, []);
+    useEffect(() => { fetchTickets(page); }, [page]);
 
-    const fetchTickets = async () => {
+    const fetchTickets = async (pageNumber: number) => {
         setLoading(true);
         try {
-            const res: any = await api.get('/support/tickets');
-            setTickets(res.data || []);
+            const res: any = await api.get(`/support/tickets?page=${pageNumber}&size=${pageSize}`);
+            setTickets(res.content || []);
+            setTotalPages(res.totalPages || 0);
+            setTotalElements(res.totalElements || 0);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
@@ -28,10 +37,10 @@ const SupportPage: React.FC = () => {
         e.preventDefault();
         try {
             await api.post('/support/tickets', formData);
-            (window as any).showToast('Ticket submitted successfully', 'success');
+            showToast('Ticket submitted successfully', 'success');
             setIsModalOpen(false);
-            fetchTickets();
-        } catch (e) { (window as any).showToast('Failed to submit', 'error'); }
+            fetchTickets(page);
+        } catch (e) { showToast('Failed to submit', 'error'); }
     };
 
     if (loading) return <Layout><LoadingSpinner /></Layout>;
@@ -87,6 +96,10 @@ const SupportPage: React.FC = () => {
                         </div>
                     )}
                 />
+
+                <div style={{ marginTop: '24px' }}>
+                    <Pagination currentPage={page} totalPages={totalPages} pageSize={pageSize} totalElements={totalElements} onPageChange={setPage} />
+                </div>
             </div>
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="New Support Request">

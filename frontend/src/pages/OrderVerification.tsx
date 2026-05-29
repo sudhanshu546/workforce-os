@@ -8,10 +8,17 @@ import {
 import api from '../services/api';
 import { Layout } from '../components/Layout';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { paymentService } from '../services/payment';
+import type { RazorpayOptions } from '../types/razorpay';
+import { toastNotifier } from '../utils/toast-notifier';
+import { useToast } from '../components/ToastProvider';
 import SockJS from 'sockjs-client';
 import { Client, over } from 'stompjs';
 
+import { API_ENDPOINTS, STORAGE_KEYS } from '../utils/constants';
+
 const OrderVerification: React.FC = () => {
+    const showToast = useToast();
     const { orderId } = useParams<{ orderId: string }>();
     const navigate = useNavigate();
     const [order, setOrder] = useState<any>(null);
@@ -33,7 +40,7 @@ const OrderVerification: React.FC = () => {
 
     const fetchOrder = async () => {
         try {
-            const response: any = await api.get(`/work-orders/${orderId}`);
+            const response: any = await api.get(`${API_ENDPOINTS.OPERATIONS.WORK_ORDERS}/${orderId}`);
             setOrder(response);
             if (response.status === 'COMPLETED' || response.status === 'AWAITING_PAYMENT') {
                 fetchInvoice();
@@ -47,8 +54,9 @@ const OrderVerification: React.FC = () => {
 
     const fetchInvoice = async (retries = 3) => {
         try {
-            const res: any = await api.get(`/finance/invoices/customer/${order.customer.id}`);
-            const inv = res.find((i: any) => i.workOrderId === Number(orderId));
+            const res: any = await api.get(`${API_ENDPOINTS.FINANCE.INVOICES}/customer/${order.customer.id}`);
+            // Fix: Backend returns Page object, access .content
+            const inv = res.content?.find((i: any) => i.workOrderId === Number(orderId));
             if (inv) {
                 setInvoice(inv);
                 setIsGeneratingInvoice(false);
@@ -64,7 +72,7 @@ const OrderVerification: React.FC = () => {
 
     const downloadProofPdf = async () => {
         try {
-            const response = await api.get(`/finance/work-orders/${orderId}/proof-pdf`, {
+            const response = await api.get(`${API_ENDPOINTS.FINANCE.INVOICES}/work-orders/${orderId}/proof-pdf`, {
                 responseType: 'blob'
             });
             const url = window.URL.createObjectURL(new Blob([response as any]));
@@ -74,19 +82,21 @@ const OrderVerification: React.FC = () => {
             document.body.appendChild(link);
             link.click();
             link.remove();
+            showToast('PDF downloaded successfully', 'success');
         } catch (e) {
-            alert('Failed to download PDF');
+            showToast('Failed to download PDF', 'error');
         }
     };
 
     const handleVerify = async () => {
         setVerifying(true);
         try {
-            await api.patch(`/work-orders/${orderId}/verify`);
+            await api.patch(`${API_ENDPOINTS.OPERATIONS.WORK_ORDERS}/${orderId}/verify`);
             setIsGeneratingInvoice(true);
             setOrder((prevOrder: any) => ({ ...prevOrder, status: 'AWAITING_PAYMENT' }));
+            showToast('Work verified successfully', 'success');
         } catch (err) {
-            alert('Verification failed. Please try again.');
+            showToast('Verification failed. Please try again.', 'error');
         } finally {
             setVerifying(false);
         }
@@ -95,23 +105,23 @@ const OrderVerification: React.FC = () => {
     const handlePayment = async () => {
         if (!invoice) return;
         try {
-            const orderRes: any = await api.post(`/finance/invoices/${invoice.id}/payment-order`);
-            const options = {
+            const orderRes: any = await api.post(`${API_ENDPOINTS.FINANCE.INVOICES}/${invoice.id}/payment-order`);
+            const options: RazorpayOptions = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: invoice.total * 100,
                 currency: "INR",
                 name: "Workforce OS",
                 description: `Payment for Order #WO-${order.id + 1000}`,
                 order_id: orderRes.orderId,
-                handler: async (response: any) => {
-                    await api.post(`/finance/payments/verify`, {
+                handler: async (response) => {
+                    await api.post(`${API_ENDPOINTS.FINANCE.PAYMENTS}/verify`, {
                         invoiceId: invoice.id,
                         razorpayOrderId: response.razorpay_order_id,
                         razorpayPaymentId: response.razorpay_payment_id,
                         razorpaySignature: response.razorpay_signature,
                         paymentMethod: 'ONLINE'
                     });
-                    alert('Payment successful!');
+                    showToast('Payment successful!', 'success');
                     fetchOrder();
                 },
                 prefill: {
@@ -121,9 +131,8 @@ const OrderVerification: React.FC = () => {
                 },
                 theme: { color: "#4f46e5" }
             };
-            const rzp = new (window as any).Razorpay(options);
-            rzp.open();
-        } catch (e) { alert('Payment initiation failed'); }
+            paymentService.initiatePayment(options);
+        } catch (e) { showToast('Payment initiation failed', 'error'); }
     };
 
     if (loading) return <Layout><LoadingSpinner /></Layout>;
@@ -296,10 +305,10 @@ const OrderVerification: React.FC = () => {
                                                         invoiceId: invoice.id,
                                                         amount: invoice.total
                                                     });
-                                                    alert('Cash payment confirmed!');
+                                                    showToast('Cash payment confirmed!', 'success');
                                                     fetchOrder();
                                                 } catch (e) {
-                                                    alert('Failed to record cash payment');
+                                                    showToast('Failed to record cash payment', 'error');
                                                 }
                                             }} 
                                             className="btn btn-secondary pay-btn"

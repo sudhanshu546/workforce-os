@@ -1,6 +1,8 @@
 package com.workforce.os.modules.attendance.service;
 
 import com.workforce.os.common.context.TenantContext;
+import com.workforce.os.common.exception.BusinessException;
+import com.workforce.os.common.exception.ResourceNotFoundException;
 import com.workforce.os.modules.attendance.domain.Attendance;
 import com.workforce.os.modules.attendance.repository.AttendanceRepository;
 import com.workforce.os.modules.operations.repository.WorkOrderRepository;
@@ -26,13 +28,16 @@ public class AttendanceService {
     @Transactional
     public Attendance clockIn(Long workerId, Long workOrderId, Double lat, Double lon, String status) {
         if (isWorkerClockedIn(workerId)) {
-            throw new RuntimeException(ALREADY_CLOCKED_IN);
+            throw new BusinessException(ALREADY_CLOCKED_IN);
         }
-        WorkerProfile worker = workerProfileRepository.findById(workerId).orElseThrow();
+        WorkerProfile worker = workerProfileRepository.findById(workerId)
+                .orElseThrow(() -> new ResourceNotFoundException(WORKER_NOT_FOUND));
+                
         Attendance attendance = new Attendance();
         attendance.setWorker(worker);
         if (workOrderId != null) {
-            attendance.setWorkOrder(workOrderRepository.findById(workOrderId).orElse(null));
+            attendance.setWorkOrder(workOrderRepository.findById(workOrderId)
+                    .orElseThrow(() -> new ResourceNotFoundException(WORK_ORDER_NOT_FOUND)));
         }
         attendance.setClockIn(LocalDateTime.now());
         attendance.setLatitude(lat);
@@ -47,19 +52,19 @@ public class AttendanceService {
         Attendance attendance;
         if (workOrderId != null) {
             attendance = attendanceRepository.findByWorkerIdAndClockOutIsNull(workerId)
-                    .orElseThrow(() -> new RuntimeException(NO_ACTIVE_SESSION));
+                    .orElseThrow(() -> new BusinessException(NO_ACTIVE_SESSION));
         } else {
             attendance = attendanceRepository.findByWorkerIdAndClockOutIsNull(workerId)
-                    .orElseThrow(() -> new RuntimeException(NO_ACTIVE_SHIFT));
+                    .orElseThrow(() -> new BusinessException(NO_ACTIVE_SHIFT));
         }
-        
+
         attendance.setClockOut(LocalDateTime.now());
         attendance.setStatus(Attendance.AttendanceStatus.CLOCKED_OUT);
         attendance.setLatitude(lat);
         attendance.setLongitude(lon);
         Duration duration = Duration.between(attendance.getClockIn(), attendance.getClockOut());
         attendance.setTotalHours(duration.toMinutes() / 60.0);
-        
+
         return attendanceRepository.save(attendance);
     }
 

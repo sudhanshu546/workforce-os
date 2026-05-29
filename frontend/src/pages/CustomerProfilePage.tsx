@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import api from '../services/api';
+import { useToast } from '../components/ToastProvider';
 
 const CustomerProfilePage: React.FC = () => {
+  const showToast = useToast();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -18,7 +20,7 @@ const CustomerProfilePage: React.FC = () => {
     try {
       const data: any = await api.get('/customers/me');
       setProfile(data);
-      setFormData({ name: data.name, phone: data.number || '' });
+      setFormData({ name: data.name, phone: data.phone || '' });
     } catch (err) {
       console.error('Failed to fetch profile', err);
     } finally {
@@ -33,8 +35,9 @@ const CustomerProfilePage: React.FC = () => {
       await api.put('/customers/me', formData);
       await fetchProfile();
       setEditing(false);
+      showToast('Profile updated successfully', 'success');
     } catch (err) {
-      alert('Failed to update profile');
+      showToast('Failed to update profile', 'error');
     } finally {
       setSaving(false);
     }
@@ -45,7 +48,7 @@ const CustomerProfilePage: React.FC = () => {
   return (
     <Layout>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Personal Identity</h1>
             <p className="text-muted">Maintain your contact records and secure account preferences.</p>
@@ -119,7 +122,7 @@ const CustomerProfilePage: React.FC = () => {
                   <div className="stat-label" style={{ marginBottom: '8px' }}>Phone Line</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: '700', color: 'var(--text-h)', fontSize: '16px' }}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Phone size={18} className="text-muted" /></div>
-                    {profile?.number}
+                    {profile?.phone}
                   </div>
                 </div>
               </div>

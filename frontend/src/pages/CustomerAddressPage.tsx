@@ -4,8 +4,10 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import Modal from '../components/Modal';
 import api from '../services/api';
+import { useToast } from '../components/ToastProvider';
 
 const CustomerAddressPage: React.FC = () => {
+  const showToast = useToast();
   const [addresses, setAddresses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,11 +39,11 @@ const CustomerAddressPage: React.FC = () => {
       (pos) => {
         setFormData({ ...formData, latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         setGeolocating(false);
-        alert('Site coordinates captured from GPS.');
+        showToast('Site coordinates captured from GPS.', 'success');
       },
       () => {
         setGeolocating(false);
-        alert('GPS signal restricted or unavailable.');
+        showToast('GPS signal restricted or unavailable.', 'error');
       }
     );
   };
@@ -54,7 +56,8 @@ const CustomerAddressPage: React.FC = () => {
       setIsModalOpen(false);
       setFormData({ street: '', city: '', state: '', zipCode: '', country: 'USA', isDefault: false, latitude: 0, longitude: 0 });
       fetchAddresses();
-    } catch (err) { alert('Failed to register address'); } finally { setSaving(false); }
+      showToast('Address registered successfully', 'success');
+    } catch (err) { showToast('Failed to register address', 'error'); } finally { setSaving(false); }
   };
 
   const handleDelete = async (id: number) => {
@@ -68,7 +71,7 @@ const CustomerAddressPage: React.FC = () => {
   return (
     <Layout>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Service Sites</h1>
               <p className="text-muted">Manage your primary locations and technical dispatch points.</p>

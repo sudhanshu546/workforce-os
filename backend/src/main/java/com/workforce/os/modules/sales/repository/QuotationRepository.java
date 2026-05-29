@@ -21,6 +21,9 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
            countQuery = "SELECT count(q) FROM Quotation q WHERE q.tenantId = :tenantId")
     Page<Quotation> findByTenantId(@Param("tenantId") String tenantId, Pageable pageable);
 
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.items WHERE q.id = :id AND q.tenantId = :tenantId")
+    Optional<Quotation> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") String tenantId);
+
     @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.items WHERE q.id = :id")
     Optional<Quotation> findById(@Param("id") Long id);
 

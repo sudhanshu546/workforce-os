@@ -6,8 +6,10 @@ import {
     Download, Printer, RefreshCw, ArrowRight
 } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../components/ToastProvider';
 
 const PayrollPage: React.FC = () => {
+    const showToast = useToast();
     const [payroll, setPayroll] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
@@ -48,7 +50,8 @@ const PayrollPage: React.FC = () => {
                 });
             }
             fetchPayroll();
-        } catch (e) { alert('Failed to generate payroll'); }
+            showToast('Payroll generated successfully', 'success');
+        } catch (e) { showToast('Failed to generate payroll', 'error'); }
         finally { setGenerating(false); }
     };
 
@@ -57,7 +60,8 @@ const PayrollPage: React.FC = () => {
         try {
             await api.patch(`/finance/payroll/${id}/pay`);
             fetchPayroll();
-        } catch (e) { alert('Failed to update status'); }
+            showToast('Payroll marked as paid', 'success');
+        } catch (e) { showToast('Failed to update status', 'error'); }
     };
 
     return (

@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { getPendingActions, clearPendingActions } from './offline';
+import { toastNotifier } from '../utils/toast-notifier';
 
 export const syncOfflineData = async () => {
     const pendingActions = await getPendingActions();
     
     if (pendingActions.length === 0) return;
 
-    if ((window as any).showToast) {
-        (window as any).showToast(`Reconnected! Syncing ${pendingActions.length} pending actions...`, 'info');
-    }
+    toastNotifier.show(`Reconnected! Syncing ${pendingActions.length} pending actions...`, 'info');
 
     let successCount = 0;
     for (const action of pendingActions) {
@@ -26,11 +25,9 @@ export const syncOfflineData = async () => {
 
     if (successCount > 0) {
         await clearPendingActions();
-        if ((window as any).showToast) {
-            (window as any).showToast(`Sync complete! ${successCount} actions synchronized.`, 'success');
-        }
-        // Reload page or trigger global refresh if needed
-        window.location.reload(); 
+        toastNotifier.show(`Sync complete! ${successCount} actions synchronized.`, 'success');
+        // Note: For better UX, instead of full reload, trigger a global state refresh or event
+        // window.location.reload(); 
     }
 };
 

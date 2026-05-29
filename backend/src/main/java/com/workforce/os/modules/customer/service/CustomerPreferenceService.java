@@ -1,5 +1,7 @@
 package com.workforce.os.modules.customer.service;
 
+import com.workforce.os.common.exception.ResourceNotFoundException;
+import com.workforce.os.common.util.MessageConstants;
 import com.workforce.os.modules.customer.domain.Customer;
 import com.workforce.os.modules.customer.domain.CustomerPreference;
 import com.workforce.os.modules.customer.dto.CustomerPreferenceResponse;
@@ -21,18 +23,18 @@ public class CustomerPreferenceService {
 
     public CustomerPreferenceResponse getPreferences(String email) {
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.CUSTOMER_NOT_FOUND));
         CustomerPreference preference = customerPreferenceRepository.findByCustomerId(customer.getId())
-                .orElseThrow(() -> new RuntimeException("Customer preferences not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
         return customerPreferenceMapper.toCustomerPreferenceResponse(preference);
     }
 
     @Transactional
     public CustomerPreferenceResponse updatePreferences(String email, CustomerPreferenceUpdateRequest request) {
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.CUSTOMER_NOT_FOUND));
         CustomerPreference preference = customerPreferenceRepository.findByCustomerId(customer.getId())
-                .orElseThrow(() -> new RuntimeException("Customer preferences not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
 
         preference.setReceiveEmailNotifications(request.isReceiveEmailNotifications());
         preference.setPreferredContactMethod(request.getPreferredContactMethod());

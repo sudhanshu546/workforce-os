@@ -7,6 +7,7 @@ import { z } from 'zod';
 import api from '../services/api'; // Your configured Axios instance
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../redux/authSlice';
+import { useToast } from '../components/ToastProvider';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
@@ -19,6 +20,7 @@ const CustomerLoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const showToast = useToast();
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -52,7 +54,7 @@ const CustomerLoginPage: React.FC = () => {
       navigate('/dashboard', { replace: true }); 
     } catch (err: any) {
       // Handle errors, e.g., display a message
-      alert(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      showToast(err.response?.data?.message || 'Login failed. Please check your credentials.', 'error');
     } finally {
       setLoading(false);
     }

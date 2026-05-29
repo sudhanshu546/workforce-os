@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @RestController
 @RequestMapping("/api/v1/organization")
 @RequiredArgsConstructor
@@ -22,7 +24,7 @@ public class OrganizationController {
         String tenantId = TenantContext.getCurrentTenant();
         return ResponseEntity.ok(ApiResponse.success(
             organizationService.getBranding(tenantId),
-            "Branding settings retrieved"
+            BRANDING_RETRIEVED
         ));
     }
 
@@ -32,7 +34,7 @@ public class OrganizationController {
         String tenantId = TenantContext.getCurrentTenant();
         return ResponseEntity.ok(ApiResponse.success(
             organizationService.updateBranding(tenantId, request.getLogoUrl(), request.getPrimaryColor(), request.getSecondaryColor()),
-            "Branding settings updated"
+            BRANDING_UPDATED
         ));
     }
 

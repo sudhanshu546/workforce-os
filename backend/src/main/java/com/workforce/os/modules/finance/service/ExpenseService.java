@@ -23,8 +23,10 @@ public class ExpenseService {
 
     @Transactional
     public Expense logExpense(Long workOrderId, Long workerId, String category, Double amount, String description, String receiptImageUrl) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId).orElseThrow();
-        WorkerProfile worker = workerProfileRepository.findById(workerId).orElseThrow();
+        WorkOrder workOrder = workOrderRepository.findByIdAndTenantId(workOrderId, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new com.workforce.os.common.exception.ResourceNotFoundException("Work order not found"));
+        WorkerProfile worker = workerProfileRepository.findByIdAndTenantId(workerId, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new com.workforce.os.common.exception.ResourceNotFoundException("Worker not found"));
 
         Expense expense = new Expense();
         expense.setWorkOrder(workOrder);
@@ -49,7 +51,8 @@ public class ExpenseService {
 
     @Transactional
     public Expense updateStatus(Long expenseId, Expense.ExpenseStatus status) {
-        Expense expense = expenseRepository.findById(expenseId).orElseThrow();
+        Expense expense = expenseRepository.findByIdAndTenantId(expenseId, TenantContext.getCurrentTenant())
+                .orElseThrow(() -> new com.workforce.os.common.exception.ResourceNotFoundException("Expense not found"));
         expense.setStatus(status);
         return expenseRepository.save(expense);
     }

@@ -11,6 +11,8 @@ import com.workforce.os.modules.support.domain.TicketComment;
 import com.workforce.os.modules.support.repository.SupportRepository;
 import com.workforce.os.modules.support.repository.TicketCommentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,9 +33,10 @@ public class SupportService {
         ticket.setCustomer(customer);
         ticket.setTitle(title);
         ticket.setDescription(description);
+        ticket.setTenantId(customer.getTenantId());
         
         if (workOrderId != null) {
-            WorkOrder wo = workOrderRepository.findById(workOrderId)
+            WorkOrder wo = workOrderRepository.findByIdAndTenantId(workOrderId, customer.getTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException("Work order not found"));
             ticket.setWorkOrder(wo);
         }
@@ -43,19 +46,20 @@ public class SupportService {
 
     @Transactional
     public TicketComment addComment(Long ticketId, User user, String message) {
-        SupportTicket ticket = supportRepository.findById(ticketId)
+        SupportTicket ticket = supportRepository.findByIdAndTenantId(ticketId, user.getTenantId())
             .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
             
         TicketComment comment = new TicketComment();
         comment.setTicket(ticket);
         comment.setUser(user);
         comment.setMessage(message);
+        comment.setTenantId(user.getTenantId());
         return commentRepository.save(comment);
     }
 
     @Transactional
     public SupportTicket updateTicketStatus(Long ticketId, SupportTicket.TicketStatus status) {
-        SupportTicket ticket = supportRepository.findById(ticketId)
+        SupportTicket ticket = supportRepository.findByIdAndTenantId(ticketId, com.workforce.os.common.context.TenantContext.getCurrentTenant())
             .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
         ticket.setStatus(status);
         return supportRepository.save(ticket);
@@ -63,6 +67,9 @@ public class SupportService {
 
     @Transactional(readOnly = true)
     public List<TicketComment> getTicketComments(Long ticketId) {
+        // Verification step
+        supportRepository.findByIdAndTenantId(ticketId, com.workforce.os.common.context.TenantContext.getCurrentTenant())
+            .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
         return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId);
     }
 
@@ -72,7 +79,17 @@ public class SupportService {
     }
 
     @Transactional(readOnly = true)
+    public Page<SupportTicket> getCustomerTickets(Long customerId, Pageable pageable) {
+        return supportRepository.findByCustomerIdOrderByCreatedAtDesc(customerId, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public List<SupportTicket> getAllTickets() {
         return supportRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SupportTicket> getAllTickets(Pageable pageable) {
+        return supportRepository.findAllByOrderByCreatedAtDesc(pageable);
     }
 }
