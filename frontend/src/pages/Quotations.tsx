@@ -94,8 +94,8 @@ const Quotations: React.FC = () => {
             <div style={{ fontWeight: '700', color: 'var(--text-h)' }}>{q.lead?.customer?.name}</div>
         </div>
     )},
-    { header: 'Issuance', accessor: (q: any) => <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>{new Date(q.createdAt).toLocaleDateString()}</span> },
-    { header: 'Total Value', accessor: (q: any) => <span style={{ fontWeight: '800', color: 'var(--text-h)' }}>₹{(q.totalAmount || 0).toLocaleString()}</span> },
+    { header: 'Issuance', accessor: (q: any) => <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>{new Date(q.lead.createdAt).toLocaleDateString()}</span> },
+    { header: 'Total Value', accessor: (q: any) => <span style={{ fontWeight: '800', color: 'var(--text-h)' }}>₹{(q.total || 0).toLocaleString()}</span> },
     { header: 'Status', accessor: (q: any) => <span className={`badge ${getStatusBadge(q.status)}`}>{q.status}</span> }
   ];
 
@@ -173,15 +173,15 @@ const Quotations: React.FC = () => {
                         <div className="financial-summary-card" style={{ background: 'var(--text-h)', padding: '24px', borderRadius: '16px', color: 'white' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', opacity: 0.8 }}>
                                 <span>Service Subtotal</span>
-                                <span>₹{q.subtotal.toLocaleString()}</span>
+                                <span>₹{(q.subtotal ?? 0).toLocaleString()}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', opacity: 0.8 }}>
                                 <span>Tax (GST)</span>
-                                <span>+ ₹{q.tax.toLocaleString()}</span>
+                                <span>+ ₹{(q.tax ?? 0).toLocaleString()}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '24px', fontWeight: '900' }}>
                                 <span>Grand Total</span>
-                                <span style={{ color: 'var(--primary)' }}>₹{q.totalAmount.toLocaleString()}</span>
+                                <span style={{ color: 'var(--primary)' }}>₹{(q.total ?? q.totalAmount ?? 0).toLocaleString()}</span>
                             </div>
                         </div>
 

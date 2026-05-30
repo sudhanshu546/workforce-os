@@ -25,4 +25,8 @@ public class Payment extends BaseEntity {
     private String paymentStatus;
 
     private String transactionReference;
+
+    private Long collectedByWorkerId;
+
+    private Long verifiedByOwnerId;
 }

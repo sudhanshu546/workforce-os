@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
     CheckCircle2, Clock, MapPin, Camera, ClipboardList, 
     Loader2, AlertCircle, ShieldCheck, IndianRupee, FileText,
-    Star, MessageCircle, ChevronRight, Navigation
+    Star, MessageCircle, ChevronRight, Navigation, Receipt, Package
 } from 'lucide-react';
 import api from '../services/api';
 import { Layout } from '../components/Layout';
@@ -42,7 +42,11 @@ const OrderVerification: React.FC = () => {
         try {
             const response: any = await api.get(`${API_ENDPOINTS.OPERATIONS.WORK_ORDERS}/${orderId}`);
             setOrder(response);
-            if (response.status === 'COMPLETED' || response.status === 'AWAITING_PAYMENT') {
+            
+            // If invoice is embedded in the order response, use it
+            if (response.invoice) {
+                setInvoice(response.invoice);
+            } else if (response.status === 'COMPLETED' || response.status === 'AWAITING_PAYMENT') {
                 fetchInvoice();
             }
         } catch (err) {
@@ -54,10 +58,9 @@ const OrderVerification: React.FC = () => {
 
     const fetchInvoice = async (retries = 3) => {
         try {
-            const res: any = await api.get(`${API_ENDPOINTS.FINANCE.INVOICES}/customer/${order.customer.id}`);
-            // Fix: Backend returns Page object, access .content
-            const inv = res.content?.find((i: any) => i.workOrderId === Number(orderId));
-            if (inv) {
+            // Using direct work-order invoice endpoint
+            const inv: any = await api.get(`${API_ENDPOINTS.FINANCE.INVOICES}/work-orders/${orderId}`);
+            if (inv && inv.id) {
                 setInvoice(inv);
                 setIsGeneratingInvoice(false);
             } else if (retries > 0 && (order?.status === 'AWAITING_PAYMENT' || order?.status === 'COMPLETED')) {
@@ -66,7 +69,10 @@ const OrderVerification: React.FC = () => {
                 console.warn('Invoice not found after all retries');
             }
         } catch (e) { 
-            console.error('Failed to fetch invoice', e); 
+            console.error('Failed to fetch invoice', e);
+            if (retries > 0 && (order?.status === 'AWAITING_PAYMENT' || order?.status === 'COMPLETED')) {
+                setTimeout(() => fetchInvoice(retries - 1), 2000);
+            }
         }
     };
 
@@ -105,6 +111,7 @@ const OrderVerification: React.FC = () => {
     const handlePayment = async () => {
         if (!invoice) return;
         try {
+            console.log('Initiating payment with Key ID:', import.meta.env.VITE_RAZORPAY_KEY_ID);
             const orderRes: any = await api.post(`${API_ENDPOINTS.FINANCE.INVOICES}/${invoice.id}/payment-order`);
             const options: RazorpayOptions = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -162,15 +169,28 @@ const OrderVerification: React.FC = () => {
                                     <Camera size={20} />
                                     <h2>Work Site Evidence</h2>
                                 </div>
-                                <a 
-                                    href={`${import.meta.env.VITE_API_BASE_URL}/finance/work-orders/${orderId}/proof-pdf`} 
-                                    className="btn btn-secondary"
-                                    style={{ textDecoration: 'none', padding: '8px 16px', fontSize: '13px' }}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    <FileText size={16} /> Download Proof PDF
-                                </a>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    {invoice && order.status === 'COMPLETED' && (
+                                        <a 
+                                            href={`${import.meta.env.VITE_API_BASE_URL}/finance/invoices/${invoice.id}/pdf`} 
+                                            className="btn btn-primary"
+                                            style={{ textDecoration: 'none', padding: '8px 16px', fontSize: '13px', background: 'var(--success)', borderColor: 'var(--success)' }}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            <Receipt size={16} /> Download Official Invoice
+                                        </a>
+                                    )}
+                                    <a 
+                                        href={`${import.meta.env.VITE_API_BASE_URL}/finance/work-orders/${orderId}/proof-pdf`} 
+                                        className="btn btn-secondary"
+                                        style={{ textDecoration: 'none', padding: '8px 16px', fontSize: '13px' }}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        <FileText size={16} /> Download Proof PDF
+                                    </a>
+                                </div>
                             </div>
                             <div className="evidence-grid">
                                 {order.evidence?.map((ev: any) => (
@@ -210,43 +230,118 @@ const OrderVerification: React.FC = () => {
                         </section>
                         {/* Detailed Breakdown */}
                         <div className="breakdown-card card">
-                            <h3>Service & Material Breakdown</h3>
-                            
-                            <div className="breakdown-section">
-                                <h4 className="section-subtitle">Quoted Services</h4>
-                                {order.quotation?.items?.map((item: any) => (
-                                    <div key={item.id} className="breakdown-row">
-                                        <div className="item-info">
-                                            <span className="item-desc">{item.description}</span>
-                                            <span className="item-qty">Qty: {item.quantity}</span>
-                                        </div>
-                                        <div className="item-price">
-                                            <IndianRupee size={12} /> {item.totalAmount.toFixed(2)}
-                                        </div>
-                                    </div>
-                                ))}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h3 style={{ margin: 0 }}>Service & Financial Ledger</h3>
+                                {invoice && (
+                                    <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', background: 'var(--surface-muted)', padding: '4px 12px', borderRadius: '6px' }}>
+                                        INV: {invoice.invoiceNumber}
+                                    </span>
+                                )}
                             </div>
-
-                            {order.materials?.length > 0 && (
-                                <div className="breakdown-section extra">
-                                    <h4 className="section-subtitle">On-Site Materials (Added)</h4>
-                                    {order.materials.map((m: any) => (
-                                        <div key={m.id} className="breakdown-row">
+                            
+                            {/* Service Items */}
+                            <div className="breakdown-section">
+                                <h4 className="section-subtitle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <ShieldCheck size={14} className="text-primary" /> Professional Service Fees
+                                </h4>
+                                {invoice ? (
+                                    invoice.items?.filter((i: any) => i.type === 'SERVICE').map((item: any, idx: number) => (
+                                        <div key={idx} className="breakdown-row">
                                             <div className="item-info">
-                                                <span className="item-desc">{m.materialName || 'Unknown Material'}</span>
-                                                <span className="item-qty">Qty: {m.quantityUsed} {m.unit || ''}</span>
+                                                <span className="item-desc">{item.description}</span>
+                                                <span className="item-qty">Premium Service Item x {item.quantity}</span>
                                             </div>
                                             <div className="item-price">
-                                                <IndianRupee size={12} /> {(m.unitPriceAtUse * m.quantityUsed).toFixed(2)}
+                                                <IndianRupee size={12} /> {item.totalAmount.toFixed(2)}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                    ))
+                                ) : (
+                                    order.quotation?.items?.map((item: any) => (
+                                        <div key={item.id} className="breakdown-row">
+                                            <div className="item-info">
+                                                <span className="item-desc">{item.description}</span>
+                                                <span className="item-qty">Quoted Quantity: {item.quantity}</span>
+                                            </div>
+                                            <div className="item-price">
+                                                <IndianRupee size={12} /> {item.totalAmount.toFixed(2)}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
 
-                            <div className="running-total-bar">
-                                <span>Estimated Total (Excl. Tax)</span>
-                                <span><IndianRupee size={16} /> {((order.quotation?.subtotal || 0) + (order.materials?.reduce((acc: number, m: any) => acc + ((m.unitPriceAtUse || 0) * (m.quantityUsed || 0)), 0) || 0)).toFixed(2)}</span>
+                            {/* Material Items */}
+                            <div className="breakdown-section extra">
+                                <h4 className="section-subtitle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Package size={14} className="text-warning" /> Consumables & On-Site Materials
+                                </h4>
+                                {invoice ? (
+                                    invoice.items?.filter((i: any) => i.type === 'MATERIAL').length > 0 ? (
+                                        invoice.items?.filter((i: any) => i.type === 'MATERIAL').map((item: any, idx: number) => (
+                                            <div key={idx} className="breakdown-row">
+                                                <div className="item-info">
+                                                    <span className="item-desc">{item.description}</span>
+                                                    <span className="item-qty">Applied Quantity: {item.quantity}</span>
+                                                </div>
+                                                <div className="item-price">
+                                                    <IndianRupee size={12} /> {item.totalAmount.toFixed(2)}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '12px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                                            No additional materials utilized.
+                                        </div>
+                                    )
+                                ) : (
+                                    order.materials?.length > 0 ? (
+                                        order.materials.map((m: any) => (
+                                            <div key={m.id} className="breakdown-row">
+                                                <div className="item-info">
+                                                    <span className="item-desc">{m.materialName || 'Unknown Material'}</span>
+                                                    <span className="item-qty">Usage: {m.quantityUsed} {m.unit || ''}</span>
+                                                </div>
+                                                <div className="item-price">
+                                                    <IndianRupee size={12} /> {(m.unitPriceAtUse * m.quantityUsed).toFixed(2)}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '12px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                                            No additional materials recorded.
+                                        </div>
+                                    )
+                                )}
+                            </div>
+
+                            {/* Detailed Totals */}
+                            <div style={{ marginTop: '24px', padding: '24px', background: '#f8fafc', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>
+                                        <span>Subtotal (Net)</span>
+                                        <span><IndianRupee size={12} /> {invoice ? invoice.subtotal.toFixed(2) : ((order.quotation?.subtotal || 0) + (order.materials?.reduce((acc: number, m: any) => acc + (m.unitPriceAtUse * m.quantityUsed), 0) || 0)).toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>
+                                        <span>Estimated Tax / GST</span>
+                                        <span><IndianRupee size={12} /> {invoice ? invoice.tax.toFixed(2) : (order.quotation?.tax || 0).toFixed(2)}</span>
+                                    </div>
+                                    {order.quotation?.discount > 0 && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '700', color: 'var(--error)' }}>
+                                            <span>Institutional Discount</span>
+                                            <span>- <IndianRupee size={12} /> {order.quotation.discount.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div style={{ marginTop: '12px', paddingTop: '16px', borderTop: '2px dashed var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Amount Paid</span>
+                                            <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '700' }}>Authorized & Finalized</span>
+                                        </div>
+                                        <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-h)' }}>
+                                            <IndianRupee size={20} /> {invoice ? invoice.total.toFixed(2) : (order.quotation?.total || 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -303,7 +398,8 @@ const OrderVerification: React.FC = () => {
                                                 try {
                                                     await api.post(`/finance/payments/cash`, {
                                                         invoiceId: invoice.id,
-                                                        amount: invoice.total
+                                                        amount: invoice.total,
+                                                        workerId: order.assignedWorker?.id
                                                     });
                                                     showToast('Cash payment confirmed!', 'success');
                                                     fetchOrder();

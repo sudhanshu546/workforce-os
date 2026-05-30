@@ -79,6 +79,16 @@ const WorkOrders: React.FC = () => {
     { header: 'Customer', accessor: (wo: any) => <div style={{ fontWeight: '700', color: 'var(--text-h)' }}>{wo.customer?.name}</div> },
     { header: 'Service Type', accessor: (wo: any) => <span style={{ fontWeight: '600', color: 'var(--text-main)' }}>{wo.serviceName || 'Standard Service'}</span> },
     { header: 'Amount', accessor: (wo: any) => <span style={{ fontWeight: '800', color: 'var(--text-h)' }}>₹{wo.totalAmount?.toLocaleString()}</span> },
+    { header: 'Schedule', accessor: (wo: any) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: 'var(--text-h)' }}>
+              <Calendar size={14} className="text-muted" /> {wo.scheduledDate}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+              <Clock size={12} /> {wo.scheduledTime || '09:00 AM'}
+          </div>
+      </div>
+    )},
     { header: 'Technician', accessor: (wo: any) => <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>{wo.assignedWorkerName !== 'Unassigned' ? <><div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>{wo.assignedWorkerName[0]}</div> <span style={{ fontWeight: '600' }}>{wo.assignedWorkerName}</span></> : <span className="text-muted">Waiting...</span>}</div> },
     { header: 'Current Status', accessor: (wo: any) => <span className={`badge ${getStatusBadge(wo.status)}`}>{statusMap[wo.status]?.label || wo.status}</span> }
   ];
@@ -144,29 +154,47 @@ const WorkOrders: React.FC = () => {
             columns={columns}
             loading={loading}
             renderExpanded={(wo: any) => (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '40px' }}>
-                    <div>
-                        <div className="stat-label">Job Specification</div>
-                        <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-h)', marginTop: '8px' }}>{wo.serviceName || 'Standard Service Item'}</div>
-                        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                                <MapPin size={16} className="text-muted" /> <span style={{ fontWeight: '600' }}>{wo.customerAddress}</span>
+                <div className="expanded-card-layout" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
+                    <div className="expanded-section">
+                        <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Job Specification</div>
+                        <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-h)', marginTop: '12px' }}>{wo.serviceName || 'Standard Service Item'}</div>
+                        <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', background: 'var(--surface-muted)', padding: '12px', borderRadius: '10px' }}>
+                                <MapPin size={18} className="text-primary" /> <span style={{ fontWeight: '600' }}>{wo.customerAddress || 'No address provided'}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                                <Calendar size={16} className="text-muted" /> <span style={{ fontWeight: '600' }}>{wo.scheduledDate}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', background: 'var(--surface-muted)', padding: '12px', borderRadius: '10px' }}>
+                                <Calendar size={18} className="text-primary" /> <span style={{ fontWeight: '600' }}>{wo.scheduledDate} at {wo.scheduledTime || '09:00 AM'}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <div>
-                        <div className="stat-label">Financial Overview</div>
-                        <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)', marginTop: '8px' }}>₹{wo.totalAmount?.toLocaleString()}</div>
-                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Includes materials and service labor</p>
+                    <div className="expanded-section">
+                        <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Technician Assignment</div>
+                        <div style={{ marginTop: '12px' }}>
+                            {wo.assignedWorkerName !== 'Unassigned' ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--surface-muted)', padding: '16px', borderRadius: '12px' }}>
+                                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '900' }}>{wo.assignedWorkerName[0]}</div>
+                                    <div>
+                                        <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-h)' }}>{wo.assignedWorkerName}</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Lead Field Technician</div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '12px', border: '1.5px dashed var(--border)', color: 'var(--text-muted)' }}>
+                                    <Users size={24} />
+                                    <div style={{ fontWeight: '700' }}>Awaiting Dispatch Assignment</div>
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ marginTop: '20px' }}>
+                            <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '8px' }}>FINANCIAL SUMMARY</div>
+                            <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)' }}>₹{wo.totalAmount?.toLocaleString()}</div>
+                        </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+                    <div className="expanded-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
                         {wo.status === 'PENDING_ASSIGNMENT' && (
-                            <button onClick={() => { setSelectedWO(wo); setIsAssignModalOpen(true); }} className="btn btn-primary" style={{ width: '100%' }}><UserPlus size={18} /> Assign Dispatch</button>
+                            <button onClick={() => { setSelectedWO(wo); setIsAssignModalOpen(true); }} className="btn btn-primary" style={{ width: '100%', height: '48px', fontSize: '15px' }}><UserPlus size={18} /> Assign Dispatch</button>
                         )}
                         {wo.status === 'IN_PROGRESS' && (
                             <button 
@@ -175,11 +203,11 @@ const WorkOrders: React.FC = () => {
                                     navigator.clipboard.writeText(trackingUrl);
                                     showToast('Tracking link copied to clipboard!', 'success');
                                 }} 
-                                className="btn btn-primary" style={{ width: '100%' }}>
+                                className="btn btn-primary" style={{ width: '100%', height: '48px', fontSize: '15px' }}>
                                 <ArrowUpRight size={18} /> Share Tracking Link
                             </button>
                         )}
-                        <button className="btn btn-secondary" style={{ width: '100%' }}><Eye size={18} /> Full Work Audit</button>
+                        <button className="btn btn-secondary" style={{ width: '100%', height: '48px', fontSize: '15px' }} onClick={() => showToast('Full audit log is being generated...', 'info')}><Eye size={18} /> Full Work Audit</button>
                     </div>
                 </div>
             )}

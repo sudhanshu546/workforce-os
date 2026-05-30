@@ -13,6 +13,7 @@ import com.workforce.os.modules.sales.repository.QuotationRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +21,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.workforce.os.common.util.MessageConstants.UNAUTHORIZED;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
-public class QuotationService {
+public class QuotationService extends com.workforce.os.common.service.BaseService {
     private final QuotationRepository quotationRepository;
     private final LeadRepository leadRepository;
     private final WorkOrderService workOrderService;
@@ -32,12 +35,14 @@ public class QuotationService {
     private Double defaultTaxRate;
 
     @Transactional
+    @CacheEvict(value = "leads", allEntries = true)
     public Quotation createQuotation(Long leadId, List<QuotationItemRequest> itemRequests, Double taxPercentage, Double discount) {     
         Lead lead = leadRepository.findByIdAndTenantId(leadId, TenantContext.getCurrentTenant())
                 .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
 
         Quotation quotation = new Quotation();
         quotation.setLead(lead);
+        quotation.setCustomer(lead.getCustomer());
         quotation.setDiscount(discount);
         quotation.setStatus(Quotation.QuotationStatus.DRAFT);
         quotation.setTenantId(TenantContext.getCurrentTenant());
@@ -66,6 +71,7 @@ public class QuotationService {
         quotation.setSubtotal(subtotal);
         quotation.setTax(subtotal * (rate / 100.0));
         quotation.setTotalAmount(subtotal + quotation.getTax() - discount);
+        quotation.calculateTotals();
 
         lead.setStatus(Lead.LeadStatus.QUOTED);
         leadRepository.save(lead);
@@ -81,6 +87,7 @@ public class QuotationService {
     }
 
     @Transactional
+    @CacheEvict(value = "leads", allEntries = true)
     public Quotation approveQuotation(Long quotationId) {
         Quotation quotation = getQuotationSecurely(quotationId);
         // Manually initialize the items collection to prevent LazyInitializationException later
@@ -104,12 +111,11 @@ public class QuotationService {
 
     @Transactional(readOnly = true)
     public Quotation getQuotationById(Long id) {
-        return getQuotationSecurely(id);
+        return getSecurely(id, quotationRepository::findByIdAndTenantId, quotationRepository::findByIdAndCustomerId);
     }
 
     private Quotation getQuotationSecurely(Long id) {
-        return quotationRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
-                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
+        return getQuotationById(id);
     }
 
     @Transactional

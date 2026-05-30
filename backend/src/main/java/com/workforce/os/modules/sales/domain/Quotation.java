@@ -1,9 +1,14 @@
 package com.workforce.os.modules.sales.domain;
 
 import com.workforce.os.common.domain.BaseEntity;
+import com.workforce.os.modules.customer.domain.Customer;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +17,7 @@ import java.util.List;
 @Setter
 @Entity
 @Table(name = "quotations")
+@Filter(name = "customerFilter", condition = "customer_id = :customerId")
 public class Quotation extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,6 +26,10 @@ public class Quotation extends BaseEntity {
     @OneToOne
     @JoinColumn(name = "lead_id")
     private Lead lead;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
 
     @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuotationItem> items = new ArrayList<>();

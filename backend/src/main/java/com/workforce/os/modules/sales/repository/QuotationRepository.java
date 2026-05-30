@@ -24,6 +24,9 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.items WHERE q.id = :id AND q.tenantId = :tenantId")
     Optional<Quotation> findByIdAndTenantId(@Param("id") Long id, @Param("tenantId") String tenantId);
 
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.items WHERE q.id = :id AND q.customer.id = :customerId")
+    Optional<Quotation> findByIdAndCustomerId(@Param("id") Long id, @Param("customerId") Long customerId);
+
     @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.items WHERE q.id = :id")
     Optional<Quotation> findById(@Param("id") Long id);
 

@@ -2,6 +2,7 @@ package com.workforce.os.modules.sales.web;
 
 import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.common.dto.ApiResponse;
+import com.workforce.os.modules.finance.service.FinanceService;
 import com.workforce.os.modules.sales.domain.Quotation;
 import com.workforce.os.modules.sales.dto.QuotationResponseDTO;
 import com.workforce.os.modules.sales.mapper.QuotationMapper;
@@ -21,11 +22,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/quotations")
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class QuotationController {
 
     private final QuotationService quotationService;
     private final QuotationRepository quotationRepository;
     private final QuotationMapper quotationMapper;
+    private final FinanceService financeService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
@@ -37,6 +40,7 @@ public class QuotationController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
     public ResponseEntity<ApiResponse<QuotationResponseDTO>> getQuotation(@PathVariable Long id) {
+        log.info("Fetching details for quotation: {}", id);
         Quotation quotation = quotationService.getQuotationById(id);
         return ResponseEntity.ok(ApiResponse.success(quotationMapper.toDTO(quotation), "Quotation retrieved successfully"));
     }
@@ -44,8 +48,18 @@ public class QuotationController {
     @GetMapping("/lead/{leadId}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
     public ResponseEntity<ApiResponse<QuotationResponseDTO>> getQuotationByLead(@PathVariable Long leadId) {
-        Quotation quotation = quotationRepository.findByLeadId(leadId)
-                .orElseThrow(() -> new RuntimeException("Quotation not found for lead: " + leadId));
+        Quotation quotation = quotationService.getQuotationById(leadId);
+//                .orElseThrow(() -> new RuntimeException("Quotation not found for lead: " + leadId));
+//
+//        // Ownership verification for customers
+//        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+//        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CUSTOMER"))) {
+//             var customer = (com.workforce.os.modules.customer.domain.Customer) auth.getPrincipal();
+//             if (quotation.getCustomer() == null || !quotation.getCustomer().getId().equals(customer.getId())) {
+//                throw new com.workforce.os.common.exception.BusinessException("Access denied");
+//             }
+//        }
+        
         return ResponseEntity.ok(ApiResponse.success(quotationMapper.toDTO(quotation), "Quotation retrieved successfully"));
     }
 
@@ -64,6 +78,7 @@ public class QuotationController {
     @PatchMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
     public ResponseEntity<ApiResponse<QuotationResponseDTO>> approveQuotation(@PathVariable Long id) {
+        // Validation handled inside service via getQuotationById
         Quotation quotation = quotationService.approveQuotation(id);
         return ResponseEntity.ok(ApiResponse.success(quotationMapper.toDTO(quotation), "Quotation approved successfully"));
     }

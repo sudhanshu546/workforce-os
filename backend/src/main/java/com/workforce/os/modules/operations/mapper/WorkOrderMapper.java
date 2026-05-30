@@ -19,6 +19,7 @@ public interface WorkOrderMapper {
     @Mapping(target = "serviceName", ignore = true)
     @Mapping(target = "totalAmount", ignore = true)
     @Mapping(target = "customerAddress", ignore = true)
+    @Mapping(source = "quotation", target = "quotation")
     WorkOrderResponseDTO toDTO(WorkOrder workOrder);
 
     @Mapping(source = "workOrder.id", target = "workOrderId")
@@ -37,4 +38,8 @@ public interface WorkOrderMapper {
     @Mapping(source = "material.unit", target = "unit")
     @Mapping(source = "unitPriceAtUse", target = "unitPriceAtUse")
     WorkOrderResponseDTO.MaterialDTO toMaterialDTO(WorkOrderMaterial material);
+
+    WorkOrderResponseDTO.QuotationDTO toQuotationDTO(com.workforce.os.modules.sales.domain.Quotation quotation);
+
+    WorkOrderResponseDTO.QuotationItemDTO toQuotationItemDTO(com.workforce.os.modules.sales.domain.QuotationItem item);
 }

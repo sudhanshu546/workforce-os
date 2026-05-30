@@ -3,6 +3,7 @@ package com.workforce.os.modules.operations.service;
 import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.common.exception.BusinessException;
 import com.workforce.os.common.exception.ResourceNotFoundException;
+import com.workforce.os.common.service.BaseService;
 import com.workforce.os.common.util.MessageConstants;
 import com.workforce.os.modules.customer.repository.CustomerAddressRepository;
 import com.workforce.os.modules.inventory.domain.Material;
@@ -40,7 +41,7 @@ import static com.workforce.os.modules.operations.domain.WorkOrder.WorkOrderStat
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class WorkOrderService {
+public class WorkOrderService extends BaseService {
 
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderTaskRepository workOrderTaskRepository;
@@ -245,11 +246,6 @@ public class WorkOrderService {
         return saved;
     }
 
-    private WorkOrder getWorkOrderSecurely(Long id) {
-        return workOrderRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
-                .orElseThrow(() -> new ResourceNotFoundException(WORK_ORDER_NOT_FOUND));
-    }
-
     private void verifyLocation(WorkOrder workOrder, Double lat, Double lon) {
         if (lat == null || lon == null) return; // Skip if location disabled by device policy for now
 
@@ -349,7 +345,11 @@ public class WorkOrderService {
 
     @Transactional(readOnly = true)
     public WorkOrder getWorkOrderById(Long id) {
-        return getWorkOrderSecurely(id);
+        return getSecurely(id, workOrderRepository::findByIdAndTenantId, workOrderRepository::findByIdAndCustomerId);
+    }
+
+    private WorkOrder getWorkOrderSecurely(Long id) {
+        return getWorkOrderById(id);
     }
 
     public WorkOrderRepository getWorkOrderRepository() {

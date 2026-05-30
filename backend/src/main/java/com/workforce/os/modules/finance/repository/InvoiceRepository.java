@@ -19,6 +19,11 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     @Query("SELECT DISTINCT i FROM Invoice i " +
            "LEFT JOIN FETCH i.items " +
+           "WHERE i.id = :id AND i.customer.id = :customerId")
+    Optional<Invoice> findByIdAndCustomerId(@Param("id") Long id, @Param("customerId") Long customerId);
+
+    @Query("SELECT DISTINCT i FROM Invoice i " +
+           "LEFT JOIN FETCH i.items " +
            "WHERE i.id = :id")
     Optional<Invoice> findById(@Param("id") Long id);
 

@@ -39,6 +39,7 @@ public class LeadService extends BaseService {
     private final WorkOrderRepository workOrderRepository;
     private final InvoiceRepository invoiceRepository;
     private final CustomerAddressRepository customerAddressRepository;
+    private final com.workforce.os.modules.notification.service.NotificationService notificationService;
 
     @Transactional(readOnly = true)
     @Cacheable(value = "leads", key = "T(com.workforce.os.common.context.TenantContext).getCurrentTenant() + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
@@ -108,7 +109,10 @@ public class LeadService extends BaseService {
         lead.setStatus(Lead.LeadStatus.NEW);
         lead.setTenantId(organization.getTenantId());
 
-        return leadRepository.save(lead);
+        Lead saved = leadRepository.save(lead);
+        notificationService.notifyManagementOfNewLead(saved);
+        
+        return saved;
     }
 
     @Transactional

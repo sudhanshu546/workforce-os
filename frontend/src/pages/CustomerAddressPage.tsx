@@ -71,33 +71,35 @@ const CustomerAddressPage: React.FC = () => {
   return (
     <Layout>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <div>
-              <h1 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '8px' }}>Service Sites</h1>
-              <p className="text-muted">Manage your primary locations and technical dispatch points.</p>
+              <h1 style={{ fontSize: '36px', fontWeight: '900', marginBottom: '8px', letterSpacing: '-0.02em' }}>Service Sites</h1>
+              <p className="text-muted" style={{ fontSize: '16px', fontWeight: '500' }}>Manage your primary locations and technical dispatch points.</p>
             </div>
-            <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">
+            <button onClick={() => setIsModalOpen(true)} className="btn btn-primary" style={{ padding: '12px 24px' }}>
               <Plus size={20} /> Register New Site
             </button>
         </header>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '32px' }}>
             {addresses.map((addr) => (
-            <div key={addr.id} className="card-premium" style={{ padding: '32px' }}>
+            <div key={addr.id} className="card-premium" style={{ padding: '32px', borderTop: '4px solid var(--primary)' }}>
                 <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <MapPin size={24} />
+                    <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <MapPin size={28} />
                     </div>
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '800', fontSize: '18px', color: 'var(--text-h)', marginBottom: '4px' }}>{addr.street}</div>
-                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>{addr.city}, {addr.state} {addr.zipCode}</div>
+                        <div style={{ fontWeight: '900', fontSize: '20px', color: 'var(--text-h)', marginBottom: '6px' }}>{addr.street}</div>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '16px' }}>{addr.city}, {addr.state} {addr.zipCode}</div>
                         
-                        <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-                            <button onClick={() => handleDelete(addr.id)} className="btn btn-secondary text-error" style={{ padding: '8px 16px', fontSize: '12px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
+                            <button onClick={() => handleDelete(addr.id)} className="btn btn-secondary text-error" style={{ padding: '8px 16px', fontSize: '12px', border: 'none', background: '#fff1f2' }}>
                                 <Trash2 size={16} /> Decommission
                             </button>
-                            {addr.latitude !== 0 && (
-                                <div className="badge badge-success" style={{ fontSize: '10px' }}><CheckCircle2 size={12} /> GPS Verified</div>
+                            {addr.latitude !== 0 ? (
+                                <div className="badge badge-success" style={{ fontSize: '11px', fontWeight: '800', background: '#dcfce7', color: '#166534', border: 'none' }}><CheckCircle2 size={14} /> GPS Verified</div>
+                            ) : (
+                                <div className="badge" style={{ fontSize: '11px', fontWeight: '800', background: '#f1f5f9', color: '#64748b' }}><Navigation size={14} /> Coordinates Missing</div>
                             )}
                         </div>
                     </div>

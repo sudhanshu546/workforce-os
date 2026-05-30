@@ -26,6 +26,7 @@ import PayrollPage from './pages/PayrollPage';
 import PublicTrackingPage from './pages/PublicTrackingPage';
 import SupportPage from './pages/SupportPage';
 import Settings from './pages/Settings';
+import WorkerEarnings from './pages/WorkerEarnings';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 function App() {
@@ -67,6 +68,7 @@ function App() {
         <Route path="/workers" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Workers /></PrivateRoute>} />
         <Route path="/attendance" element={<PrivateRoute><AttendanceTracker /></PrivateRoute>} />
         <Route path="/tasks" element={<PrivateRoute><Tasks /></PrivateRoute>} />
+        <Route path="/earnings" element={<PrivateRoute roles={['WORKER']}><WorkerEarnings /></PrivateRoute>} />
         
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>

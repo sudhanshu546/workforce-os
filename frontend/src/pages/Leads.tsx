@@ -212,6 +212,11 @@ const Leads: React.FC = () => {
         </div>
     )},
     { header: 'Priority', accessor: (lead: any) => <span className={`badge ${getPriorityBadge(lead.priority)}`}>{lead.priority}</span> },
+    { header: 'Created On', accessor: (lead: any) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>
+            <Calendar size={14} /> {new Date(lead.createdAt).toLocaleDateString()}
+        </div>
+    )},
     { header: 'Stage', accessor: (lead: any) => <span className={`badge ${getStatusBadge(lead.status)}`}>{lead.status.replace('_', ' ')}</span> }
   ];
 
@@ -260,40 +265,43 @@ const Leads: React.FC = () => {
                 columns={columns}
                 loading={loading}
                 renderExpanded={(lead: any) => (
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
                         <div>
-                            <div className="stat-label">Inquiry Requirements</div>
-                            <p style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', fontSize: '15px', color: 'var(--text-main)', marginTop: '12px', lineHeight: '1.6' }}>
-                                {lead.description}
-                            </p>
-                            <div style={{ marginTop: '20px', display: 'flex', gap: '24px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
-                                    <Calendar size={16} /> Created: {new Date(lead.createdAt).toLocaleDateString()}
+                            <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Inquiry Requirements</div>
+                            <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)', fontSize: '15px', color: 'var(--text-main)', marginTop: '12px', lineHeight: '1.6', position: 'relative' }}>
+                                <div style={{ position: 'absolute', top: '-10px', left: '20px', background: 'var(--primary)', color: 'white', padding: '2px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800' }}>CLIENT BRIEF</div>
+                                {lead.description || 'No specific requirements mentioned. Standard service inquiry.'}
+                            </div>
+                            <div style={{ marginTop: '24px', display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', background: 'var(--surface-muted)', padding: '8px 16px', borderRadius: '10px' }}>
+                                    <Phone size={14} className="text-primary" /> {lead.customer?.phone}
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)' }}>
-                                    <Clock size={16} /> Ref ID: #LD-{lead.id + 1000}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', background: 'var(--surface-muted)', padding: '8px 16px', borderRadius: '10px' }}>
+                                    <Clock size={14} className="text-primary" /> ID: #LD-{lead.id + 1000}
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
-                            <div className="stat-label">Pipeline Actions</div>
-                            {(lead.status === 'NEW' || lead.status === 'CONTACTED') && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
+                            <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Pipeline Actions</div>
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                                {(lead.status === 'NEW' || lead.status === 'CONTACTED') && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setIsQuotationModalOpen(true); }}
+                                        className="btn btn-primary"
+                                        style={{ width: '100%', height: '48px' }}
+                                    >
+                                        <FileText size={18} /> Construct Estimate
+                                    </button>
+                                )}
                                 <button 
-                                    onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); setIsQuotationModalOpen(true); }}
-                                    className="btn btn-primary"
-                                    style={{ width: '100%' }}
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
+                                    className="btn btn-secondary text-error" 
+                                    style={{ width: '100%', height: '48px' }}
                                 >
-                                    <FileText size={18} /> Construct Estimate
+                                    <Trash2 size={18} /> Archive Opportunity
                                 </button>
-                            )}
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
-                                className="btn btn-secondary text-error" 
-                                style={{ width: '100%' }}
-                            >
-                                <Trash2 size={18} /> Archive Opportunity
-                            </button>
+                            </div>
                         </div>
                     </div>
                 )}

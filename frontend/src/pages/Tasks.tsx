@@ -499,7 +499,7 @@ const Tasks: React.FC = () => {
                                 <div className="job-section-standard">
                                     <h4 className="section-title-standard">LOGGED MATERIALS</h4>
                                     <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
-                                        {(Array.isArray(selectedTask.materials) ? selectedTask.materials : []).map((m: any) => (
+                                        {Array.isArray(selectedTask?.materials) ? selectedTask.materials.map((m: any) => (
                                             <div key={m.id} className="checklist-item-standard" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <Tag size={18} className="text-muted" />
@@ -507,7 +507,7 @@ const Tasks: React.FC = () => {
                                                 </div>
                                                 <span className="badge badge-primary">Qty: {m.quantityUsed} {m.unit}</span>
                                             </div>
-                                        ))}
+                                        )) : null}
                                     </div>
                                 </div>
                             )}
@@ -570,11 +570,12 @@ const Tasks: React.FC = () => {
                                                     const data: any = await api.get('/finance/invoices');
                                                     const inv = (data || []).find((i: any) => i.workOrder?.id === selectedTask.id);
                                                     if (inv) {
-                                                        await api.post(`/finance/payments`, {
+                                                        await api.post(`/finance/payments/cash`, {
                                                             invoiceId: inv.id,
                                                             amount: inv.total,
                                                             paymentMethod: 'CASH',
-                                                            transactionReference: `CASH_COLLECTED_BY_WORKER_${workerId}`
+                                                            transactionReference: `CASH_COLLECTED_BY_WORKER_${workerId}`,
+                                                            workerId: Number(workerId)
                                                         });
                                                         showToast('Cash payment recorded successfully!', 'success');
                                                         setIsDetailModalOpen(false);

@@ -130,44 +130,74 @@ const CustomerOrdersPage: React.FC = () => {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '300px' }}>
                                     <MapPin size={16} className="text-muted" />
                                     <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {order.customer?.address || 'Site mapping in progress'}
+                                        {order.customerAddress || 'Site mapping in progress'}
                                     </span>
+                                </div>
+                            ) 
+                        },
+                        { 
+                            header: 'Amount', 
+                            accessor: (order: any) => (
+                                <div style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-h)' }}>
+                                    ₹{order.totalAmount?.toLocaleString() || '---'}
                                 </div>
                             ) 
                         }
                     ]}
                     renderExpanded={(order: any) => (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-                            <div style={{ display: 'flex', gap: '40px' }}>
-                                <div>
-                                    <div className="stat-label">Description</div>
-                                    <div style={{ marginTop: '4px', color: 'var(--text-muted)', fontSize: '14px', maxWidth: '400px' }}>
-                                        {order.description || 'Request for AC Repair. Standard service deployment.'}
-                                    </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '32px', padding: '16px 0' }}>
+                            <div>
+                                <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Service Details</div>
+                                <div style={{ marginTop: '12px', color: 'var(--text-h)', fontSize: '15px', fontWeight: '700' }}>
+                                    {order.serviceName || 'Service Appointment'}
                                 </div>
-                                <div>
-                                    <div className="stat-label">Technician</div>
-                                    <div style={{ marginTop: '4px', fontWeight: '700' }}>
-                                        {order.assignedWorker?.user?.name || 'Assigning Expert...'}
+                                <div style={{ marginTop: '8px', color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.5' }}>
+                                    {order.description || 'Standard service deployment and field fulfillment.'}
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Assigned Expert</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>
+                                        {order.assignedWorkerName?.[0] || 'T'}
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: '700', fontSize: '14px' }}>{order.assignedWorkerName || 'Assigning Tech...'}</div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>Field Technician</div>
                                     </div>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
+
+                            <div>
+                                <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Financial Overview</div>
+                                <div style={{ marginTop: '12px' }}>
+                                    <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary)' }}>
+                                        ₹{order.totalAmount?.toLocaleString() || '0'}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', marginTop: '4px' }}>
+                                        Total billable amount
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
                                 {order.status === 'AWAITING_VERIFICATION' && (
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${order.id}/verify`); }} 
                                         className="btn btn-primary"
-                                        style={{ animation: 'pulse 2s infinite' }}
+                                        style={{ width: '100%', animation: 'pulse 2s infinite' }}
                                     >
                                         <CheckCircle size={16} /> Review Deployment
                                     </button>
                                 )}
                                 {order.status === 'AWAITING_PAYMENT' && (
                                     <button 
-                                        onClick={(e) => { e.stopPropagation(); /* Payment logic can be added here or navigation */ }} 
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${order.id}/verify`); }} 
                                         className="btn btn-primary"
+                                        style={{ width: '100%' }}
                                     >
-                                        <IndianRupee size={16} /> Pay Now
+                                        <IndianRupee size={16} /> Settlement Required
                                     </button>
                                 )}
                                 {order.status === 'COMPLETED' && (
@@ -178,17 +208,18 @@ const CustomerOrdersPage: React.FC = () => {
                                             setIsReviewModalOpen(true);
                                         }} 
                                         className="btn btn-primary"
-                                        style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                                        style={{ background: '#f59e0b', borderColor: '#f59e0b', width: '100%' }}
                                     >
                                         <Star size={16} /> Rate Service
                                     </button>
                                 )}
-                                <button onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${order.id}/verify`); }} className="btn btn-secondary">
-                                    Full Details
+                                <button onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${order.id}/verify`); }} className="btn btn-secondary" style={{ width: '100%' }}>
+                                    <FileText size={16} /> Full Details & Invoice
                                 </button>
                             </div>
                         </div>
-                    )}
+                    )
+                }
                 />
 
                 <div style={{ marginTop: '24px' }}>

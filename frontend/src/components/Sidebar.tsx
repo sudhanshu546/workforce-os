@@ -2,7 +2,7 @@ import {
   Users, Briefcase, Clock, LayoutDashboard, 
   UserCircle, FileText, Settings, LogOut, HardHat, CheckSquare,
   MapPin, Tag, X, Receipt, Package, TrendingUp, Calendar as CalendarIcon, Map,
-  IndianRupee, MessageSquare
+  IndianRupee, MessageSquare, Wallet
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { STORAGE_KEYS, ROLES } from '../utils/constants';
@@ -78,7 +78,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         )}
         
         {role === ROLES.WORKER && (
-          <Link to="/tasks" className={`nav-item ${isActive('/tasks') ? 'active' : ''}`} onClick={onClose}><CheckSquare size={20} /> My Tasks</Link>
+          <>
+            <Link to="/tasks" className={`nav-item ${isActive('/tasks') ? 'active' : ''}`} onClick={onClose}><CheckSquare size={18} /> <span>My Tasks</span></Link>
+            <Link to="/earnings" className={`nav-item ${isActive('/earnings') ? 'active' : ''}`} onClick={onClose}><Wallet size={18} /> <span>My Collections</span></Link>
+          </>
         )}
 
         {role === ROLES.CUSTOMER && (

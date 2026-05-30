@@ -186,4 +186,20 @@ public void sendTrackingLink(WorkOrder workOrder) {
             emailService.sendEmail(workOrder.getCustomer().getEmail(), subject, body);
         }
     }
+
+    public void notifyManagementOfNewLead(com.workforce.os.modules.sales.domain.Lead lead) {
+        String title = "New Service Inquiry Received";
+        String body = String.format("A new lead has been captured for customer %s regarding %s.", 
+            lead.getCustomer().getName(),
+            lead.getRequestedService() != null ? lead.getRequestedService().getName() : "General Inquiry");
+
+        List<User> managementUsers = userRepository.findByTenantIdAndRoleNameIn(
+            lead.getTenantId(), 
+            Arrays.asList("OWNER", "MANAGER")
+        );
+
+        for (User manager : managementUsers) {
+            createNotification(manager.getId(), title, body, "/leads", lead.getTenantId());
+        }
+    }
 }
