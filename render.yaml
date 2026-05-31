@@ -36,16 +36,17 @@ services:
           name: workforce-redis
           property: password
       - key: SPRING_RABBITMQ_HOST
-        fromService:
-          type: private
-          name: workforce-rabbitmq
-          property: host
+        sync: false
       - key: SPRING_RABBITMQ_PORT
         value: 5672
       - key: SPRING_RABBITMQ_USERNAME
-        value: guest
+        sync: false
       - key: SPRING_RABBITMQ_PASSWORD
-        sync: false # Set this manually in Render Dashboard for security
+        sync: false 
+      - key: SPRING_RABBITMQ_VIRTUAL_HOST
+        sync: false
+      - key: SPRING_RABBITMQ_SSL
+        value: true
       - key: JWT_SECRET
         generateValue: true
       - key: MESSAGING_PROVIDER
