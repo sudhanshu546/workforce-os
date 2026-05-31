@@ -42,6 +42,14 @@ public class FinanceController {
         return ResponseEntity.ok(ApiResponse.success(dtos, INVOICES_RETRIEVED));
     }
 
+    @GetMapping("/invoices/{id}")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+    public ResponseEntity<ApiResponse<InvoiceResponseDTO>> getInvoice(@PathVariable Long id) {
+        log.info("Fetching details for invoice ID: {}", id);
+        Invoice invoice = financeService.getInvoiceById(id);
+        return ResponseEntity.ok(ApiResponse.success(financeMapper.toInvoiceDTO(invoice), INVOICE_RETRIEVED));
+    }
+
     @GetMapping("/invoices/{id}/pdf")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
     public ResponseEntity<byte[]> downloadInvoicePdf(@PathVariable Long id) {
@@ -84,15 +92,45 @@ public class FinanceController {
     }
 
 
+//    @GetMapping("/invoices/work-orders/{workOrderId}")
+//    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
+//    public ResponseEntity<ApiResponse<InvoiceResponseDTO>> getInvoiceByWorkOrder(@PathVariable Long workOrderId) {
+//        log.info("Fetching invoice for work order ID: {}", workOrderId);
+//        Invoice invoice = financeService.getPaymentsByWorker(workOrderId);
+//        return ResponseEntity.ok(ApiResponse.success(financeMapper.toInvoiceDTO(invoice), INVOICE_RETRIEVED));
+//    }
+
+    @GetMapping("/payments/worker/{workerId}")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
+    public ResponseEntity<ApiResponse<Page<PaymentResponseDTO>>> getPaymentsByWorker(@PathVariable Long workerId, Pageable pageable) {
+        log.info("Fetching payments for worker ID: {}, page: {}", workerId, pageable.getPageNumber());
+        Page<Payment> payments = financeService.getPaymentsByWorker(workerId, pageable);
+        Page<PaymentResponseDTO> dtos = payments.map(financeMapper::toPaymentDTO);
+        return ResponseEntity.ok(ApiResponse.success(dtos, PAYMENTS_RETRIEVED));
+    }
+
+    @GetMapping("/payments")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Page<PaymentResponseDTO>>> getPayments(
+            @RequestParam(required = false) String method,
+            @RequestParam(required = false) String status,
+            Pageable pageable) {
+        log.info("Fetching all payments with filters - method: {}, status: {}, page: {}", method, status, pageable.getPageNumber());
+        Page<Payment> payments = financeService.getAllPayments(method, status, pageable);
+        Page<PaymentResponseDTO> dtos = payments.map(financeMapper::toPaymentDTO);
+        return ResponseEntity.ok(ApiResponse.success(dtos, PAYMENTS_RETRIEVED));
+    }
+
     @PostMapping("/payments/cash")
     @PreAuthorize("hasAnyRole('WORKER', 'CUSTOMER')")
     public ResponseEntity<ApiResponse<PaymentResponseDTO>> recordCashPayment(@Valid @RequestBody PaymentRequest request) {
-        log.info("Recording cash payment for invoice ID: {}", request.getInvoiceId());
+        log.info("Recording cash payment for invoice ID: {} by worker: {}", request.getInvoiceId(), request.getWorkerId());
         Payment payment = financeService.recordPayment(
                 request.getInvoiceId(),
                 request.getAmount(),
                 "CASH",
-                request.getTransactionReference()
+                request.getTransactionReference(),
+                request.getWorkerId()
         );
         return ResponseEntity.ok(ApiResponse.success(financeMapper.toPaymentDTO(payment), PAYMENT_SUCCESSFUL));
     }
@@ -133,6 +171,15 @@ public class FinanceController {
         return ResponseEntity.ok(ApiResponse.success(financeMapper.toPaymentDTO(payment), PAYMENT_SUCCESSFUL));
     }
 
+    @PostMapping("/payments/{paymentId}/verify-cash")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<PaymentResponseDTO>> verifyCashDeposit(@PathVariable Long paymentId) {
+        log.info("Verifying cash deposit for payment ID: {}", paymentId);
+        // In a production app, extract ownerId from security context
+        Payment payment = financeService.verifyCashDeposit(paymentId, 0L); 
+        return ResponseEntity.ok(ApiResponse.success(financeMapper.toPaymentDTO(payment), CASH_DEPOSIT_VERIFIED));
+    }
+
     @Data
     public static class VerificationRequest {
         private Long invoiceId;
@@ -148,5 +195,6 @@ public class FinanceController {
         private Double amount;
         private String paymentMethod;
         private String transactionReference;
+        private Long workerId;
     }
 }

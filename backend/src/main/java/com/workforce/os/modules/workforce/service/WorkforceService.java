@@ -8,6 +8,8 @@ import com.workforce.os.modules.identity.repository.RoleRepository;
 import com.workforce.os.modules.identity.repository.UserRepository;
 import com.workforce.os.modules.organization.repository.BranchRepository;
 import com.workforce.os.modules.organization.repository.OrganizationRepository;
+import com.workforce.os.modules.operations.domain.WorkOrder;
+import com.workforce.os.modules.operations.repository.WorkOrderRepository;
 import com.workforce.os.modules.workforce.domain.WorkerLocation;
 import com.workforce.os.modules.workforce.domain.WorkerProfile;
 import com.workforce.os.modules.workforce.domain.WorkerSkill;
@@ -41,6 +43,23 @@ public class WorkforceService extends BaseService {
     private final PasswordEncoder passwordEncoder;
     private final WorkerMapper workerMapper;
     private final com.workforce.os.modules.workforce.repository.WorkerLocationRepository workerLocationRepository;
+    private final WorkOrderRepository workOrderRepository;
+
+    public List<WorkerProfileDTO> getAvailableWorkers() {
+        String tenantId = getTenantId();
+        List<WorkerProfile> allWorkers = workerProfileRepository.findAllByTenantId(tenantId);
+        List<WorkOrder> busyOrders = workOrderRepository.findByTenantIdAndStatus(tenantId, com.workforce.os.modules.operations.domain.WorkOrder.WorkOrderStatus.ASSIGNED);
+        busyOrders.addAll(workOrderRepository.findByTenantIdAndStatus(tenantId, com.workforce.os.modules.operations.domain.WorkOrder.WorkOrderStatus.IN_PROGRESS));
+
+        java.util.Set<Long> busyWorkerIds = busyOrders.stream()
+                .map(wo -> wo.getAssignedWorker().getId())
+                .collect(java.util.stream.Collectors.toSet());
+
+        return allWorkers.stream()
+                .filter(w -> w.getStatus() == com.workforce.os.modules.workforce.domain.WorkerProfile.WorkerStatus.ACTIVE && !busyWorkerIds.contains(w.getId()))
+                .map(workerMapper::toDTO)
+                .collect(java.util.stream.Collectors.toList());
+    }
 
     @Transactional
     public void updateWorkerLocation(Long workerId, Double lat, Double lon, String status) {

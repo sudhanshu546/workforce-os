@@ -63,11 +63,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                // Set Tenant Context for both User and Customer types
+                // Set Tenant and Customer Context
                 if (userDetails instanceof com.workforce.os.modules.identity.domain.User user) {
                     TenantContext.setCurrentTenant(user.getTenantId());
                 } else if (userDetails instanceof com.workforce.os.modules.customer.domain.Customer customer) {
                     TenantContext.setCurrentTenant(customer.getTenantId());
+                    TenantContext.setCurrentCustomer(customer.getId());
                 }
             }
         }

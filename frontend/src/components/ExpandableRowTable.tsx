@@ -76,13 +76,56 @@ export function ExpandableRowTable<T extends { id: string | number }>({
       </div>
 
       <style>{`
-        .row-active td { background-color: var(--primary-light) !important; color: var(--primary); font-weight: 700; }
-        .expanded-cell { padding: 0 !important; background-color: var(--surface-muted); }
-        .expanded-content-anim { padding: 32px; animation: slideDown 0.3s ease-out; border-bottom: 2px solid var(--primary); }
+        .row-active td { 
+          background-color: var(--primary-light) !important; 
+          color: var(--primary); 
+          font-weight: 800;
+          border-bottom-color: transparent;
+        }
+        .row-active {
+          box-shadow: inset 6px 0 0 0 var(--primary);
+        }
+        .expanded-cell { 
+          padding: 0 !important; 
+          background-color: #f8fafc;
+        }
+        .expanded-content-anim { 
+          padding: 40px; 
+          animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+          border-bottom: 4px solid var(--primary);
+          box-shadow: inset 0 8px 12px -8px rgba(0, 0, 0, 0.1), inset 0 -8px 12px -8px rgba(0, 0, 0, 0.1);
+          position: relative;
+          background: white;
+          margin: 0 12px 12px;
+          border-radius: 0 0 16px 16px;
+        }
+        .expanded-content-anim::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 6px;
+          background: var(--primary);
+          opacity: 0.8;
+          border-radius: 0 0 0 6px;
+        }
 
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .action-toggle { text-align: right; padding-right: 20px !important; color: var(--text-muted); }
-        .row-active .action-toggle { color: var(--primary); }
+        @keyframes slideDown { 
+          from { opacity: 0; transform: translateY(-20px); } 
+          to { opacity: 1; transform: translateY(0); } 
+        }
+        
+        .action-toggle { 
+          text-align: right; 
+          padding-right: 24px !important; 
+          color: var(--text-muted);
+          transition: transform 0.3s ease;
+        }
+        .row-active .action-toggle { 
+          color: var(--primary);
+          transform: scale(1.1);
+        }
       `}</style>
     </div>
   );

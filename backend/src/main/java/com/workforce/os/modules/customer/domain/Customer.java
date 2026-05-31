@@ -51,6 +51,11 @@ public class Customer extends BaseEntity implements UserDetails {
     }
 
     @Override
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
     public String getUsername() {
         return email;
     }

@@ -121,6 +121,11 @@ const OwnerDashboard: React.FC = () => {
               data={recentOrders} 
               columns={[
                 { header: 'Order Ref', accessor: (order: any) => <span className="id-tag">#WO-{order.id+1000}</span> },
+                { header: 'Service Category', accessor: (order: any) => (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', color: 'var(--text-main)' }}>
+                    <Briefcase size={14} className="text-primary" /> {order.serviceName}
+                  </div>
+                ) },
                 { header: 'Client Entity', accessor: (order: any) => (
                   <div style={{ fontWeight: '700', color: 'var(--text-h)' }}>{order.customer?.name}</div>
                 ) },
@@ -129,8 +134,11 @@ const OwnerDashboard: React.FC = () => {
                   return <span className={`badge ${isComp ? 'badge-success' : 'badge-primary'}`} style={{ fontSize: '10px' }}>{order.status.replace('_', ' ')}</span>
                 }},
                 { header: 'Schedule', accessor: (order: any) => (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>
-                    <Calendar size={14} /> {order.scheduledDate}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: 'var(--text-h)' }}>
+                      <Calendar size={14} className="text-muted" /> {order.scheduledDate}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>{order.scheduledTime || '09:00 AM'}</div>
                   </div>
                 )}
               ]}

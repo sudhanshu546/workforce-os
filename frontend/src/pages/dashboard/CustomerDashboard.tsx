@@ -25,6 +25,7 @@ const CustomerDashboard: React.FC = () => {
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [customerRequests, setCustomerRequests] = useState<any[]>([]);
+  const [activeWorkOrders, setActiveWorkOrders] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
 
@@ -71,15 +72,23 @@ const CustomerDashboard: React.FC = () => {
 
   const fetchCustomerData = async () => {
     try {
-      const [orgsRes, requestsData, addrData]: any = await Promise.all([
+      const [orgsRes, requestsData, addrData, ordersRes]: any = await Promise.all([
         api.get(API_ENDPOINTS.ORGANIZATION.LIST_PUBLIC),
         api.get(`${API_ENDPOINTS.CUSTOMER.LEADS}/${customerId}`),
-        api.get(API_ENDPOINTS.AUTH.ME + '/addresses')
+        api.get(API_ENDPOINTS.AUTH.ME + '/addresses'),
+        api.get(`${API_ENDPOINTS.OPERATIONS.WORK_ORDERS}/customer/${customerId}`)
       ]);
-      // API interceptor returns the data field, which in your response is a Page object for organizations
       setOrganizations(orgsRes?.content || []);
       setCustomerRequests(requestsData || []);
       setAddresses(addrData || []);
+      
+      // Filter for active orders (IN_PROGRESS, AWAITING_VERIFICATION, AWAITING_PAYMENT)
+      if (ordersRes?.content) {
+        setActiveWorkOrders(ordersRes.content.filter((o: any) => 
+            ['IN_PROGRESS', 'AWAITING_VERIFICATION', 'AWAITING_PAYMENT'].includes(o.status)
+        ));
+      }
+
       if (addrData && addrData.length > 0) setSelectedAddressId(addrData[0].id);
     } catch (err) {
       console.error('Failed to fetch customer data:', err);
@@ -87,6 +96,11 @@ const CustomerDashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const filteredOrganizations = organizations.filter(org => 
+    org.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    org.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleOrgClick = async (org: any) => {
     setSelectedOrg(org);
@@ -105,17 +119,23 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
+  const [preferredDate, setPreferredDate] = useState('');
+  const [preferredTime, setPreferredTime] = useState('');
+
   const handleRequestService = async (service: any) => {
     if (!selectedAddressId) { toastNotifier.show('Please select an address', 'info'); return; }
+    if (!preferredDate) { toastNotifier.show('Please select a preferred date', 'info'); return; }
     try {
       await api.post('/leads', {
-        customerName: user?.name || 'Customer', 
+        customerName: user?.name || 'Customer',
         customerPhone: user?.number || '0000000000',
         customerEmail: user?.email || '',
         organizationId: selectedOrg.id,
         serviceItemId: service.id,
         customerAddressId: selectedAddressId,
         description: `${requirementNotes || 'Request for ' + service.name}. ${preferredWorkerId ? 'Preferred Worker ID: ' + preferredWorkerId : ''}`,
+        preferredDate,
+        preferredTime: preferredTime ? `${preferredTime}:00` : null,
         priority: 'MEDIUM'
       });
       toastNotifier.show('Service request sent successfully!', 'success');
@@ -249,146 +269,117 @@ const CustomerDashboard: React.FC = () => {
 
   return (
     <div className="dashboard-container">
-      <header className="dashboard-hero customer-hero">
-        <h1 style={{ fontSize: '42px', fontWeight: '900', letterSpacing: '-0.02em', marginBottom: '16px' }}>Professional Network</h1>
-        <p style={{ fontSize: '20px', opacity: 0.8, fontWeight: '500' }}>Access verified industrial and domestic service providers instantly.</p>
-        <div className="search-container-premium">
-          <Search size={28} style={{ position: 'absolute', left: '24px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', zIndex: 1 }} />
-          <input 
-            type="text" 
-            className="search-input-premium"
-            placeholder="What service do you need today?" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-          />
+      <header className="dashboard-hero customer-hero" style={{ textAlign: 'left', padding: '40px', minHeight: 'auto' }}>
+        <div style={{ maxWidth: '800px' }}>
+            <h1 style={{ fontSize: '32px', fontWeight: '900', letterSpacing: '-0.02em', marginBottom: '8px' }}>Hello, {user?.name?.split(' ')[0] || 'Client'}</h1>
+            <p style={{ fontSize: '16px', opacity: 0.8, fontWeight: '500' }}>Access verified industrial and domestic service providers instantly.</p>
+            <div className="search-container-premium" style={{ margin: '24px 0 0', maxWidth: '600px' }}>
+                <Search size={24} style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', zIndex: 1 }} />
+                <input 
+                    type="text" 
+                    className="search-input-premium"
+                    style={{ padding: '16px 24px 16px 60px', fontSize: '16px' }}
+                    placeholder="Search for a service or provider..." 
+                    value={searchTerm} 
+                    onChange={(e) => setSearchTerm(e.target.value)} 
+                />
+            </div>
         </div>
       </header>
 
-      <section style={{ marginBottom: '64px' }}>
-        <h2 style={{ fontSize: '26px', fontWeight: '800', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Building2 size={32} className="text-primary" /> Verified Partners
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '32px' }}>
-          {filteredOrgs.map((org) => (
-            <div key={org.id} className="org-card-premium" onClick={() => handleOrgClick(org)}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ width: '72px', height: '72px', borderRadius: '20px', background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Building2 size={36} className="text-primary" />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: '800', color: '#f59e0b', background: '#fffbeb', padding: '10px 16px', borderRadius: '14px' }}>
-                  <Star size={18} fill="#f59e0b" /> 4.9
-                </div>
-              </div>
-              <h3 style={{ fontSize: '24px', fontWeight: '800', marginTop: '28px', marginBottom: '8px' }}>{org.name}</h3>
-              <p style={{ fontSize: '16px', color: 'var(--text-muted)', marginBottom: '28px', flex: 1 }}>{org.description || 'Professional Service Organization'}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px', color: 'var(--success)', fontWeight: '700', borderTop: '1px solid var(--border-light)', paddingTop: '24px' }}>
-                <ShieldCheck size={22} /> Booking Guarantee Protected
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="card-header-flex" style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Activity size={32} className="text-primary" /> Service History
+      {/* Live Activity Tracker */}
+      {activeWorkOrders.length > 0 && (
+        <section style={{ marginBottom: '48px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Activity size={20} className="animate-pulse" /> Active Deployments
           </h2>
-          <button className="btn btn-secondary" style={{ padding: '12px 24px' }} onClick={() => navigate('/customer/orders')}>
-            View All Records <ChevronRight size={18} />
-          </button>
-        </div>
-
-        <ExpandableRowTable 
-          data={customerRequests}
-          columns={[
-            { 
-              header: 'Service Detail', 
-              accessor: (req: any) => (
-                <div>
-                  <div style={{ fontWeight: '800', fontSize: '17px', color: 'var(--text-h)' }}>{req.requestedService?.name || 'Service Inquiry'}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '700' }}>Ref: SR-{req.id+500}</div>
-                </div>
-              ) 
-            },
-            { 
-              header: 'Provider', 
-              accessor: (req: any) => (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div className="avatar" style={{ width: '36px', height: '36px', fontSize: '14px', background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: '800' }}>
-                    {req.organization?.businessName?.[0] || 'O'}
-                  </div>
-                  <span style={{ fontWeight: '700', fontSize: '15px' }}>{req.organization?.businessName || 'N/A'}</span>
-                </div>
-              ) 
-            },
-            { 
-              header: 'Status', 
-              accessor: (req: any) => (
-                <span className={`badge ${
-                  req.status === 'NEW' ? 'badge-primary' : 
-                  req.status === 'QUOTED' ? 'badge-warning' : 
-                  req.status === 'CONVERTED' ? 'badge-success' : 
-                  'badge-secondary'
-                }`} style={{ fontSize: '11px', padding: '6px 14px' }}>
-                  {req.status}
-                </span>
-              ) 
-            },
-            { 
-              header: 'Requested On', 
-              accessor: (req: any) => (
-                <span style={{ fontSize: '15px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  {new Date(req.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
-              ) 
-            }
-          ]}
-          renderExpanded={(req: any) => (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '60px' }}>
-                <div>
-                  <div className="stat-label-modern" style={{ fontSize: '11px', marginBottom: '6px' }}>Description</div>
-                  <div style={{ color: 'var(--text-main)', fontSize: '15px', maxWidth: '500px', lineHeight: '1.6' }}>{req.description || 'No additional notes provided.'}</div>
-                </div>
-                {req.priority && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+            {activeWorkOrders.map((order) => (
+              <div key={order.id} className="card-premium" style={{ borderLeft: '4px solid var(--primary)', padding: '20px', background: 'var(--primary-light)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <div className="stat-label-modern" style={{ fontSize: '11px', marginBottom: '6px' }}>Priority</div>
-                    <div style={{ fontWeight: '800', fontSize: '15px' }} className={req.priority === 'HIGH' ? 'text-error' : 'text-primary'}>{req.priority}</div>
+                    <div style={{ fontSize: '10px', fontWeight: '900', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {order.status === 'IN_PROGRESS' ? 'Live on site' : 'Pending Verification'}
+                    </div>
+                    <h3 style={{ fontSize: '18px', fontWeight: '900', marginTop: '6px' }}>{order.serviceName}</h3>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '600' }}>{order.assignedWorkerName || 'Expert Team'}</p>
                   </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: '16px' }}>
-                {req.status === 'QUOTED' && (
-                  <button onClick={(e) => { e.stopPropagation(); handleViewQuote(req.id); }} className="btn btn-primary">
-                    <FileText size={18} /> Review Quote
+                  <span className="badge badge-primary" style={{ fontSize: '10px' }}>{order.status.replace('_', ' ')}</span>
+                </div>
+                <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+                  <button onClick={() => navigate(`/customer/orders/${order.id}/verify`)} className="btn btn-primary" style={{ flex: 1, height: '40px', fontSize: '13px' }}>
+                    {order.status === 'IN_PROGRESS' ? 'Track Live' : 'View Details'}
                   </button>
-                )}
-                {req.workOrderStatus === 'AWAITING_VERIFICATION' && (
-                  <button onClick={(e) => { e.stopPropagation(); handleVerifyWork(req.workOrderId); }} className="btn btn-success">
-                    <CheckCircle size={18} /> Verify Work
-                  </button>
-                )}
-                {req.status === 'CONVERTED' && req.invoiceId && (
-                  <>
-                    <button onClick={(e) => { e.stopPropagation(); handleViewInvoice(req.invoiceId); }} className="btn btn-secondary">
-                      <Receipt size={18} /> Invoice
-                    </button>
-                    {req.invoiceStatus === 'UNPAID' && (
-                      <button onClick={(e) => { e.stopPropagation(); handlePayInvoice(req.invoiceId, req.invoiceAmount); }} className="btn btn-primary">
-                        <IndianRupee size={18} /> Pay Now
-                      </button>
-                    )}
-                  </>
-                )}
-                <button onClick={(e) => { e.stopPropagation(); navigate(`/customer/orders/${req.workOrderId || ''}`); }} className="btn btn-secondary">
-                  Full Details
-                </button>
+                </div>
               </div>
-            </div>
-          )}
-        />
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="dashboard-main-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '32px', marginBottom: '48px' }}>
+        <section>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Building2 size={24} className="text-primary" /> Verified Partners
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+            {filteredOrgs.map((org) => (
+              <div key={org.id} className="org-card-premium" onClick={() => handleOrgClick(org)} style={{ cursor: 'pointer', padding: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Building2 size={28} className="text-primary" />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: '#f59e0b', background: '#fffbeb', padding: '6px 12px', borderRadius: '10px' }}>
+                    <Star size={14} fill="#f59e0b" /> 4.9
+                  </div>
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', marginTop: '20px', marginBottom: '4px' }}>{org.name}</h3>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px', flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{org.businessType || 'Professional Service Provider'}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--success)', fontWeight: '700', borderTop: '1px solid var(--border-light)', paddingTop: '16px' }}>
+                  <ShieldCheck size={18} /> Verified
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <div className="card-header-flex" style={{ marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Activity size={24} className="text-primary" /> Recent Activity
+            </h2>
+            <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={() => navigate('/customer/orders')}>
+              Full History
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {customerRequests.slice(0, 5).map((req) => (
+                <div key={req.id} className="card-premium" style={{ padding: '16px', cursor: 'pointer' }} onClick={() => req.workOrderId ? navigate(`/customer/orders/${req.workOrderId}`) : handleViewQuote(req.id)}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <div style={{ fontWeight: '800', fontSize: '15px' }}>{req.requestedService?.name || 'Service Inquiry'}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{req.organization?.businessName}</div>
+                        </div>
+                        <span className={`badge ${
+                            req.status === 'NEW' ? 'badge-primary' : 
+                            req.status === 'QUOTED' ? 'badge-warning' : 
+                            req.status === 'CONVERTED' ? 'badge-success' : 
+                            'badge-secondary'
+                        }`} style={{ fontSize: '10px' }}>
+                            {req.status}
+                        </span>
+                    </div>
+                </div>
+            ))}
+            {customerRequests.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px', background: 'var(--surface-muted)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: '600' }}>No recent requests found.</p>
+                </div>
+            )}
+          </div>
+        </section>
+      </div>
 
       {/* Modals are kept similar to original but with consistent styling from Dashboard.css */}
       <Modal isOpen={isOrgModalOpen} onClose={() => setIsOrgModalOpen(false)} title="Request Professional Service" width="1000px">
@@ -436,6 +427,23 @@ const CustomerDashboard: React.FC = () => {
             <div style={{ display: 'flex', gap: '24px' }}>
               <div style={{ width: '40px', height: '40px', background: 'var(--primary)', color: 'white', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>3</div>
               <div style={{ flex: 1 }}>
+                <h4 className="stat-label-modern" style={{ marginBottom: '20px' }}>Service Timing</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="form-group">
+                        <label className="form-label">Preferred Date</label>
+                        <input type="date" className="input-field" value={preferredDate} onChange={e => setPreferredDate(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Preferred Time</label>
+                        <input type="time" className="input-field" value={preferredTime} onChange={e => setPreferredTime(e.target.value)} />
+                    </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '24px' }}>
+              <div style={{ width: '40px', height: '40px', background: 'var(--primary)', color: 'white', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>4</div>
+              <div style={{ flex: 1 }}>
                 <h4 className="stat-label-modern" style={{ marginBottom: '20px' }}>Custom Requirements</h4>
                 <textarea 
                   className="input-field" 
@@ -450,6 +458,65 @@ const CustomerDashboard: React.FC = () => {
         )}
       </Modal>
 
+      {/* Smart Quotation Review Modal */}
+      <Modal isOpen={isQuoteModalOpen} onClose={() => setIsQuoteModalOpen(false)} title="Service Quotation Review" width="800px">
+        {selectedQuote && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            <div style={{ padding: '24px', background: '#f8fafc', borderRadius: '18px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+                <div>
+                    <div className="stat-label-modern" style={{ fontSize: '11px', marginBottom: '4px' }}>ESTIMATE REF</div>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary)' }}>#QT-{selectedQuote.id + 1000}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div className="stat-label-modern" style={{ fontSize: '11px', marginBottom: '4px' }}>ISSUE DATE</div>
+                    <div style={{ fontSize: '16px', fontWeight: '700' }}>{new Date().toLocaleDateString()}</div>
+                </div>
+            </div>
+
+            <div>
+                <h4 className="stat-label-modern" style={{ marginBottom: '16px' }}>BILLABLE ITEMS</h4>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                    {selectedQuote.items?.map((item: any, idx: number) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'white', border: '1px solid var(--border)', borderRadius: '14px' }}>
+                            <div>
+                                <div style={{ fontWeight: '700', fontSize: '15px' }}>{item.description}</div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Quantity: {item.quantity}</div>
+                            </div>
+                            <div style={{ fontWeight: '800', fontSize: '16px' }}>₹{item.totalAmount.toLocaleString()}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div style={{ background: 'var(--text-h)', padding: '24px', borderRadius: '20px', color: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', opacity: 0.8 }}>
+                    <span>Net Subtotal</span>
+                    <span>₹{selectedQuote.subtotal.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', opacity: 0.8 }}>
+                    <span>Estimated Tax</span>
+                    <span>+ ₹{selectedQuote.tax.toLocaleString()}</span>
+                </div>
+                {selectedQuote.discount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px', color: '#f87171' }}>
+                        <span>Loyalty Discount</span>
+                        <span>- ₹{selectedQuote.discount.toLocaleString()}</span>
+                    </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '24px', fontWeight: '900' }}>
+                    <span>Final Amount</span>
+                    <span style={{ color: 'var(--primary)' }}>₹{selectedQuote.total.toLocaleString()}</span>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
+                <button onClick={() => setIsQuoteModalOpen(false)} className="btn btn-secondary">Review Later</button>
+                <button onClick={() => handleApproveQuote(selectedQuote.id)} className="btn btn-primary" style={{ padding: '16px 40px' }}>Approve & Start Work</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* Final Verification Modal */}
       <Modal isOpen={isVerificationModalOpen} onClose={() => setIsVerificationModalOpen(false)} title="Service Completion Audit" width="900px">
         {selectedWorkOrder && (
@@ -457,7 +524,7 @@ const CustomerDashboard: React.FC = () => {
             <div style={{ padding: '32px', background: '#f8fafc', borderRadius: '24px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
               <div>
                 <div className="stat-label-modern" style={{ fontSize: '11px', marginBottom: '8px' }}>Deployed Expert</div>
-                <div style={{ fontSize: '20px', fontWeight: '900' }}>{selectedWorkOrder.assignedWorker?.user?.name}</div>
+                <div style={{ fontSize: '20px', fontWeight: '900' }}>{selectedWorkOrder.assignedWorkerName || 'Expert Team'}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div className="stat-label-modern" style={{ fontSize: '11px', marginBottom: '8px' }}>Job ID</div>

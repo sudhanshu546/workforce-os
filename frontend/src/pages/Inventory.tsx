@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Package, Plus, Trash2, Search, Edit3, Loader2, 
   Layers, Tag, IndianRupee, AlertCircle, Filter, 
@@ -6,23 +6,30 @@ import {
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import Modal from '../components/Modal';
-import api from '../services/api';
+import { 
+  useGetInventoryQuery, 
+  useCreateMaterialMutation, 
+  useUpdateMaterialMutation, 
+  useDeleteMaterialMutation 
+} from '../redux/inventoryApi';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
 import { Pagination } from '../components/Pagination';
 import { useToast } from '../components/ToastProvider';
 
 const Inventory: React.FC = () => {
   const showToast = useToast();
-  const [materials, setMaterials] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
+
+  const { data, isLoading } = useGetInventoryQuery({ page, size: pageSize });
+  const [createMaterial] = useCreateMaterialMutation();
+  const [updateMaterial] = useUpdateMaterialMutation();
+  const [deleteMaterial] = useDeleteMaterialMutation();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
-  const pageSize = 10;
 
   // Form State
   const [formData, setFormData] = useState({
@@ -34,23 +41,6 @@ const Inventory: React.FC = () => {
     unitPrice: 0,
     minQuantity: 0
   });
-
-  useEffect(() => {
-    fetchInventory(page);
-  }, [page]);
-
-  const fetchInventory = async (pageNumber: number) => {
-    try {
-      const data: any = await api.get(`/inventory/materials?page=${pageNumber}&size=${pageSize}`);
-      setMaterials(data.content || []);
-      setTotalPages(data.totalPages || 0);
-      setTotalElements(data.totalElements || 0);
-    } catch (err) {
-      console.error('Failed to fetch inventory');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleOpenModal = (material: any = null) => {
     if (material) {
@@ -76,12 +66,11 @@ const Inventory: React.FC = () => {
     setSubmitting(true);
     try {
       if (editingMaterial) {
-        await api.put(`/inventory/materials/${editingMaterial.id}`, formData);
+        await updateMaterial({ id: editingMaterial.id, material: formData }).unwrap();
       } else {
-        await api.post('/inventory/materials', formData);
+        await createMaterial(formData).unwrap();
       }
       setIsModalOpen(false);
-      fetchInventory(page);
       showToast('Material saved successfully', 'success');
     } catch (err) {
       showToast('Failed to save material', 'error');
@@ -93,23 +82,24 @@ const Inventory: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('Are you sure you want to remove this item from inventory?')) return;
     try {
-      await api.delete(`/inventory/materials/${id}`);
-      fetchInventory(page);
+      await deleteMaterial(id).unwrap();
       showToast('Material deleted successfully', 'success');
     } catch (err) {
       showToast('Failed to delete material', 'error');
     }
   };
 
-  const safeMaterials = Array.isArray(materials) ? materials : [];
+  const materials = data?.content || [];
+  const totalPages = data?.totalPages || 0;
+  const totalElements = data?.totalElements || 0;
 
-  const filteredMaterials = safeMaterials.filter(m => 
+  const filteredMaterials = materials.filter((m: any) => 
     (m.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
     (m.sku && m.sku.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const totalValue = safeMaterials.reduce((sum, m) => sum + (m.totalValue || 0), 0);
-  const lowStockItems = safeMaterials.filter(m => m.quantity <= (m.minQuantity || 0)).length;
+  const totalValue = materials.reduce((sum: number, m: any) => sum + (m.totalValue || 0), 0);
+  const lowStockItems = materials.filter((m: any) => m.quantity <= (m.minQuantity || 0)).length;
 
   const columns = [
     { header: 'Asset Item', accessor: (m: any) => (
@@ -145,7 +135,7 @@ const Inventory: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
             <div className="mini-stat">
                 <span className="stat-label">Total Managed SKUs</span>
-                <span className="stat-value">{Array.isArray(materials) ? materials.length : 0}</span>
+                <span className="stat-value">{totalElements}</span>
             </div>
             <div className="mini-stat">
                 <span className="stat-label">Estimated Stock Worth</span>
@@ -172,7 +162,7 @@ const Inventory: React.FC = () => {
         <ExpandableRowTable 
             data={filteredMaterials}
             columns={columns}
-            loading={loading}
+            loading={isLoading}
             renderExpanded={(m: any) => (
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
                     <div>
@@ -287,42 +277,11 @@ const Inventory: React.FC = () => {
       </Modal>
 
       <style>{`
-        .inventory-container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .premium-form-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 32px;
-            padding: 8px 4px;
-        }
-
-        .form-grid-standard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
-        }
-
-        .modal-footer-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 16px;
-            margin-top: 12px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border);
-        }
+        .inventory-container { max-width: 1400px; margin: 0 auto; }
+        .premium-form-layout { display: flex; flex-direction: column; gap: 32px; padding: 8px 4px; }
+        .form-grid-standard { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .form-label { display: block; font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+        .modal-footer-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 12px; padding-top: 24px; border-top: 1px solid var(--border); }
       `}</style>
     </Layout>
   );

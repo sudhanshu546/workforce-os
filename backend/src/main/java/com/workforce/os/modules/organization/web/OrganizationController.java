@@ -2,7 +2,8 @@ package com.workforce.os.modules.organization.web;
 
 import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.common.dto.ApiResponse;
-import com.workforce.os.modules.organization.domain.Organization;
+import com.workforce.os.modules.organization.dto.OrganizationDTO;
+import com.workforce.os.modules.organization.mapper.OrganizationMapper;
 import com.workforce.os.modules.organization.service.OrganizationService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -18,22 +19,23 @@ import static com.workforce.os.common.util.MessageConstants.*;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final OrganizationMapper organizationMapper;
 
     @GetMapping("/branding")
-    public ResponseEntity<ApiResponse<Organization>> getBranding() {
+    public ResponseEntity<ApiResponse<OrganizationDTO>> getBranding() {
         String tenantId = TenantContext.getCurrentTenant();
         return ResponseEntity.ok(ApiResponse.success(
-            organizationService.getBranding(tenantId),
+            organizationMapper.toDTO(organizationService.getBranding(tenantId)),
             BRANDING_RETRIEVED
         ));
     }
 
     @PatchMapping("/branding")
     @PreAuthorize("hasRole('OWNER')")
-    public ResponseEntity<ApiResponse<Organization>> updateBranding(@RequestBody BrandingRequest request) {
+    public ResponseEntity<ApiResponse<OrganizationDTO>> updateBranding(@RequestBody BrandingRequest request) {
         String tenantId = TenantContext.getCurrentTenant();
         return ResponseEntity.ok(ApiResponse.success(
-            organizationService.updateBranding(tenantId, request.getLogoUrl(), request.getPrimaryColor(), request.getSecondaryColor()),
+            organizationMapper.toDTO(organizationService.updateBranding(tenantId, request.getLogoUrl(), request.getPrimaryColor(), request.getSecondaryColor())),
             BRANDING_UPDATED
         ));
     }

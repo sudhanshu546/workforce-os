@@ -17,6 +17,9 @@ public interface FinanceMapper {
     InvoiceResponseDTO.InvoiceItemDTO toInvoiceItemDTO(InvoiceItem item);
 
     @Mapping(source = "invoice.id", target = "invoiceId")
+    @Mapping(source = "invoice.invoiceNumber", target = "invoiceNumber")
+    @Mapping(source = "invoice.customer.name", target = "customerName")
+    @Mapping(source = "collectedByWorker.user.name", target = "collectedByWorkerName")
     PaymentResponseDTO toPaymentDTO(Payment payment);
 
     @Mapping(source = "customer", target = "customer")
@@ -38,4 +41,8 @@ public interface FinanceMapper {
     @Mapping(source = "worker.id", target = "workerId")
     @Mapping(source = "worker.user.name", target = "workerName")
     com.workforce.os.modules.finance.dto.ExpenseResponseDTO toExpenseDTO(com.workforce.os.modules.finance.domain.Expense expense);
+
+    @Mapping(source = "worker.user.name", target = "workerName")
+    @Mapping(source = "worker.designation", target = "workerDesignation")
+    com.workforce.os.modules.finance.dto.PayrollRecordDTO toPayrollDTO(com.workforce.os.modules.finance.domain.PayrollRecord payrollRecord);
 }

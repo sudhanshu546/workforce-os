@@ -1,10 +1,14 @@
 import { UI_CONSTANTS } from '../utils/ui-constants';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { IndianRupee, TrendingUp, Target, BarChart3, PieChart, Activity, Download, FileText, Loader2, Users } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useToast } from '../components/ToastProvider';
-import api from '../services/api';
+import { 
+  useGetOwnerAnalyticsQuery, 
+  useGetProfitabilityQuery, 
+  useLazyGetPerformanceReportQuery 
+} from '../redux/analyticsApi';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -33,23 +37,14 @@ ChartJS.register(
 
 const AnalyticsPage: React.FC = () => {
     const showToast = useToast();
-    const [profitData, setProfitData] = useState<any[]>([]);
-    const [ownerStats, setOwnerStats] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [downloadingReport, setDownloadingReport] = useState(false);
-
-    useEffect(() => {
-        fetchAllData();
-    }, []);
+    const { data: ownerStats, isLoading: statsLoading } = useGetOwnerAnalyticsQuery();
+    const { data: profitability, isLoading: profitLoading } = useGetProfitabilityQuery();
+    const [triggerReport, { isLoading: downloadingReport }] = useLazyGetPerformanceReportQuery();
 
     const handleDownloadReport = async () => {
-        setDownloadingReport(true);
         try {
-            const response = await api.get('/analytics/report-pdf', {
-                responseType: 'blob'
-            });
-            
-            const url = window.URL.createObjectURL(new Blob([response as any]));
+            const data = await triggerReport().unwrap();
+            const url = window.URL.createObjectURL(data);
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', `performance-report-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -60,26 +55,10 @@ const AnalyticsPage: React.FC = () => {
         } catch (err) {
             console.error('Failed to download report:', err);
             showToast('Failed to generate report', 'error');
-        } finally {
-            setDownloadingReport(false);
         }
     };
 
-    const fetchAllData = async () => {
-        setLoading(true);
-        try {
-            const [profitRes, ownerRes]: any = await Promise.all([
-                api.get('/analytics/profitability'),
-                api.get('/analytics/owner')
-            ]);
-            setProfitData(profitRes || []);
-            setOwnerStats(ownerRes || null);
-        } catch (e) {
-            console.error('Failed to fetch analytics', e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const loading = statsLoading || profitLoading;
 
     const revenueChartData = {
         labels: ownerStats ? Object.keys(ownerStats.monthlyRevenue) : [],

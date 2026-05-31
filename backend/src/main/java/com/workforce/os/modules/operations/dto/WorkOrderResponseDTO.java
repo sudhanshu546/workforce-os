@@ -36,6 +36,26 @@ public class WorkOrderResponseDTO {
     private List<TaskDTO> tasks;
     private List<EvidenceDTO> evidence;
     private List<MaterialDTO> materials;
+    private QuotationDTO quotation;
+    private Object invoice; // Using Object to avoid strict dependency for now, or use a proper DTO
+
+    @Data
+    public static class QuotationDTO {
+        private Long id;
+        private Double subtotal;
+        private Double tax;
+        private Double discount;
+        private Double totalAmount;
+        private List<QuotationItemDTO> items;
+    }
+
+    @Data
+    public static class QuotationItemDTO {
+        private String description;
+        private Integer quantity;
+        private Double unitPrice;
+        private Double totalAmount;
+    }
 
     @Data
     public static class TaskDTO {

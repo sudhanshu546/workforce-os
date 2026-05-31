@@ -39,13 +39,18 @@ export const useWebSocket = (topic: string, onMessage: (msg: any) => void) => {
   }, [topic, onMessage]);
 
   useEffect(() => {
+    if (!topic) return;
     connect();
     return () => {
       if (stompClient.current?.connected) {
-        stompClient.current.disconnect(() => {});
+        try {
+          stompClient.current.disconnect(() => {});
+        } catch (e) {
+          console.error('WebSocket disconnect error', e);
+        }
       }
     };
-  }, [connect]);
+  }, [connect, topic]);
 
   const sendMessage = (destination: string, payload: any) => {
     if (stompClient.current?.connected) {

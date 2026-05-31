@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @RestController
 @RequestMapping("/api/v1/dashboard")
 @RequiredArgsConstructor
@@ -20,14 +22,14 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/owner")
-    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<OwnerStatsResponse>> getOwnerStats() {
-        return ResponseEntity.ok(ApiResponse.success(dashboardService.getOwnerStats(), "Owner stats retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getOwnerStats(), OWNER_STATS_RETRIEVED));
     }
 
     @GetMapping("/worker")
-    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
+    @PreAuthorize("hasRole('WORKER')")
     public ResponseEntity<ApiResponse<WorkerStatsResponse>> getWorkerStats(@RequestParam Long workerId) {
-        return ResponseEntity.ok(ApiResponse.success(dashboardService.getWorkerStats(workerId), "Worker stats retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getWorkerStats(workerId), WORKER_STATS_RETRIEVED));
     }
 }

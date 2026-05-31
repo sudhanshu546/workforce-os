@@ -30,12 +30,14 @@ import static com.workforce.os.common.util.MessageConstants.WORK_ORDER_NOT_FOUND
 @Service
 @RequiredArgsConstructor
 @Getter
-public class FinanceService {
+@lombok.extern.slf4j.Slf4j
+public class FinanceService extends com.workforce.os.common.service.BaseService {
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final WorkOrderRepository workOrderRepository;
     private final RazorpayService razorpayService;
     private final PdfService pdfService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     public PdfService getPdfService() {
         return pdfService;
@@ -63,12 +65,25 @@ public class FinanceService {
 
     @Transactional(readOnly = true)
     public Invoice getInvoiceById(Long id) {
-        return getInvoiceSecurely(id);
+        return getSecurely(id, invoiceRepository::findByIdAndTenantId, invoiceRepository::findByIdAndCustomerId);
     }
 
     private Invoice getInvoiceSecurely(Long id) {
-        return invoiceRepository.findByIdAndTenantId(id, TenantContext.getCurrentTenant())
-                .orElseThrow(() -> new ResourceNotFoundException(MessageConstants.RESOURCE_NOT_FOUND));
+        return getInvoiceById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Payment> getPaymentsByWorker(Long workerId, Pageable pageable) {
+        return paymentRepository.findByCollectedByWorkerId(workerId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Payment> getAllPayments(String method, String status, Pageable pageable) {
+        String tenantId = TenantContext.getCurrentTenant();
+        if (method == null && status == null) {
+            return paymentRepository.findAllByTenantId(tenantId, pageable);
+        }
+        return paymentRepository.findAllByTenantIdAndFilters(tenantId, method, status, pageable);
     }
 
     @Transactional
@@ -96,6 +111,7 @@ public class FinanceService {
         Quotation quotation = workOrder.getQuotation();
         Invoice invoice = new Invoice();
         invoice.setWorkOrder(workOrder);
+        invoice.setCustomer(workOrder.getCustomer());
         invoice.setInvoiceNumber("INV-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         invoice.setTenantId(workOrder.getTenantId());
 
@@ -161,19 +177,27 @@ public class FinanceService {
             throw new BusinessException(PAYMENT_VERIFICATION_FAILED);
         }
 
-        return recordPayment(invoiceId, null, method, paymentId); // Use paymentId as reference
+        return recordPayment(invoiceId, null, method, paymentId, null); // Online payments have no collectorId
     }
 
     @Transactional
-    public Payment recordPayment(Long invoiceId, Double amount, String method, String reference) {
+    public Payment recordPayment(Long invoiceId, Double amount, String method, String reference, Long collectorId) {
         Invoice invoice = getInvoiceSecurely(invoiceId);
 
         Payment payment = new Payment();
         payment.setInvoice(invoice);
         payment.setAmount(amount != null ? amount : invoice.getTotal());
         payment.setPaymentMethod(method);
-        payment.setPaymentStatus("SUCCESS");
         payment.setTransactionReference(reference);
+        payment.setCollectedByWorkerId(collectorId);
+
+        // Accountability Logic: Cash requires owner verification
+        if ("CASH".equalsIgnoreCase(method)) {
+            payment.setPaymentStatus("PENDING_DEPOSIT"); // Worker has it, Owner doesn't yet
+            log.info("Cash collection recorded for Invoice {}. Pending deposit by Worker {}.", invoice.getInvoiceNumber(), collectorId);
+        } else {
+            payment.setPaymentStatus("SUCCESS");
+        }
 
         // Ensure the payment belongs to the organization's tenant
         payment.setTenantId(invoice.getTenantId());
@@ -188,6 +212,30 @@ public class FinanceService {
         }
 
         return paymentRepository.save(payment);
+    }
+
+    @Transactional
+    public Payment verifyCashDeposit(Long paymentId, Long ownerId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment record not found"));
+
+        if (!"CASH".equalsIgnoreCase(payment.getPaymentMethod())) {
+            throw new BusinessException("Only cash payments require manual verification");
+        }
+
+        payment.setPaymentStatus("SUCCESS");
+        payment.setVerifiedByOwnerId(ownerId);
+        
+        Payment saved = paymentRepository.save(payment);
+        
+        // Notify worker in real-time
+        if (saved.getCollectedByWorkerId() != null) {
+            messagingTemplate.convertAndSend("/topic/worker/" + saved.getCollectedByWorkerId() + "/payments", "PAYMENT_VERIFIED");
+        }
+        
+        log.info("Cash deposit verified for Payment {}. Verified by Owner {}.", paymentId, ownerId);
+
+        return saved;
     }
 
 }

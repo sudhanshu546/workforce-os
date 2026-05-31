@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @RestController
 @RequestMapping("/api/v1/customers/auth")
 @RequiredArgsConstructor
@@ -24,23 +26,23 @@ public class CustomerAuthController {
     public ResponseEntity<ApiResponse<CustomerAuthResponse>> register(@RequestBody CustomerRegisterRequest request) {
         CustomerAuthResponse response = customerRegistrationService.registerCustomer(request);
         return ResponseEntity.created(URI.create("/api/v1/customers/me"))
-                .body(ApiResponse.success(response, "Registration successful"));
+                .body(ApiResponse.success(response, REGISTRATION_SUCCESS));
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<CustomerAuthResponse>> login(@RequestBody CustomerLoginRequest request) {
         CustomerAuthResponse response = customerAuthService.authenticate(request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+        return ResponseEntity.ok(ApiResponse.success(response, LOGIN_SUCCESS));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(@RequestBody String refreshToken) {
         customerAuthService.logout(refreshToken);
-        return ResponseEntity.ok(ApiResponse.success(null, "Logout successful"));
+        return ResponseEntity.ok(ApiResponse.success(null, LOGOUT_SUCCESS));
     }
 
     @PostMapping("/refresh-token")
     public ResponseEntity<ApiResponse<CustomerAuthResponse>> refreshToken(@RequestBody String refreshToken) {
-        return ResponseEntity.ok(ApiResponse.success(customerAuthService.refreshToken(refreshToken), "Token refreshed"));
+        return ResponseEntity.ok(ApiResponse.success(customerAuthService.refreshToken(refreshToken), TOKEN_REFRESHED));
     }
 }

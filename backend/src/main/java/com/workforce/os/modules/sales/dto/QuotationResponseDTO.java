@@ -7,6 +7,7 @@ import java.util.List;
 public class QuotationResponseDTO {
     private Long id;
     private Long leadId;
+    private com.workforce.os.modules.sales.dto.LeadResponseDTO lead;
     private Double subtotal;
     private Double tax;
     private Double discount;

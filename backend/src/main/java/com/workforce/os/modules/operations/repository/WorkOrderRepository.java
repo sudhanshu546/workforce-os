@@ -45,6 +45,12 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long> {
         "customer", "assignedWorker", "assignedWorker.user", "tasks", "evidence", "materials", "materials.material",
         "quotation", "quotation.items", "quotation.lead", "quotation.lead.requestedService"
     })
+    Optional<WorkOrder> findByIdAndCustomerId(Long id, Long customerId);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {
+        "customer", "assignedWorker", "assignedWorker.user", "tasks", "evidence", "materials", "materials.material",
+        "quotation", "quotation.items", "quotation.lead", "quotation.lead.requestedService"
+    })
     Optional<WorkOrder> findById(Long id);
     long countByTenantId(String tenantId);
     long countByAssignedWorkerIdAndStatusNot(Long workerId, WorkOrder.WorkOrderStatus status);

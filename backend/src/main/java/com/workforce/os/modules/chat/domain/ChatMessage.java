@@ -15,7 +15,10 @@ public class ChatMessage extends BaseEntity {
     private Long id;
 
     private String senderId;
+    private String senderName;
+    private String senderRole;
     private String recipientId;
     private String content;
     private String conversationId; // ID to group messages
+    private boolean isRead = false;
 }

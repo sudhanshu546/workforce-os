@@ -47,6 +47,12 @@ public class WorkerController {
         return ResponseEntity.ok(ApiResponse.success(dtos, "All workers retrieved successfully"));
     }
 
+    @GetMapping("/available")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<List<WorkerProfileDTO>>> getAvailableWorkers() {
+        return ResponseEntity.ok(ApiResponse.success(workforceService.getAvailableWorkers(), "Available workers retrieved"));
+    }
+
     @PostMapping("/onboard")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<WorkerProfileDTO>> onboardWorker(@Valid @RequestBody WorkerOnboardingRequest request) {

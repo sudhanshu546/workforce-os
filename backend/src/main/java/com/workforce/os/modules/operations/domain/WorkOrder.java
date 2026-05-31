@@ -9,6 +9,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -20,6 +24,7 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "work_orders")
+@Filter(name = "customerFilter", condition = "customer_id = :customerId")
 public class WorkOrder extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

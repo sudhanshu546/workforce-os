@@ -2,6 +2,7 @@ package com.workforce.os.modules.operations.web;
 
 import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.common.dto.ApiResponse;
+import com.workforce.os.modules.customer.domain.Customer;
 import com.workforce.os.modules.operations.domain.*;
 import com.workforce.os.modules.operations.dto.WorkOrderAuditDTO;
 import com.workforce.os.modules.operations.dto.WorkOrderResponseDTO;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -185,7 +187,18 @@ public class WorkOrderController {
         
         // Prioritize Invoice Amount if generated
         invoiceRepository.findByWorkOrderId(wo.getId())
-                .ifPresent(inv -> dto.setTotalAmount(inv.getTotal()));
+                .ifPresent(inv -> {
+                    dto.setTotalAmount(inv.getTotal());
+                    // Mapping invoice to a simple map or DTO
+                    java.util.Map<String, Object> invoiceData = new java.util.HashMap<>();
+                    invoiceData.put("id", inv.getId());
+                    invoiceData.put("invoiceNumber", inv.getInvoiceNumber());
+                    invoiceData.put("total", inv.getTotal());
+                    invoiceData.put("status", inv.getStatus());
+                    invoiceData.put("subtotal", inv.getSubtotal());
+                    invoiceData.put("tax", inv.getTax());
+                    dto.setInvoice(invoiceData);
+                });
 
         if (dto.getServiceName() == null) dto.setServiceName(GENERAL_SERVICE);
         if (dto.getTotalAmount() == null) dto.setTotalAmount(0.0);

@@ -217,9 +217,9 @@ const Workers: React.FC = () => {
                 columns={columns}
                 loading={loadingWorkers}
                 renderExpanded={(worker: any) => (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '40px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
                         <div>
-                            <div className="stat-label">Service Specialization</div>
+                            <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Service Specialization</div>
                             <div className="services-container" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginTop: '16px' }}>
                                 {services.map((service: any) => {
                                     const isChecked = worker.supportedServices?.some((s: any) => s.id === service.id);
@@ -239,22 +239,22 @@ const Workers: React.FC = () => {
                         </div>
 
                         <div>
-                            <div className="stat-label">Payroll Information</div>
-                            <div className="card" style={{ marginTop: '16px', padding: '24px', background: '#1e293b', color: 'white' }}>
-                                <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>CURRENT SALARY ({worker.salaryType})</div>
+                            <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Payroll Information</div>
+                            <div className="card" style={{ marginTop: '16px', padding: '24px', background: '#1e293b', color: 'white', borderRadius: '16px' }}>
+                                <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px', fontWeight: '700' }}>CURRENT SALARY ({worker.salaryType})</div>
                                 <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)' }}>₹{worker.salaryAmount?.toLocaleString()}</div>
-                                <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                                <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#94a3b8' }}>
                                     <ShieldCheck size={16} className="text-success" /> System Verified Profile
                                 </div>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
-                            <div className="stat-label">Admin Actions</div>
-                            <button onClick={(e) => { e.stopPropagation(); openEditModal(worker); }} className="btn btn-primary" style={{ width: '100%' }}>
+                            <div className="stat-label-modern" style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Admin Actions</div>
+                            <button onClick={(e) => { e.stopPropagation(); openEditModal(worker); }} className="btn btn-primary" style={{ width: '100%', height: '48px' }}>
                                 <Edit3 size={18} /> Modify Employment
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDeleteWorker(worker.id); }} className="btn btn-secondary text-error" style={{ width: '100%' }}>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteWorker(worker.id); }} className="btn btn-secondary text-error" style={{ width: '100%', height: '48px' }}>
                                 <Trash2 size={18} /> Terminate Contract
                             </button>
                         </div>

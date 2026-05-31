@@ -9,10 +9,15 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
+
 @Getter
 @Setter
 @Entity
 @Table(name = "leads")
+@Filter(name = "customerFilter", condition = "customer_id = :customerId")
 public class Lead extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,6 +40,9 @@ public class Lead extends BaseEntity {
     private CustomerAddress customerAddress;
 
     private String description;
+
+    private java.time.LocalDate preferredDate;
+    private java.time.LocalTime preferredTime;
 
     private String priority;
 

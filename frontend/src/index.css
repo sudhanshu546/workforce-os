@@ -117,6 +117,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
 }
 
 .table-responsive-wrapper {
@@ -132,30 +133,44 @@ body {
 }
 
 .premium-table th {
-  background: #f8fafc;
-  padding: 14px 20px;
+  background: #fdfdfe;
+  padding: 18px 24px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid var(--border-light);
 }
 
 .premium-table td {
-  padding: 16px 20px;
+  padding: 20px 24px;
   border-bottom: 1px solid var(--border-light);
-  font-size: 14px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-main);
+  transition: all 0.2s ease;
 }
 
-/* Zebra Striping */
+/* Zebra Striping & Hover */
+.zebra-table tbody tr {
+  transition: all 0.2s ease;
+  position: relative;
+  cursor: pointer;
+}
+
 .zebra-table tbody tr:nth-child(even) {
-  background-color: #fcfdfe;
+  background-color: #fafbfc;
 }
 
 .zebra-table tr:hover:not(.row-active) td {
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
+  color: var(--primary);
+}
+
+.zebra-table tr:hover:not(.row-active) {
+  box-shadow: inset 4px 0 0 0 var(--primary);
 }
 
 
@@ -206,6 +221,31 @@ body {
 .nav-item.active {
   background: var(--primary-light);
   color: var(--primary);
+}
+
+.sidebar-unread-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--error);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
 }
 
 /* Badges */

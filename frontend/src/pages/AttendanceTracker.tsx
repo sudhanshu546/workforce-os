@@ -6,86 +6,53 @@ import {
   Square, 
   Coffee, 
   CheckCircle2,
-  Calendar
+  Calendar,
+  Navigation
 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useToast } from '../components/ToastProvider';
-import api from '../services/api';
+import { 
+  useGetAttendanceQuery, 
+  useGetWorkerAttendanceQuery, 
+  useGetAttendanceStatusQuery, 
+  useClockInMutation, 
+  useClockOutMutation 
+} from '../redux/attendanceApi';
+import { useGetAllWorkersQuery } from '../redux/workforceApi';
 import { Pagination } from '../components/Pagination';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
+import { useSelector } from 'react-redux';
 
 const AttendanceTracker: React.FC = () => {
   const showToast = useToast();
-  const [status, setStatus] = useState<'CLOCKED_OUT' | 'CLOCKED_IN' | 'ON_BREAK'>('CLOCKED_OUT');
-  const [allAttendance, setAllAttendance] = useState<any[]>([]);
-  const [workers, setWorkers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const workerId = localStorage.getItem('worker_id');
-  const role = localStorage.getItem('role') || 'WORKER';
+  const { workerId, role } = useSelector((state: any) => state.auth);
+  const [page, setPage] = useState(0);
 
-  useEffect(() => {
-    if (role === 'OWNER') {
-      fetchOwnerData();
-    } else if (workerId) {
-      fetchStatus();
-      fetchWorkerLogs();
-    } else {
-      setLoading(false);
-    }
-  }, [workerId, role]);
+  // Queries
+  const { data: ownerAttData, isLoading: ownerLoading } = useGetAttendanceQuery({ page, size: 100 }, { skip: role !== 'OWNER' });
+  const { data: workerAttData, isLoading: workerLoading } = useGetWorkerAttendanceQuery({ workerId: Number(workerId), page, size: 10 }, { skip: role !== 'WORKER' || !workerId });
+  const { data: isClockedIn, isLoading: statusLoading } = useGetAttendanceStatusQuery(Number(workerId), { skip: !workerId });
+  const { data: workers = [], isLoading: workersLoading } = useGetAllWorkersQuery(undefined, { skip: role !== 'OWNER' });
 
-  const fetchOwnerData = async () => {
-    try {
-      const [attData, workersData]: any = await Promise.all([
-        api.get('/attendance?size=100'),
-        api.get('/workers/all')
-      ]);
-      setAllAttendance(attData?.content || []);
-      setWorkers(Array.isArray(workersData) ? workersData : []);
-    } catch (err) {
-      console.error('Failed to fetch owner data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchWorkerLogs = async () => {
-    try {
-      const data: any = await api.get(`/attendance/worker/${workerId}?size=10`);
-      setAllAttendance(data?.content || []);
-    } catch (err) {
-      console.error('Failed to fetch logs');
-    }
-  };
-
-  const fetchStatus = async () => {
-    try {
-      const data: any = await api.get(`/attendance/status?workerId=${workerId}`);
-      setStatus(data ? 'CLOCKED_IN' : 'CLOCKED_OUT');
-    } catch (err) {
-      console.error('Failed to fetch status');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Mutations
+  const [clockIn] = useClockInMutation();
+  const [clockOut] = useClockOutMutation();
 
   const handleClockIn = async (id?: number) => {
     const targetId = id || Number(workerId);
     
     const proceedClockIn = async (lat = 0, lon = 0) => {
       try {
-        await api.post('/attendance/clock-in', { 
+        await clockIn({ 
           workerId: targetId,
           status: 'ON_FIELD',
           latitude: lat,
           longitude: lon 
-        });
-        if (role === 'OWNER') fetchOwnerData();
-        else { fetchStatus(); fetchWorkerLogs(); }
+        }).unwrap();
         showToast('Clocked in successfully', 'success');
       } catch (err: any) {
-        showToast(err.response?.data?.message || 'Error clocking in', 'error');
+        showToast(err.data?.message || 'Error clocking in', 'error');
       }
     };
 
@@ -107,16 +74,14 @@ const AttendanceTracker: React.FC = () => {
     
     const proceedClockOut = async (lat = 0, lon = 0) => {
       try {
-        await api.post('/attendance/clock-out', { 
+        await clockOut({ 
           workerId: targetId,
           latitude: lat,
           longitude: lon 
-        });
-        if (role === 'OWNER') fetchOwnerData();
-        else { fetchStatus(); fetchWorkerLogs(); }
+        }).unwrap();
         showToast('Clocked out successfully', 'success');
       } catch (err: any) {
-        showToast(err.response?.data?.message || 'Failed to clock out', 'error');
+        showToast(err.data?.message || 'Failed to clock out', 'error');
       }
     };
 
@@ -129,6 +94,9 @@ const AttendanceTracker: React.FC = () => {
       proceedClockOut();
     }
   };
+
+  const allAttendance = role === 'OWNER' ? (ownerAttData?.content || []) : (workerAttData?.content || []);
+  const loading = role === 'OWNER' ? (ownerLoading || workersLoading) : (workerLoading || statusLoading);
 
   const columns = [
     { header: 'Technician', accessor: (log: any) => (
@@ -157,9 +125,9 @@ const AttendanceTracker: React.FC = () => {
           <section>
             <div className="stat-label" style={{ marginBottom: '16px' }}>Current Workforce Status</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-              {workers.map(worker => {
-                const activeSession = allAttendance.find(a => a.workerId === worker.id && !a.clockOut);
-                const isClockedIn = !!activeSession;
+              {workers.map((worker: any) => {
+                const activeSession = allAttendance.find((a: any) => a.workerId === worker.id && !a.clockOut);
+                const workerIsClockedIn = !!activeSession;
                 
                 return (
                   <div key={worker.id} className="card" style={{ 
@@ -167,22 +135,22 @@ const AttendanceTracker: React.FC = () => {
                     display: 'flex', 
                     flexDirection: 'column', 
                     gap: '16px',
-                    borderLeft: isClockedIn ? '4px solid var(--success)' : '1px solid var(--border)'
+                    borderLeft: workerIsClockedIn ? '4px solid var(--success)' : '1px solid var(--border)'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: isClockedIn ? 'var(--success)' : 'var(--surface-muted)', color: isClockedIn ? 'white' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '20px' }}>
-                        {worker.user?.name.charAt(0)}
+                      <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: workerIsClockedIn ? 'var(--success)' : 'var(--surface-muted)', color: workerIsClockedIn ? 'white' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '20px' }}>
+                        {worker.name?.charAt(0) || worker.user?.name?.charAt(0)}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-h)' }}>{worker.user?.name}</div>
+                        <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-h)' }}>{worker.name || worker.user?.name}</div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>{worker.designation || 'Field Technician'}</div>
                       </div>
-                      <span className={`badge ${isClockedIn ? 'badge-success' : 'badge-secondary'}`} style={{ fontSize: '10px' }}>
-                        {isClockedIn ? 'On Shift' : 'Off Duty'}
+                      <span className={`badge ${workerIsClockedIn ? 'badge-success' : 'badge-secondary'}`} style={{ fontSize: '10px' }}>
+                        {workerIsClockedIn ? 'On Shift' : 'Off Duty'}
                       </span>
                     </div>
 
-                    {isClockedIn ? (
+                    {workerIsClockedIn ? (
                         <div style={{ padding: '12px', background: 'var(--surface-muted)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                             <span className="text-muted">Clocked in at</span>
                             <span style={{ fontWeight: '800', color: 'var(--success)' }}>{new Date(activeSession.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -194,7 +162,7 @@ const AttendanceTracker: React.FC = () => {
                     )}
 
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      {isClockedIn ? (
+                      {workerIsClockedIn ? (
                         <button onClick={() => handleClockOut(worker.id)} className="btn btn-secondary text-error" style={{ flex: 1 }}><Square size={16} /> Force Clock Out</button>
                       ) : (
                         <button onClick={() => handleClockIn(worker.id)} className="btn btn-primary" style={{ flex: 1 }}><Play size={16} /> Manual Clock In</button>
@@ -217,7 +185,10 @@ const AttendanceTracker: React.FC = () => {
                             <div className="stat-label">Deployment Metadata</div>
                             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px' }}>
-                                    <MapPin size={16} className="text-muted" /> <span style={{ fontWeight: '600' }}>Logged Site: Business Zone Area 4</span>
+                                    <Navigation size={16} className="text-primary" /> 
+                                    <span style={{ fontWeight: '600' }}>
+                                        Location: {log.latitude && log.longitude ? `${log.latitude.toFixed(4)}, ${log.longitude.toFixed(4)} (GPS Verified)` : 'Manual Entry'}
+                                    </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px' }}>
                                     <Clock size={16} className="text-muted" /> <span style={{ fontWeight: '600' }}>Shift Type: {log.totalHours > 8 ? 'Overtime' : 'Standard'}</span>
@@ -225,7 +196,16 @@ const AttendanceTracker: React.FC = () => {
                             </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                            <button className="btn btn-secondary"><Calendar size={18} /> View Shift Detail</button>
+                            {log.latitude && log.longitude && (
+                                <a 
+                                    href={`https://www.google.com/maps?q=${log.latitude},${log.longitude}`} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    className="btn btn-secondary"
+                                >
+                                    <MapPin size={18} /> View on Map
+                                </a>
+                            )}
                         </div>
                     </div>
                 )}
@@ -235,6 +215,8 @@ const AttendanceTracker: React.FC = () => {
       </Layout>
     );
   }
+
+  const status = isClockedIn ? 'CLOCKED_IN' : 'CLOCKED_OUT';
 
   return (
     <Layout>
@@ -261,10 +243,10 @@ const AttendanceTracker: React.FC = () => {
               </div>
               
               <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-h)' }}>
-                {status === 'CLOCKED_IN' ? 'You are On-Duty' : status === 'ON_BREAK' ? 'Break in Progress' : 'Shift Not Started'}
+                {status === 'CLOCKED_IN' ? 'You are On-Duty' : 'Shift Not Started'}
               </h2>
               <p style={{ color: 'var(--text-muted)', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600' }}>
-                <MapPin size={18} className="text-primary" /> Auto-detecting site location...
+                <MapPin size={18} className="text-primary" /> GPS Location Detection Enabled
               </p>
 
               <div style={{ maxWidth: '400px', margin: '0 auto' }}>
@@ -274,9 +256,6 @@ const AttendanceTracker: React.FC = () => {
                   </button>
                 ) : (
                   <div style={{ display: 'flex', gap: '16px' }}>
-                    <button onClick={() => setStatus(status === 'ON_BREAK' ? 'CLOCKED_IN' : 'ON_BREAK')} className="btn btn-secondary" style={{ flex: 1, height: '56px' }}>
-                        {status === 'ON_BREAK' ? <><Play size={20} /> Resume Work</> : <><Coffee size={20} /> Take a Break</>}
-                    </button>
                     <button onClick={() => handleClockOut()} className="btn btn-secondary text-error" style={{ flex: 1, height: '56px', border: '1.5px solid var(--error)' }}>
                         <Square size={20} /> End Shift
                     </button>
@@ -288,7 +267,7 @@ const AttendanceTracker: React.FC = () => {
           <div style={{ marginTop: '40px' }}>
               <div className="stat-label" style={{ marginBottom: '16px' }}>Recent Shift Activity</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {allAttendance.slice(0, 5).map((log, i) => (
+                {allAttendance.slice(0, 5).map((log: any, i: number) => (
                     <div key={i} className="card" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--surface-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>

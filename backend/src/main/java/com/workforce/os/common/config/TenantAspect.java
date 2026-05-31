@@ -17,10 +17,19 @@ public class TenantAspect {
 
     @Before("execution(* com.workforce.os.modules..repository..*(..))")
     public void beforeRepositoryMethod() {
+        Session session = entityManager.unwrap(Session.class);
+
+        // 1. Handle Multi-Tenancy (Staff Context)
         String tenantId = TenantContext.getCurrentTenant();
         if (tenantId != null) {
-            Session session = entityManager.unwrap(Session.class);
             session.enableFilter("tenantFilter").setParameter("tenantId", tenantId);
+        }
+
+        // 2. Handle Customer Ownership (Marketplace Context)
+        Long customerId = TenantContext.getCurrentCustomer();
+        if (customerId != null) {
+            // Note: This filter must be defined on relevant entities
+            session.enableFilter("customerFilter").setParameter("customerId", customerId);
         }
     }
 }

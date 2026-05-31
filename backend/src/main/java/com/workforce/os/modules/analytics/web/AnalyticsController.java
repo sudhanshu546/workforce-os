@@ -16,6 +16,8 @@ import com.workforce.os.modules.analytics.dto.AnalyticsResponse;
 import com.workforce.os.modules.analytics.dto.WorkerUtilizationDTO;
 import com.workforce.os.common.context.TenantContext;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @RestController
 @RequestMapping("/api/v1/analytics")
 @RequiredArgsConstructor
@@ -25,19 +27,19 @@ public class AnalyticsController {
     @GetMapping("/worker-utilization")
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<List<WorkerUtilizationDTO>>> getWorkerUtilization() {
-        return ResponseEntity.ok(ApiResponse.success(analyticsService.getWorkerUtilization(), "Worker utilization retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(analyticsService.getWorkerUtilization(), WORKER_UTILIZATION_RETRIEVED));
     }
 
     @GetMapping("/profitability")
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<List<ProfitabilityDTO>>> getProfitability() {
-        return ResponseEntity.ok(ApiResponse.success(analyticsService.getJobProfitability(), "Profitability data retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(analyticsService.getJobProfitability(), PROFITABILITY_RETRIEVED));
     }
 
     @GetMapping("/owner")
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ApiResponse<AnalyticsResponse>> getOwnerAnalytics() {
-        return ResponseEntity.ok(ApiResponse.success(analyticsService.getOwnerAnalytics(), "Owner analytics retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(analyticsService.getOwnerAnalytics(), OWNER_ANALYTICS_RETRIEVED));
     }
 
     @GetMapping("/report-pdf")
