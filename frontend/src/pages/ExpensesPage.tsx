@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { 
     IndianRupee, Tag, User, Calendar, CheckCircle2, XCircle, 
@@ -6,42 +6,22 @@ import {
     Briefcase, Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '../components/ToastProvider';
-import api from '../services/api';
+import { useGetExpensesQuery, useUpdateExpenseStatusMutation } from '../redux/financeApi';
 import { Pagination } from '../components/Pagination';
 import { ExpandableRowTable } from '../components/ExpandableRowTable';
 import { EXPENSE_STATUS, EXPENSE_CATEGORIES } from '../utils/constants';
 
 const ExpensesPage: React.FC = () => {
     const showToast = useToast();
-    const [expenses, setExpenses] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
     const pageSize = 10;
 
-    useEffect(() => {
-        fetchExpenses(page);
-    }, [page]);
-
-    const fetchExpenses = async (pageNumber: number) => {
-        setLoading(true);
-        try {
-            const data: any = await api.get(`/finance/expenses?page=${pageNumber}&size=${pageSize}`);
-            setExpenses(data.content || []);
-            setTotalPages(data.totalPages || 0);
-            setTotalElements(data.totalElements || 0);
-        } catch (err) {
-            console.error('Failed to fetch expenses');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data, isLoading } = useGetExpensesQuery({ page, size: pageSize });
+    const [updateStatus] = useUpdateExpenseStatusMutation();
 
     const handleUpdateStatus = async (id: number, status: string) => {
         try {
-            await api.patch(`/finance/expenses/${id}/status`, { status });
-            fetchExpenses(page);
+            await updateStatus({ id, status }).unwrap();
             showToast(`Expense ${status.toLowerCase()} successfully`, 'success');
         } catch (err) {
             showToast('Failed to update status', 'error');
@@ -61,6 +41,10 @@ const ExpensesPage: React.FC = () => {
         return EXPENSE_CATEGORIES.find(c => c.value === value)?.label || value;
     };
 
+    const expenses = data?.content || [];
+    const totalPages = data?.totalPages || 0;
+    const totalElements = data?.totalElements || 0;
+
     const columns = [
         { header: 'Category', accessor: (ex: any) => (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -73,10 +57,10 @@ const ExpensesPage: React.FC = () => {
         { header: 'Technician', accessor: (ex: any) => (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div className="avatar" style={{ width: '28px', height: '28px', fontSize: '11px', borderRadius: '50%', background: '#e0e7ff', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>{ex.worker?.user?.name[0]}</div>
-                <span style={{ fontWeight: '600' }}>{ex.worker?.user?.name}</span>
+                <span style={{ fontWeight: '600' }}>{ex.workerName}</span>
             </div>
         )},
-        { header: 'Related Job', accessor: (ex: any) => <span className="id-tag">#WO-{ex.workOrder?.id + 1000}</span> },
+        { header: 'Related Job', accessor: (ex: any) => <span className="id-tag">#WO-{ex.workOrderId + 1000}</span> },
         { header: 'Amount', accessor: (ex: any) => <span style={{ fontWeight: '800', color: 'var(--text-h)' }}>₹{ex.amount.toFixed(2)}</span> },
         { header: 'Status', accessor: (ex: any) => <span className={`badge ${getStatusBadge(ex.status)}`}>{ex.status}</span> }
     ];
@@ -92,7 +76,7 @@ const ExpensesPage: React.FC = () => {
                 <ExpandableRowTable 
                     data={expenses}
                     columns={columns}
-                    loading={loading}
+                    loading={isLoading}
                     renderExpanded={(ex: any) => (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '40px' }}>
                             <div className="detail-section">

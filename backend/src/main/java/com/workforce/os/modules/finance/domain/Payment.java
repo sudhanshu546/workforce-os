@@ -26,7 +26,12 @@ public class Payment extends BaseEntity {
 
     private String transactionReference;
 
+    @Column(name = "collected_by_worker_id")
     private Long collectedByWorkerId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "collected_by_worker_id", insertable = false, updatable = false)
+    private com.workforce.os.modules.workforce.domain.WorkerProfile collectedByWorker;
 
     private Long verifiedByOwnerId;
 }

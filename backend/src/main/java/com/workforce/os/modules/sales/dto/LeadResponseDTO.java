@@ -16,6 +16,8 @@ public class LeadResponseDTO {
     private String description;
     private String priority;
     private String status;
+    private java.time.LocalDate preferredDate;
+    private java.time.LocalTime preferredTime;
     private LocalDateTime createdAt;
     
     private CustomerDTO customer;

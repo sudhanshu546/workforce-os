@@ -10,6 +10,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @RestController
 @RequestMapping("/api/v1/customers/me/preferences")
 @RequiredArgsConstructor
@@ -21,13 +23,13 @@ public class CustomerPreferenceController {
     public ResponseEntity<ApiResponse<CustomerPreferenceResponse>> getPreferences() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return ResponseEntity.ok(ApiResponse.success(customerPreferenceService.getPreferences(email), "Preferences retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success(customerPreferenceService.getPreferences(email), PREFERENCES_RETRIEVED));
     }
 
     @PutMapping
     public ResponseEntity<ApiResponse<CustomerPreferenceResponse>> updatePreferences(@RequestBody CustomerPreferenceUpdateRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
-        return ResponseEntity.ok(ApiResponse.success(customerPreferenceService.updatePreferences(email, request), "Preferences updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success(customerPreferenceService.updatePreferences(email, request), PREFERENCES_UPDATED));
     }
 }

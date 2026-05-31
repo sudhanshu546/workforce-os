@@ -6,6 +6,18 @@ export const financeApi = apiSlice.injectEndpoints({
       query: ({ page, size }) => `/finance/invoices?page=${page}&size=${size}`,
       providesTags: ['Invoice'],
     }),
+    getInvoicePdf: builder.query<Blob, number>({
+      query: (id) => ({
+        url: `/finance/invoices/${id}/pdf`,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+    getProofOfServicePdf: builder.query<Blob, number>({
+      query: (workOrderId) => ({
+        url: `/finance/work-orders/${workOrderId}/proof-pdf`,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
     getPayments: builder.query<any, { page: number; size: number; method?: string; status?: string }>({
       query: ({ page, size, method, status }) => {
         let url = `/finance/payments?page=${page}&size=${size}`;
@@ -26,6 +38,18 @@ export const financeApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['Payment', 'Invoice'],
     }),
+    getExpenses: builder.query<any, { page: number; size: number }>({
+      query: ({ page, size }) => `/finance/expenses?page=${page}&size=${size}`,
+      providesTags: ['Expense'],
+    }),
+    updateExpenseStatus: builder.mutation<any, { id: number; status: string }>({
+      query: ({ id, status }) => ({
+        url: `/finance/expenses/${id}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: ['Expense'],
+    }),
   }),
 });
 
@@ -34,4 +58,8 @@ export const {
   useGetPaymentsQuery,
   useGetWorkerPaymentsQuery,
   useVerifyCashDepositMutation,
+  useLazyGetInvoicePdfQuery,
+  useLazyGetProofOfServicePdfQuery,
+  useGetExpensesQuery,
+  useUpdateExpenseStatusMutation,
 } = financeApi;

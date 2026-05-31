@@ -20,6 +20,9 @@ import java.util.Map;
 import com.workforce.os.modules.customer.domain.Customer;
 import com.workforce.os.modules.customer.repository.CustomerRepository;
 import com.workforce.os.modules.support.dto.SupportTicketRequest;
+import com.workforce.os.modules.support.dto.SupportTicketResponseDTO;
+import com.workforce.os.modules.support.dto.TicketCommentResponseDTO;
+import com.workforce.os.modules.support.mapper.SupportMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -33,10 +36,11 @@ public class SupportController {
 
     private final SupportService supportService;
     private final CustomerRepository customerRepository;
+    private final SupportMapper supportMapper;
 
     @PostMapping("/tickets")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<ApiResponse<SupportTicket>> createTicket(
+    public ResponseEntity<ApiResponse<SupportTicketResponseDTO>> createTicket(
             @Valid @RequestBody SupportTicketRequest request,
             @AuthenticationPrincipal User user) {
         log.info("Creating support ticket for user: {}", user.getEmail());
@@ -46,14 +50,14 @@ public class SupportController {
             .orElseThrow(() -> new com.workforce.os.common.exception.ResourceNotFoundException(CUSTOMER_NOT_FOUND));
 
         return ResponseEntity.ok(ApiResponse.success(
-            supportService.createTicket(customer, request.getWorkOrderId(), request.getTitle(), request.getDescription()),
+            supportMapper.toTicketDTO(supportService.createTicket(customer, request.getWorkOrderId(), request.getTitle(), request.getDescription())),
             TICKET_CREATED
         ));
     }
 
     @GetMapping("/tickets")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
-    public ResponseEntity<ApiResponse<Page<SupportTicket>>> getAllTickets(
+    public ResponseEntity<ApiResponse<Page<SupportTicketResponseDTO>>> getAllTickets(
             @AuthenticationPrincipal User user,
             Pageable pageable) {
         log.info("Fetching tickets for user: {}, page: {}", user.getEmail(), pageable.getPageNumber());
@@ -62,48 +66,54 @@ public class SupportController {
              Customer customer = customerRepository.findByEmail(user.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException(CUSTOMER_NOT_FOUND));
              return ResponseEntity.ok(ApiResponse.success(
-                 supportService.getCustomerTickets(customer.getId(), pageable), 
+                 supportService.getCustomerTickets(customer.getId(), pageable).map(supportMapper::toTicketDTO), 
                  TICKETS_RETRIEVED
              ));
         }
 
-        return ResponseEntity.ok(ApiResponse.success(supportService.getAllTickets(pageable), TICKETS_RETRIEVED));
+        return ResponseEntity.ok(ApiResponse.success(
+            supportService.getAllTickets(pageable).map(supportMapper::toTicketDTO), 
+            TICKETS_RETRIEVED
+        ));
     }
 
     @PatchMapping("/tickets/{ticketId}/status")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
-    public ResponseEntity<ApiResponse<SupportTicket>> updateTicketStatus(
+    public ResponseEntity<ApiResponse<SupportTicketResponseDTO>> updateTicketStatus(
             @PathVariable Long ticketId,
             @RequestBody Map<String, String> payload) {
         log.info("Updating status for ticket: {}", ticketId);
         
         SupportTicket.TicketStatus status = SupportTicket.TicketStatus.valueOf(payload.get("status"));
         return ResponseEntity.ok(ApiResponse.success(
-            supportService.updateTicketStatus(ticketId, status),
+            supportMapper.toTicketDTO(supportService.updateTicketStatus(ticketId, status)),
             "Ticket status updated"
         ));
     }
 
     @GetMapping("/tickets/{ticketId}/comments")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
-    public ResponseEntity<ApiResponse<List<TicketComment>>> getTicketComments(@PathVariable Long ticketId) {
+    public ResponseEntity<ApiResponse<List<TicketCommentResponseDTO>>> getTicketComments(@PathVariable Long ticketId) {
         log.info("Fetching comments for ticket: {}", ticketId);
+        List<TicketCommentResponseDTO> comments = supportService.getTicketComments(ticketId).stream()
+            .map(supportMapper::toCommentDTO)
+            .collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success(
-            supportService.getTicketComments(ticketId),
+            comments,
             "Comments retrieved"
         ));
     }
 
     @PostMapping("/tickets/{ticketId}/comments")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'CUSTOMER')")
-    public ResponseEntity<ApiResponse<TicketComment>> addComment(
+    public ResponseEntity<ApiResponse<TicketCommentResponseDTO>> addComment(
             @PathVariable Long ticketId,
             @RequestBody Map<String, String> payload,
             @AuthenticationPrincipal User user) {
         log.info("Adding comment to ticket: {} by user: {}", ticketId, user.getEmail());
         
         return ResponseEntity.ok(ApiResponse.success(
-            supportService.addComment(ticketId, user, payload.get("message")),
+            supportMapper.toCommentDTO(supportService.addComment(ticketId, user, payload.get("message"))),
             COMMENT_ADDED
         ));
     }

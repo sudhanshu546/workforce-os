@@ -22,6 +22,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.workforce.os.modules.identity.domain.User;
 import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @RestController
 @RequestMapping("/api/v1/attendance")
 @RequiredArgsConstructor
@@ -36,7 +38,7 @@ public class AttendanceController {
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<Page<AttendanceResponseDTO>>> getAllAttendance(Pageable pageable) {
         Page<Attendance> attendance = attendanceRepository.findByTenantIdOrderByClockInDesc(TenantContext.getCurrentTenant(), pageable);
-        return ResponseEntity.ok(ApiResponse.success(attendance.map(attendanceMapper::toDTO), "Attendance records retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(attendance.map(attendanceMapper::toDTO), ATTENDANCE_RECORDS_RETRIEVED));
     }
 
     private void validateAccess(Long workerId) {
@@ -46,7 +48,7 @@ public class AttendanceController {
         if (!isManager) {
             WorkerProfile worker = workerProfileRepository.findById(workerId).orElseThrow();
             if (!worker.getUser().getId().equals(currentUser.getId())) {
-                throw new RuntimeException("Unauthorized: You can only clock in/out for yourself.");
+                throw new RuntimeException(SELF_CLOCK_ONLY);
             }
         }
     }
@@ -56,7 +58,7 @@ public class AttendanceController {
     public ResponseEntity<ApiResponse<AttendanceResponseDTO>> clockIn(@Valid @RequestBody ClockInRequest request) {
         validateAccess(request.getWorkerId());
         Attendance attendance = attendanceService.clockIn(request.getWorkerId(), request.getWorkOrderId(), request.getLatitude(), request.getLongitude(), request.getStatus());
-        return ResponseEntity.ok(ApiResponse.success(attendanceMapper.toDTO(attendance), "Clocked in successfully"));
+        return ResponseEntity.ok(ApiResponse.success(attendanceMapper.toDTO(attendance), CLOCKED_IN_SUCCESS));
     }
 
     @PostMapping("/clock-out")
@@ -64,14 +66,14 @@ public class AttendanceController {
     public ResponseEntity<ApiResponse<AttendanceResponseDTO>> clockOut(@Valid @RequestBody ClockOutRequest request) {
         validateAccess(request.getWorkerId());
         Attendance attendance = attendanceService.clockOut(request.getWorkerId(), request.getWorkOrderId(), request.getLatitude(), request.getLongitude());
-        return ResponseEntity.ok(ApiResponse.success(attendanceMapper.toDTO(attendance), "Clocked out successfully"));
+        return ResponseEntity.ok(ApiResponse.success(attendanceMapper.toDTO(attendance), CLOCKED_OUT_SUCCESS));
     }
 
 
     @GetMapping("/status")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'WORKER')")
     public ResponseEntity<ApiResponse<Boolean>> getStatus(@RequestParam Long workerId) {
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.isWorkerClockedIn(workerId), "Status retrieved"));
+        return ResponseEntity.ok(ApiResponse.success(attendanceService.isWorkerClockedIn(workerId), ATTENDANCE_STATUS_RETRIEVED));
     }
 
     @Data

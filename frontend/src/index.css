@@ -223,6 +223,31 @@ body {
   color: var(--primary);
 }
 
+.sidebar-unread-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--error);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
 /* Badges */
 .badge {
   display: inline-flex;

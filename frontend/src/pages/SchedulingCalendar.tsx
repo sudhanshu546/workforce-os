@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
 import { Briefcase, User, Calendar as CalendarIcon, Clock, ChevronRight, Phone, MapPin } from 'lucide-react';
+import { toastNotifier } from '../utils/toast-notifier';
 
 const localizer = momentLocalizer(moment);
 
@@ -16,6 +17,7 @@ const SchedulingCalendar: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
   
   // Controlled Calendar States using strings to avoid import issues
   const [date, setDate] = useState(new Date());
@@ -71,20 +73,40 @@ const SchedulingCalendar: React.FC = () => {
     };
   };
 
-  const handleSelectEvent = (event: any) => {
-    setSelectedEvent(event);
-    setIsModalOpen(true);
-  };
-
   const onNavigate = (newDate: Date) => setDate(newDate);
   const onView = (newView: any) => setView(newView);
 
+  const handleSelectEvent = async (event: any) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+    
+    // Fetch available workers
+    try {
+        const res: any = await api.get('/workers/available');
+        setAvailableWorkers(res || []);
+    } catch (e) {
+        console.error('Failed to fetch available workers');
+    }
+  };
+
+  const handleAssign = async (workerId: number) => {
+      try {
+          // Using the specific assignment endpoint from WorkOrderController: PATCH /api/v1/work-orders/{id}/assign
+          await api.patch(`/work-orders/${selectedEvent.id}/assign`, { workerId });
+          toastNotifier.show('Worker assigned successfully', 'success');
+          setIsModalOpen(false);
+          fetchWorkOrders();
+      } catch (e) {
+          toastNotifier.show('Failed to assign worker', 'error');
+      }
+  };
+
   return (
     <Layout>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
         <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-                <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-h)', marginBottom: '4px' }}>Operational Control Tower</h1>
+                <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-h)', marginBottom: '4px' }}>Operational Command Tower</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>Real-time visualization of workforce assignments and capacity.</p>
             </div>
             <div className="calendar-legend">
@@ -96,28 +118,57 @@ const SchedulingCalendar: React.FC = () => {
         </header>
         
         {loading ? (
-            <div className="loading-container">
-                <LoadingSpinner />
-            </div>
+            <div className="loading-container"><LoadingSpinner /></div>
         ) : (
-            <div className="calendar-card card">
-                <Calendar
-                    localizer={localizer}
-                    events={events}
-                    startAccessor="start"
-                    endAccessor="end"
-                    style={{ height: '75vh' }}
-                    
-                    // Controlled props to ensure buttons work
-                    date={date}
-                    onNavigate={onNavigate}
-                    view={view}
-                    onView={onView}
-                    
-                    views={['month', 'week', 'day']}
-                    onSelectEvent={handleSelectEvent}
-                    eventPropGetter={eventStyleGetter}
-                />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '24px' }}>
+                <div className="calendar-card card">
+                    <Calendar
+                        localizer={localizer}
+                        events={events}
+                        startAccessor="start"
+                        endAccessor="end"
+                        style={{ height: '75vh' }}
+                        date={date}
+                        onNavigate={onNavigate}
+                        view={view}
+                        onView={onView}
+                        views={['month', 'week', 'day']}
+                        onSelectEvent={handleSelectEvent}
+                        eventPropGetter={eventStyleGetter}
+                    />
+                </div>
+                
+                <div className="card" style={{ padding: '24px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px' }}>Dispatch Panel</h2>
+                    {selectedEvent ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div style={{ padding: '16px', background: 'var(--surface-muted)', borderRadius: '12px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: '900', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Selected Job</div>
+                                <div style={{ fontWeight: '800', fontSize: '16px', marginTop: '4px' }}>{selectedEvent.customer}</div>
+                                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{selectedEvent.address}</div>
+                            </div>
+                            
+                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-muted)' }}>Available Technicians</h3>
+                            {availableWorkers.length > 0 ? (
+                                availableWorkers.map(w => (
+                                    <div key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>{w.name[0]}</div>
+                                            <div style={{ fontWeight: '700' }}>{w.name}</div>
+                                        </div>
+                                        <button className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={() => handleAssign(w.id)}>Dispatch</button>
+                                    </div>
+                                ))
+                            ) : (
+                                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No technicians available at this time.</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px', border: '2px dashed var(--border)', borderRadius: '16px' }}>
+                            Select a job from the calendar to see dispatch suggestions.
+                        </div>
+                    )}
+                </div>
             </div>
         )}
       </div>

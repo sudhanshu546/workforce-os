@@ -65,7 +65,9 @@ public class LeadController {
                 request.getServiceItemId(),
                 request.getCustomerAddressId(),
                 request.getDescription(),
-                request.getPriority()
+                request.getPriority(),
+                request.getPreferredDate(),
+                request.getPreferredTime()
         );
         return ResponseEntity.ok(ApiResponse.success(leadMapper.toDTO(lead), LEAD_CREATED));
     }

@@ -24,6 +24,8 @@ public class LeadRequestDTO {
     private Long customerAddressId;
 
     private String description;
+    private java.time.LocalDate preferredDate;
+    private java.time.LocalTime preferredTime;
     private String priority;
     private String status;
 }

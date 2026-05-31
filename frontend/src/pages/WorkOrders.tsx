@@ -3,7 +3,7 @@ import {
   Briefcase, User, Calendar, Clock, CheckCircle2, AlertCircle, Loader2,
   Filter, Search, UserPlus, MapPin, ChevronRight, MoreVertical,
   Activity, ArrowUpRight, ClipboardCheck, Trash2, Eye,
-  IndianRupee, Zap, Navigation, Award, Users, ShieldCheck
+  IndianRupee, Zap, Navigation, Award, Users, ShieldCheck, Printer
 } from 'lucide-react';
 import api from '../services/api';
 import { Layout } from '../components/Layout';
@@ -15,6 +15,7 @@ import DispatchModal from '../components/DispatchModal';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useGetWorkOrdersQuery } from '../redux/ordersApi';
 import { useGetAllWorkersQuery } from '../redux/workforceApi';
+import { useLazyGetProofOfServicePdfQuery } from '../redux/financeApi';
 
 import './WorkOrders.css';
 
@@ -32,6 +33,25 @@ const WorkOrders: React.FC = () => {
     refetch 
   } = useGetWorkOrdersQuery({ page, size: pageSize });
   const { data: workersData = [] } = useGetAllWorkersQuery();
+  const [triggerDownloadProof] = useLazyGetProofOfServicePdfQuery();
+
+  const handleDownloadProof = async (woId: number) => {
+    try {
+        const { data } = await triggerDownloadProof(woId).unwrap() as any;
+        if (data) {
+            const url = window.URL.createObjectURL(data);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `proof-of-service-${woId}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        }
+    } catch (err) {
+        showToast('Failed to generate proof of service', 'error');
+    }
+  };
 
   // Real-time updates
   useWebSocket('/topic/orders', (msg) => {
@@ -208,6 +228,13 @@ const WorkOrders: React.FC = () => {
                             </button>
                         )}
                         <button className="btn btn-secondary" style={{ width: '100%', height: '48px', fontSize: '15px' }} onClick={() => showToast('Full audit log is being generated...', 'info')}><Eye size={18} /> Full Work Audit</button>
+                        {wo.status === 'COMPLETED' && (
+                            <button 
+                                onClick={() => handleDownloadProof(wo.id)} 
+                                className="btn btn-secondary" style={{ width: '100%', height: '48px', fontSize: '15px' }}>
+                                <Printer size={18} /> Proof of Service
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

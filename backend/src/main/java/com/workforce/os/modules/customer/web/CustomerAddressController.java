@@ -33,7 +33,7 @@ public class CustomerAddressController {
         log.info("Adding address for customer: {}", email);
         CustomerAddressResponse savedAddress = customerAddressService.addAddress(email, request);
         return ResponseEntity.created(URI.create("/api/v1/customers/me/addresses/" + savedAddress.getId()))
-                .body(ApiResponse.success(savedAddress, "Address added successfully"));
+                .body(ApiResponse.success(savedAddress, ADDRESS_ADDED));
     }
 
     @GetMapping
@@ -42,14 +42,14 @@ public class CustomerAddressController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
         log.info("Fetching addresses for customer: {}", email);
-        return ResponseEntity.ok(ApiResponse.success(customerAddressService.getAddresses(email), "Addresses retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success(customerAddressService.getAddresses(email), ADDRESSES_RETRIEVED));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<ApiResponse<CustomerAddressResponse>> updateAddress(@PathVariable Long id, @Valid @RequestBody CustomerAddressRequest request) {
         log.info("Updating address ID: {}", id);
-        return ResponseEntity.ok(ApiResponse.success(customerAddressService.updateAddress(id, request), "Address updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success(customerAddressService.updateAddress(id, request), ADDRESS_UPDATED));
     }
 
     @DeleteMapping("/{id}")
@@ -57,6 +57,6 @@ public class CustomerAddressController {
     public ResponseEntity<ApiResponse<Void>> deleteAddress(@PathVariable Long id) {
         log.info("Deleting address ID: {}", id);
         customerAddressService.deleteAddress(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Address deleted successfully"));
+        return ResponseEntity.ok(ApiResponse.success(null, ADDRESS_DELETED));
     }
 }

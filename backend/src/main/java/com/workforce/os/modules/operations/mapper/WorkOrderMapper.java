@@ -42,4 +42,11 @@ public interface WorkOrderMapper {
     WorkOrderResponseDTO.QuotationDTO toQuotationDTO(com.workforce.os.modules.sales.domain.Quotation quotation);
 
     WorkOrderResponseDTO.QuotationItemDTO toQuotationItemDTO(com.workforce.os.modules.sales.domain.QuotationItem item);
+
+    @Mapping(source = "workOrder.id", target = "workOrderId")
+    @Mapping(source = "customer.id", target = "customerId")
+    @Mapping(source = "customer.name", target = "customerName")
+    @Mapping(source = "worker.id", target = "workerId")
+    @Mapping(source = "worker.user.name", target = "workerName")
+    com.workforce.os.modules.operations.dto.ReviewResponseDTO toReviewDTO(Review review);
 }

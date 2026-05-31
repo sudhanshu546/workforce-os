@@ -41,6 +41,9 @@ public class Lead extends BaseEntity {
 
     private String description;
 
+    private java.time.LocalDate preferredDate;
+    private java.time.LocalTime preferredTime;
+
     private String priority;
 
     @Enumerated(EnumType.STRING)

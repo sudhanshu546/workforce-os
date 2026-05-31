@@ -119,17 +119,23 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
+  const [preferredDate, setPreferredDate] = useState('');
+  const [preferredTime, setPreferredTime] = useState('');
+
   const handleRequestService = async (service: any) => {
     if (!selectedAddressId) { toastNotifier.show('Please select an address', 'info'); return; }
+    if (!preferredDate) { toastNotifier.show('Please select a preferred date', 'info'); return; }
     try {
       await api.post('/leads', {
-        customerName: user?.name || 'Customer', 
+        customerName: user?.name || 'Customer',
         customerPhone: user?.number || '0000000000',
         customerEmail: user?.email || '',
         organizationId: selectedOrg.id,
         serviceItemId: service.id,
         customerAddressId: selectedAddressId,
         description: `${requirementNotes || 'Request for ' + service.name}. ${preferredWorkerId ? 'Preferred Worker ID: ' + preferredWorkerId : ''}`,
+        preferredDate,
+        preferredTime: preferredTime ? `${preferredTime}:00` : null,
         priority: 'MEDIUM'
       });
       toastNotifier.show('Service request sent successfully!', 'success');
@@ -421,6 +427,23 @@ const CustomerDashboard: React.FC = () => {
             <div style={{ display: 'flex', gap: '24px' }}>
               <div style={{ width: '40px', height: '40px', background: 'var(--primary)', color: 'white', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>3</div>
               <div style={{ flex: 1 }}>
+                <h4 className="stat-label-modern" style={{ marginBottom: '20px' }}>Service Timing</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="form-group">
+                        <label className="form-label">Preferred Date</label>
+                        <input type="date" className="input-field" value={preferredDate} onChange={e => setPreferredDate(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Preferred Time</label>
+                        <input type="time" className="input-field" value={preferredTime} onChange={e => setPreferredTime(e.target.value)} />
+                    </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '24px' }}>
+              <div style={{ width: '40px', height: '40px', background: 'var(--primary)', color: 'white', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>4</div>
+              <div style={{ flex: 1 }}>
                 <h4 className="stat-label-modern" style={{ marginBottom: '20px' }}>Custom Requirements</h4>
                 <textarea 
                   className="input-field" 
@@ -501,7 +524,7 @@ const CustomerDashboard: React.FC = () => {
             <div style={{ padding: '32px', background: '#f8fafc', borderRadius: '24px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
               <div>
                 <div className="stat-label-modern" style={{ fontSize: '11px', marginBottom: '8px' }}>Deployed Expert</div>
-                <div style={{ fontSize: '20px', fontWeight: '900' }}>{selectedWorkOrder.assignedWorker?.user?.name}</div>
+                <div style={{ fontSize: '20px', fontWeight: '900' }}>{selectedWorkOrder.assignedWorkerName || 'Expert Team'}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div className="stat-label-modern" style={{ fontSize: '11px', marginBottom: '8px' }}>Job ID</div>

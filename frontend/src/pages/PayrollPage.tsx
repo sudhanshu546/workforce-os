@@ -138,10 +138,10 @@ const PayrollPage: React.FC = () => {
                                     <tr key={p.id} className="table-row-hover" style={{ borderBottom: '1px solid #f1f5f9' }}>
                                         <td style={{ padding: '16px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'var(--primary)' }}>{p.worker?.user?.name[0]}</div>
+                                                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'var(--primary)' }}>{(p.workerName || 'U')[0]}</div>
                                                 <div>
-                                                    <div style={{ fontWeight: '800', color: 'var(--text-h)' }}>{p.worker?.user?.name}</div>
-                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{p.worker?.designation}</div>
+                                                    <div style={{ fontWeight: '800', color: 'var(--text-h)' }}>{p.workerName}</div>
+                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{p.workerDesignation}</div>
                                                 </div>
                                             </div>
                                         </td>

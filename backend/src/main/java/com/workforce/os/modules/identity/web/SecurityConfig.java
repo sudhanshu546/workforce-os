@@ -36,8 +36,34 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig::disable))
                 .authorizeHttpRequests(req ->
-                        req.requestMatchers("/api/v1/auth/**", "/api/v1/customers/auth/**", "/api/v1/public/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/ws-workforce/**", "/api/v1/finance/invoices/*/pdf", "/api/v1/files/download/**", "/index.html", "/static/**", "/", "/assets/**", "/favicon.ico", "/manifest.json", "/sw.js")
-                                .permitAll()
+                        req.requestMatchers(
+                                        "/",
+                                        "/index.html",
+                                        "/static/**",
+                                        "/assets/**",
+                                        "/*.js",
+                                        "/*.css",
+                                        "/*.png",
+                                        "/*.jpg",
+                                        "/*.svg",
+                                        "/*.ico",
+                                        "/*.json",
+                                        "/manifest.json",
+                                        "/sw.js",
+                                        "/favicon.ico",
+                                        "/api/v1/auth/**",
+                                        "/api/v1/customers/auth/**",
+                                        "/api/v1/public/**",
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html",
+                                        "/ws-workforce/**",
+                                        "/api/v1/finance/invoices/*/pdf",
+                                        "/api/v1/finance/work-orders/*/proof-pdf",
+                                        "/api/v1/files/download/**",
+                                        "/actuator/**",
+                                        "/error"
+                                ).permitAll()
                                 .requestMatchers("/api/v1/leads/customer/**").hasAnyRole("CUSTOMER", "OWNER", "MANAGER")
                                 .requestMatchers("/api/v1/**").authenticated()
                                 .anyRequest().permitAll()
@@ -52,10 +78,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*")); // Use patterns with * for maximum dev flexibility
+        // In production, you should ideally specify allowed origins. 
+        // For now, we'll keep patterns but be more explicit if possible.
+        configuration.setAllowedOriginPatterns(List.of("*")); 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of("Authorization"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

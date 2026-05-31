@@ -13,5 +13,8 @@ public class WorkerProfileDTO {
     private String designation;
     private LocalDate joiningDate;
     private String status;
+    private String salaryType;
+    private Double salaryAmount;
     private List<WorkerSkillDTO> skills;
+    private List<com.workforce.os.modules.service.dto.ServiceItemDTO> supportedServices;
 }

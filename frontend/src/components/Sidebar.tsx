@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { 
   Users, Briefcase, Clock, LayoutDashboard, 
   UserCircle, FileText, Settings, LogOut, HardHat, CheckSquare,
@@ -5,7 +6,12 @@ import {
   IndianRupee, MessageSquare, Wallet
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import SockJS from 'sockjs-client';
+import Stomp from 'stompjs';
+import api from '../services/api';
 import { STORAGE_KEYS, ROLES } from '../utils/constants';
+import { useSelector } from 'react-redux';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,7 +24,41 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const isActive = (path: string) => location.pathname === path;
   const orgLogo = localStorage.getItem('orgLogo');
   
-  const role = localStorage.getItem(STORAGE_KEYS.ROLE) || ROLES.WORKER;
+  const { user, workerId, customerId, role: authRole } = useSelector((state: any) => state.auth);
+  const role = authRole || ROLES.WORKER;
+
+  // Consistent userId derivation
+  const userId = React.useMemo(() => {
+    if (role === ROLES.WORKER && workerId) return `W-${workerId}`;
+    if (role === ROLES.CUSTOMER && customerId) return `C-${customerId}`;
+    if (user?.id) return `U-${user.id}`;
+    return '';
+  }, [role, workerId, customerId, user?.id]);
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchUnread = async () => {
+        try {
+            const res: any = await api.get(`/chat/unread-count/${userId}`);
+            setUnreadCount(res || 0);
+        } catch (e) {
+            console.error('Failed to fetch unread count', e);
+        }
+    };
+
+    fetchUnread();
+  }, [userId]);
+
+  // Use the common WebSocket hook for real-time unread updates
+  useWebSocket(
+    userId ? `/user/${userId}/queue/messages` : '',
+    () => {
+        api.get(`/chat/unread-count/${userId}`).then((res: any) => setUnreadCount(res || 0)).catch(() => {});
+    }
+  );
 
   const handleLogout = () => {
     localStorage.clear();
@@ -48,6 +88,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <nav className="sidebar-nav">
         <Link to="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`} onClick={onClose}>
           <LayoutDashboard size={18} /> <span>Dashboard Overview</span>
+        </Link>
+
+        <Link to="/messages" className={`nav-item ${isActive('/messages') ? 'active' : ''}`} onClick={onClose}>
+          <div style={{ position: 'relative' }}>
+            <MessageSquare size={18} />
+            {unreadCount > 0 && <div className="sidebar-unread-badge">{unreadCount}</div>}
+          </div>
+          <span>Messages Center</span>
         </Link>
         
         {(role === ROLES.OWNER || role === ROLES.MANAGER) && (

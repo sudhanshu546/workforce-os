@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import static com.workforce.os.common.util.MessageConstants.*;
+
 @RestController
 @RequestMapping("/api/v1/finance/expenses")
 @RequiredArgsConstructor
@@ -32,25 +34,25 @@ public class ExpenseController {
             request.getDescription(),
             request.getReceiptImageUrl()
         );
-        return ResponseEntity.ok(ApiResponse.success( enrichExpenseDTO(expense) , "Expense logged successfully"));
+        return ResponseEntity.ok(ApiResponse.success( enrichExpenseDTO(expense) , EXPENSE_LOGGED));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<Page<com.workforce.os.modules.finance.dto.ExpenseResponseDTO>>> getExpenses(Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.success( service.getTenantExpenses(pageable).map(this::enrichExpenseDTO) , "Expenses retrieved"));
+        return ResponseEntity.ok(ApiResponse.success( service.getTenantExpenses(pageable).map(this::enrichExpenseDTO) , EXPENSES_RETRIEVED));
     }
 
     @GetMapping("/worker/{workerId}")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER') or hasRole('WORKER')")
     public ResponseEntity<ApiResponse<Page<com.workforce.os.modules.finance.dto.ExpenseResponseDTO>>> getWorkerExpenses(@PathVariable Long workerId, Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.success( service.getWorkerExpenses(workerId, pageable).map(this::enrichExpenseDTO) , "Worker expenses retrieved"));
+        return ResponseEntity.ok(ApiResponse.success( service.getWorkerExpenses(workerId, pageable).map(this::enrichExpenseDTO) , WORKER_EXPENSES_RETRIEVED));
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<com.workforce.os.modules.finance.dto.ExpenseResponseDTO>> updateStatus(@PathVariable Long id, @RequestBody StatusRequest request) {
-        return ResponseEntity.ok(ApiResponse.success( enrichExpenseDTO(service.updateStatus(id, request.getStatus())) , "Expense status updated"));
+        return ResponseEntity.ok(ApiResponse.success( enrichExpenseDTO(service.updateStatus(id, request.getStatus())) , EXPENSE_STATUS_UPDATED));
     }
 
     private com.workforce.os.modules.finance.dto.ExpenseResponseDTO enrichExpenseDTO(Expense expense) {

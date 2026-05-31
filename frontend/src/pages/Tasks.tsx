@@ -4,7 +4,7 @@ import {
     CheckCircle2, Clock, MapPin, Phone, Loader2, ChevronRight,
     Camera, X, AlertCircle, PlayCircle, ClipboardList,
     CheckSquare, Send, Package, Tag, IndianRupee,
-    Navigation, MessageCircle, User
+    Navigation, MessageCircle, MessageSquare, User
 } from 'lucide-react';
 import api from '../services/api';
 import Modal from '../components/Modal';
@@ -382,22 +382,28 @@ const Tasks: React.FC = () => {
                                         <div className="stat-label" style={{ marginBottom: '4px' }}>CLIENT NAME & SERVICE</div>
                                         <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-h)' }}>{selectedTask.customer?.name}</h2>
                                         <div style={{ fontWeight: '700', color: 'var(--primary)', fontSize: '15px' }}>{selectedTask.serviceName}</div>
-                                        <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
-                                            <a href={selectedTask.status !== 'COMPLETED' ? `tel:${selectedTask.customer?.phone}` : '#'} className="contact-link-standard" style={{ opacity: selectedTask.status === 'COMPLETED' ? 0.5 : 1, pointerEvents: selectedTask.status === 'COMPLETED' ? 'none' : 'auto' }}><Phone size={14} /> Call Client</a>
+                                        <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                                            <a 
+                                                href={selectedTask.status !== 'COMPLETED' ? `tel:${selectedTask.customer?.phone}` : '#'} 
+                                                className="btn btn-secondary" 
+                                                style={{ padding: '10px 20px', fontSize: '13px', border: '1px solid var(--border)', background: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                onClick={(e) => selectedTask.status === 'COMPLETED' && e.preventDefault()}
+                                            >
+                                                <Phone size={16} /> Call
+                                            </a>
                                             <button 
                                                 onClick={handleNavigate} 
-                                                className="contact-link-standard" 
-                                                style={{ borderColor: 'var(--success)', color: 'var(--success)', opacity: selectedTask.status === 'COMPLETED' ? 0.5 : 1, pointerEvents: selectedTask.status === 'COMPLETED' ? 'none' : 'auto' }}
+                                                className="btn btn-secondary" 
+                                                style={{ padding: '10px 20px', fontSize: '13px', border: '1px solid var(--border)', background: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}
                                             >
-                                                <Navigation size={14} /> Navigate
+                                                <Navigation size={16} /> Navigate
                                             </button>
                                             <button 
                                                 onClick={() => { setCurrentChatId(`WO-${selectedTask.id}`); setIsChatOpen(true); }} 
-                                                className="contact-link-standard" 
-                                                style={{ borderColor: 'var(--primary)', color: 'var(--primary)', opacity: selectedTask.status === 'COMPLETED' ? 0.5 : 1 }}
-                                                disabled={selectedTask.status === 'COMPLETED'}
+                                                className="btn btn-primary" 
+                                                style={{ padding: '10px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
                                             >
-                                                <MessageCircle size={14} /> Message
+                                                <MessageSquare size={16} /> Chat
                                             </button>
                                         </div>
                                     </div>

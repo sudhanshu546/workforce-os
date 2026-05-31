@@ -73,9 +73,17 @@ public class FinanceService extends com.workforce.os.common.service.BaseService 
     }
 
     @Transactional(readOnly = true)
-    public Invoice getInvoiceByWorkOrderId(Long workOrderId) {
-        return invoiceRepository.findByWorkOrderId(workOrderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found for this work order"));
+    public Page<Payment> getPaymentsByWorker(Long workerId, Pageable pageable) {
+        return paymentRepository.findByCollectedByWorkerId(workerId, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Payment> getAllPayments(String method, String status, Pageable pageable) {
+        String tenantId = TenantContext.getCurrentTenant();
+        if (method == null && status == null) {
+            return paymentRepository.findAllByTenantId(tenantId, pageable);
+        }
+        return paymentRepository.findAllByTenantIdAndFilters(tenantId, method, status, pageable);
     }
 
     @Transactional

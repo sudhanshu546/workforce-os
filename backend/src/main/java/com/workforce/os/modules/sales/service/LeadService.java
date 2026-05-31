@@ -50,6 +50,8 @@ public class LeadService extends BaseService {
 
     private LeadResponseDTO enrichDTO(Lead lead) {
         LeadResponseDTO dto = leadMapper.toDTO(lead);
+        dto.setPreferredDate(lead.getPreferredDate());
+        dto.setPreferredTime(lead.getPreferredTime());
         quotationRepository.findByLeadId(lead.getId()).ifPresent(q -> {
             dto.setQuotationId(q.getId());
             workOrderRepository.findByQuotationId(q.getId()).ifPresent(wo -> {
@@ -69,7 +71,7 @@ public class LeadService extends BaseService {
     @CacheEvict(value = "leads", allEntries = true)
     public Lead createLead(String customerName, String customerPhone, String customerEmail,
                           Long organizationId, Long serviceItemId, Long customerAddressId,
-                          String description, String priority) {
+                          String description, String priority, java.time.LocalDate preferredDate, java.time.LocalTime preferredTime) {
         // Use email for lookup if provided, otherwise fallback to phone, scoped by tenant
         var customer = (customerEmail != null && !customerEmail.isEmpty())
             ? customerRepository.findByEmailAndTenantId(customerEmail, getTenantId())
@@ -105,6 +107,8 @@ public class LeadService extends BaseService {
         }
 
         lead.setDescription(description);
+        lead.setPreferredDate(preferredDate);
+        lead.setPreferredTime(preferredTime);
         lead.setPriority(priority != null ? priority : "MEDIUM");
         lead.setStatus(Lead.LeadStatus.NEW);
         lead.setTenantId(organization.getTenantId());

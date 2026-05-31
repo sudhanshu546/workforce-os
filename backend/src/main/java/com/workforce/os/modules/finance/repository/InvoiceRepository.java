@@ -32,7 +32,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
            "WHERE i.tenantId = :tenantId ORDER BY i.createdAt DESC")
     List<Invoice> findAllByTenantId(@Param("tenantId") String tenantId);
 
-    Page<Invoice> findAllByTenantId(String tenantId, Pageable pageable);
+    @Query("SELECT DISTINCT i FROM Invoice i " +
+           "LEFT JOIN FETCH i.items " +
+           "WHERE i.tenantId = :tenantId ORDER BY i.createdAt DESC")
+    Page<Invoice> findAllByTenantId(@Param("tenantId") String tenantId, Pageable pageable);
     
     Optional<Invoice> findByWorkOrderId(Long workOrderId);
     Optional<Invoice> findByInvoiceNumber(String invoiceNumber);

@@ -338,7 +338,7 @@ const OrderVerification: React.FC = () => {
                                             <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '700' }}>Authorized & Finalized</span>
                                         </div>
                                         <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text-h)' }}>
-                                            <IndianRupee size={20} /> {invoice ? invoice.total.toFixed(2) : (order.quotation?.total || 0).toFixed(2)}
+                                            <IndianRupee size={20} /> {invoice ? invoice.total.toFixed(2) : (order.quotation?.totalAmount || 0).toFixed(2)}
                                         </div>
                                     </div>
                                 </div>
