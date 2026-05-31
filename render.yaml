@@ -78,18 +78,6 @@ services:
       - key: APPLICATION_BASE_URL
         value: https://workforce-app.onrender.com # Update this with your actual Render URL
 
-  # 2. RabbitMQ (Private Service)
-  - type: private
-    name: workforce-rabbitmq
-    env: docker
-    dockerContext: .
-    dockerfilePath: Dockerfile.rabbitmq
-    plan: starter # Requires at least starter plan for Private Services
-    disk:
-      name: rabbitmq-data
-      mountPath: /var/lib/rabbitmq
-      sizeGB: 1
-
 # Redis is a first-class citizen in Render
 redis:
   - name: workforce-redis
