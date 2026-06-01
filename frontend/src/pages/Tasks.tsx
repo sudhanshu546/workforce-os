@@ -18,10 +18,25 @@ import { startLiveTracking, stopLiveTracking } from '../services/location';
 
 import { useSelector } from 'react-redux';
 import type { RootState } from '../redux/store';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 const Tasks: React.FC = () => {
     const showToast = useToast();
     const { workerId, role } = useSelector((state: RootState) => state.auth);
+
+    // Listen for Auto Clock-in events via WebSocket
+    useWebSocket(
+        workerId ? `/topic/worker/${workerId}/jobs` : '',
+        (message: string) => {
+            if (message.startsWith('JOB_STARTED:')) {
+                const woId = message.split(':')[1];
+                showToast(`Auto Clock-in: Work Order #D${Number(woId) + 1000} has been started based on your location.`, 'success');
+                fetchTasks(page);
+                fetchAttendanceStatus();
+            }
+        }
+    );
+
     const [tasks, setTasks] = useState<any[]>([]);
     // ... rest of state ...
     const [loading, setLoading] = useState(true);

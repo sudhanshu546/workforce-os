@@ -24,6 +24,13 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "work_orders")
+@NamedEntityGraph(
+    name = "WorkOrder.detail",
+    attributeNodes = {
+        @NamedAttributeNode("customer"),
+        @NamedAttributeNode("assignedWorker")
+    }
+)
 @Filter(name = "customerFilter", condition = "customer_id = :customerId")
 public class WorkOrder extends BaseEntity {
     @Id

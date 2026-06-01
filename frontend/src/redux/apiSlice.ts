@@ -25,10 +25,11 @@ const baseQueryWithReauth: BaseQueryFn<
   try {
     let result = await baseQuery(args, api, extraOptions);
     
-    if (result.error && result.error.status === 401) {
-      // Attempt to refresh the token
+    // Check for 401 OR the 500 error that might happen before backend fix is deployed
+    if (result.error && (result.error.status === 401 || result.error.status === 500)) {
       const refreshToken = localStorage.getItem('refreshToken');
       if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
+        // Use a separate baseQuery call for refresh to avoid infinite loops if refresh fails with 401
         const refreshResult = await baseQuery(
           {
             url: '/auth/refresh',
@@ -41,26 +42,29 @@ const baseQueryWithReauth: BaseQueryFn<
         );
 
         if (refreshResult.data) {
-          // We got a new token!
           const data = (refreshResult.data as any).data || refreshResult.data;
           const newAccessToken = data.access_token || data.accessToken;
           const newRefreshToken = data.refresh_token || data.refreshToken;
 
           if (newAccessToken && newRefreshToken) {
             api.dispatch(updateToken({ accessToken: newAccessToken, refreshToken: newRefreshToken }));
-            // Retry the original request
+            // Retry the original request with new token
             result = await baseQuery(args, api, extraOptions);
           } else {
             api.dispatch(logout());
           }
         } else {
+          // Refresh failed
           api.dispatch(logout());
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+            window.location.href = '/login?expired=true';
           }
         }
       } else {
-        api.dispatch(logout());
+        // No refresh token available
+        if (result.error.status === 401) {
+            api.dispatch(logout());
+        }
       }
     }
 

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Briefcase, Zap, Award, Navigation, ShieldCheck, Users, Loader2, ChevronRight } from 'lucide-react';
+import { Briefcase, Zap, Award, Navigation, ShieldCheck, Users, Loader2, ChevronRight, Cpu } from 'lucide-react';
 import Modal from './Modal';
 import api from '../services/api';
-import { useAssignWorkerMutation, useLazyGetRecommendationsQuery } from '../redux/ordersApi';
+import { useAssignWorkerMutation, useLazyGetRecommendationsQuery, useAutoDispatchMutation } from '../redux/ordersApi';
+import { useToast } from './ToastProvider';
 
 interface DispatchModalProps {
   isOpen: boolean;
@@ -13,18 +14,32 @@ interface DispatchModalProps {
 }
 
 const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, onClose, selectedWO, workers, onAssigned }) => {
+  const showToast = useToast();
   const [triggerRecommendations, { data: recommendations = [], isLoading: loadingRecs }] = useLazyGetRecommendationsQuery();
   const [assignWorker, { isLoading: assigning }] = useAssignWorkerMutation();
+  const [autoDispatch, { isLoading: isAutoDispatching }] = useAutoDispatchMutation();
 
   if (!selectedWO) return null;
 
   const handleAssign = async (workerId: number) => {
     try {
       await assignWorker({ workOrderId: selectedWO.id, workerId }).unwrap();
+      showToast('Technician assigned successfully', 'success');
       onAssigned();
       onClose();
-    } catch (err) {
-      console.error('Failed to assign worker:', err);
+    } catch (err: any) {
+      showToast(err.data?.message || 'Assignment failed', 'error');
+    }
+  };
+
+  const handleAutoDispatch = async () => {
+    try {
+        const result = await autoDispatch(selectedWO.id).unwrap();
+        showToast(`AI Auto-Dispatched to ${result.name} (Match Score: ${(result.matchScore * 100).toFixed(0)}%)`, 'success');
+        onAssigned();
+        onClose();
+    } catch (err: any) {
+        showToast(err.data?.message || 'Auto-dispatch failed', 'error');
     }
   };
 
@@ -39,10 +54,35 @@ const DispatchModal: React.FC<DispatchModalProps> = ({ isOpen, onClose, selected
               <div className="dispatch-service-name"><Briefcase size={14} /> {selectedWO.serviceName}</div>
             </div>
           </div>
-          <button className="btn-smart-dispatch" onClick={() => triggerRecommendations(selectedWO.id)} disabled={loadingRecs}>
-            {loadingRecs ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} fill="currentColor" />}
-            {loadingRecs ? 'Analyzing...' : 'Smart Suggest'}
-          </button>
+          
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button className="btn-smart-dispatch" onClick={() => triggerRecommendations(selectedWO.id)} disabled={loadingRecs}>
+              {loadingRecs ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} fill="currentColor" />}
+              {loadingRecs ? 'Analyzing...' : 'Smart Suggest'}
+            </button>
+
+            <button 
+                className="btn-auto-dispatch" 
+                onClick={handleAutoDispatch} 
+                disabled={isAutoDispatching}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '0 20px',
+                    borderRadius: '12px',
+                    background: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                }}
+            >
+              {isAutoDispatching ? <Loader2 className="animate-spin" size={18} /> : <Cpu size={18} />}
+              {isAutoDispatching ? 'Dispatching...' : 'AI Auto-Dispatch'}
+            </button>
+          </div>
         </div>
 
         {recommendations.length > 0 && (

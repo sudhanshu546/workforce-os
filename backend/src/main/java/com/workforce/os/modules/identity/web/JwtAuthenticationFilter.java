@@ -9,6 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +23,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -49,29 +51,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        userEmail = jwtService.extractUsername(jwt);
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-            if (jwtService.isTokenValid(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+        try {
+            userEmail = jwtService.extractUsername(jwt);
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                // Set Tenant and Customer Context
-                if (userDetails instanceof com.workforce.os.modules.identity.domain.User user) {
-                    TenantContext.setCurrentTenant(user.getTenantId());
-                } else if (userDetails instanceof com.workforce.os.modules.customer.domain.Customer customer) {
-                    TenantContext.setCurrentTenant(customer.getTenantId());
-                    TenantContext.setCurrentCustomer(customer.getId());
+                    // Set Tenant and Customer Context
+                    if (userDetails instanceof com.workforce.os.modules.identity.domain.User user) {
+                        TenantContext.setCurrentTenant(user.getTenantId());
+                    } else if (userDetails instanceof com.workforce.os.modules.customer.domain.Customer customer) {
+                        TenantContext.setCurrentTenant(customer.getTenantId());
+                        TenantContext.setCurrentCustomer(customer.getId());
+                    }
                 }
             }
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            log.info("JWT expired for request: {}", request.getRequestURI());
+        } catch (Exception e) {
+            log.error("JWT authentication failed: {}", e.getMessage());
         }
+
         try {
             filterChain.doFilter(request, response);
         } finally {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { Palette, Upload, Loader2, Save, Building, Image as ImageIcon } from 'lucide-react';
+import { Palette, Upload, Loader2, Save, Building, Image as ImageIcon, Receipt, Plus, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import { useToast } from '../components/ToastProvider';
+import { useGetTaxConfigsQuery, useSaveTaxConfigMutation } from '../redux/taxApi';
 
 const Settings: React.FC = () => {
     const showToast = useToast();
@@ -13,6 +14,11 @@ const Settings: React.FC = () => {
         primaryColor: '#4f46e5',
         secondaryColor: '#4338ca'
     });
+
+    // Tax Engine State
+    const { data: taxConfigs = [], refetch: refetchTaxes } = useGetTaxConfigsQuery();
+    const [saveTax] = useSaveTaxConfigMutation();
+    const [newTax, setNewTax] = useState({ name: '', rate: 0, region: 'DEFAULT', isDefault: false });
 
     useEffect(() => {
         fetchBranding();
@@ -64,7 +70,6 @@ const Settings: React.FC = () => {
             const res: any = await api.post('/files/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            // Construct full URL if needed, assuming backend returns filename
             const url = `${import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')}/uploads/${res.fileName || res}`;
             setBranding({ ...branding, logoUrl: url });
         } catch (err) {
@@ -149,6 +154,65 @@ const Settings: React.FC = () => {
                                                 style={{ flex: 1, fontFamily: 'monospace' }}
                                             />
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="settings-section" style={{ borderTop: '1px solid var(--border-light)', paddingTop: '32px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                                <Receipt className="text-primary" size={20} />
+                                <h3 style={{ fontWeight: '800' }}>Tax Engine & Compliance</h3>
+                            </div>
+
+                            <div className="tax-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                <div className="tax-list">
+                                    {Array.isArray(taxConfigs) && taxConfigs.map((tax: any) => (
+                                        <div key={tax.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: 'var(--surface-muted)', borderRadius: '12px', marginBottom: '12px' }}>
+                                            <div>
+                                                <div style={{ fontWeight: '800' }}>{tax.name} {tax.isDefault && <span className="badge badge-primary" style={{ fontSize: '9px', marginLeft: '8px' }}>DEFAULT</span>}</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Region: {tax.region}</div>
+                                            </div>
+                                            <div style={{ fontWeight: '900', fontSize: '18px', color: 'var(--primary)' }}>{tax.rate}%</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="add-tax-form" style={{ padding: '24px', border: '2px dashed var(--border)', borderRadius: '16px' }}>
+                                    <h4 style={{ fontWeight: '800', marginBottom: '16px', fontSize: '14px' }}>Add New Tax Zone</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '12px', alignItems: 'end' }}>
+                                        <div>
+                                            <label className="form-label">Tax Type</label>
+                                            <select className="input-field" value={newTax.name} onChange={e => setNewTax({...newTax, name: e.target.value})}>
+                                                <option value="">Select Type</option>
+                                                <option value="GST">GST</option>
+                                                <option value="VAT">VAT</option>
+                                                <option value="Sales Tax">Sales Tax</option>
+                                                <option value="Service Tax">Service Tax</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="form-label">Rate (%)</label>
+                                            <input type="number" className="input-field" value={newTax.rate} onChange={e => setNewTax({...newTax, rate: Number(e.target.value)})} />
+                                        </div>
+                                        <div>
+                                            <label className="form-label">Region/State</label>
+                                            <input type="text" className="input-field" placeholder="DEFAULT" value={newTax.region} onChange={e => setNewTax({...newTax, region: e.target.value})} />
+                                        </div>
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-primary" 
+                                            style={{ height: '44px' }}
+                                            onClick={async () => {
+                                                try {
+                                                    await saveTax(newTax).unwrap();
+                                                    showToast('Tax zone added', 'success');
+                                                    setNewTax({ name: '', rate: 0, region: 'DEFAULT', isDefault: false });
+                                                } catch (e) { showToast('Failed to add tax', 'error'); }
+                                            }}
+                                        >
+                                            <Plus size={18} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>

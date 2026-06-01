@@ -14,16 +14,16 @@ import java.util.Optional;
 @Repository
 public interface WorkerProfileRepository extends JpaRepository<WorkerProfile, Long> {
     List<WorkerProfile> findBySupportedServices_Id(Long serviceId);
-    @EntityGraph(attributePaths = {"skills", "user"})
+    @EntityGraph(value = "WorkerProfile.detail", type = EntityGraph.EntityGraphType.LOAD)
     List<WorkerProfile> findAllByTenantId(String tenantId);
 
-    @EntityGraph(attributePaths = {"skills", "user"})
+    @EntityGraph(value = "WorkerProfile.detail", type = EntityGraph.EntityGraphType.LOAD)
     @Nullable Page<WorkerProfile> findByTenantId(String currentTenant, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"skills", "user"})
+    @EntityGraph(value = "WorkerProfile.detail", type = EntityGraph.EntityGraphType.LOAD)
     Optional<WorkerProfile> findByUserEmail(String email);
 
-    @EntityGraph(attributePaths = {"skills", "user"})
+    @EntityGraph(value = "WorkerProfile.detail", type = EntityGraph.EntityGraphType.LOAD)
     Optional<WorkerProfile> findByIdAndTenantId(Long id, String tenantId);
 
     long countByTenantId(String tenantId);

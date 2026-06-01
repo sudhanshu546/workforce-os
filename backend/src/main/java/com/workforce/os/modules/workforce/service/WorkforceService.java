@@ -6,6 +6,7 @@ import com.workforce.os.common.exception.ResourceNotFoundException;
 import com.workforce.os.modules.identity.domain.User;
 import com.workforce.os.modules.identity.repository.RoleRepository;
 import com.workforce.os.modules.identity.repository.UserRepository;
+import com.workforce.os.modules.operations.service.WorkOrderService;
 import com.workforce.os.modules.organization.repository.BranchRepository;
 import com.workforce.os.modules.organization.repository.OrganizationRepository;
 import com.workforce.os.modules.operations.domain.WorkOrder;
@@ -19,8 +20,10 @@ import com.workforce.os.modules.workforce.repository.WorkerProfileRepository;
 import com.workforce.os.modules.workforce.repository.WorkerSkillRepository;
 import com.workforce.os.modules.workforce.dto.WorkerOnboardingRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +36,7 @@ import static com.workforce.os.common.util.MessageConstants.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WorkforceService extends BaseService {
     private final WorkerProfileRepository workerProfileRepository;
     private final WorkerSkillRepository workerSkillRepository;
@@ -44,6 +48,7 @@ public class WorkforceService extends BaseService {
     private final WorkerMapper workerMapper;
     private final com.workforce.os.modules.workforce.repository.WorkerLocationRepository workerLocationRepository;
     private final WorkOrderRepository workOrderRepository;
+    private final @Lazy WorkOrderService workOrderService;
 
     public List<WorkerProfileDTO> getAvailableWorkers() {
         String tenantId = getTenantId();
@@ -75,6 +80,50 @@ public class WorkforceService extends BaseService {
                 .build();
         // tenantId is set by listener
         workerLocationRepository.save(location);
+
+        // Auto Clock-in Logic: Automatically start job if worker is within 150m of assigned today's job
+        if (lat != null && lon != null && "ACTIVE".equals(status)) {
+            checkAndAutoClockIn(workerId, lat, lon);
+        }
+    }
+
+    private void checkAndAutoClockIn(Long workerId, Double lat, Double lon) {
+        String tenantId = getTenantId();
+        // Find assigned jobs for today
+        List<WorkOrder> assignedJobs = workOrderRepository.findByTenantIdAndStatus(tenantId, com.workforce.os.modules.operations.domain.WorkOrder.WorkOrderStatus.ASSIGNED)
+                .stream()
+                .filter(wo -> wo.getAssignedWorker() != null && wo.getAssignedWorker().getId().equals(workerId))
+                .filter(wo -> wo.getScheduledDate().equals(java.time.LocalDate.now()))
+                .toList();
+
+        for (WorkOrder wo : assignedJobs) {
+            if (wo.getServiceAddress() != null && wo.getServiceAddress().getLatitude() != null) {
+                double distance = calculateDistance(lat, lon, wo.getServiceAddress().getLatitude(), wo.getServiceAddress().getLongitude());
+                if (distance < 150) { // 150 meters radius for auto clock-in
+                    log.info("Auto-starting Work Order {} for worker {} due to geofence entry", wo.getId(), workerId);
+                    try {
+                        workOrderService.startWorkOrder(wo.getId(), lat, lon);
+                    } catch (Exception e) {
+                        log.warn("Auto clock-in failed for Work Order {}: {}", wo.getId(), e.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371000.0; // Earth radius in meters
+        double phi1 = Math.toRadians(lat1);
+        double phi2 = Math.toRadians(lat2);
+        double dPhi = Math.toRadians(lat2 - lat1);
+        double dLambda = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(dPhi / 2) * Math.sin(dPhi / 2) +
+                   Math.cos(phi1) * Math.cos(phi2) *
+                   Math.sin(dLambda / 2) * Math.sin(dLambda / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
     }
 
     @Cacheable(value = "workers", key = "T(com.workforce.os.common.context.TenantContext).getCurrentTenant() + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")

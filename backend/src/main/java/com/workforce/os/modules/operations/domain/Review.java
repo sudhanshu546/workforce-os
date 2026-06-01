@@ -35,4 +35,11 @@ public class Review extends BaseEntity {
 
     @Column(length = 1000)
     private String comment;
+
+    private Double sentimentScore; // -1.0 (Very Negative) to 1.0 (Very Positive)
+
+    @ElementCollection
+    @CollectionTable(name = "review_issues", joinColumns = @JoinColumn(name = "review_id"))
+    @Column(name = "issue_key")
+    private java.util.Set<String> identifiedIssues = new java.util.HashSet<>();
 }

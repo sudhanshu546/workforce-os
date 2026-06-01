@@ -1,6 +1,7 @@
 package com.workforce.os.modules.finance.repository;
 
 import com.workforce.os.modules.finance.domain.Invoice;
+import com.workforce.os.modules.finance.dto.InvoiceSummaryProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,6 +37,10 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
            "LEFT JOIN FETCH i.items " +
            "WHERE i.tenantId = :tenantId ORDER BY i.createdAt DESC")
     Page<Invoice> findAllByTenantId(@Param("tenantId") String tenantId, Pageable pageable);
+
+    @Query("SELECT i.id AS id, i.invoiceNumber AS invoiceNumber, i.total AS total, i.status AS status, c.name AS customerName " +
+           "FROM Invoice i JOIN i.customer c WHERE i.tenantId = :tenantId ORDER BY i.createdAt DESC")
+    Page<InvoiceSummaryProjection> findAllSummariesByTenantId(@Param("tenantId") String tenantId, Pageable pageable);
     
     Optional<Invoice> findByWorkOrderId(Long workOrderId);
     Optional<Invoice> findByInvoiceNumber(String invoiceNumber);

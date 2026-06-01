@@ -8,6 +8,7 @@ import com.workforce.os.common.dto.ApiResponse;
 import com.workforce.os.common.util.MessageConstants;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,7 +19,7 @@ import static com.workforce.os.common.util.MessageConstants.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 public class AuthController {
 
     private final AuthService service;

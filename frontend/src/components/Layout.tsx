@@ -65,8 +65,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           border: '1px solid var(--border)',
           animation: 'fadeInUp 0.3s ease-out'
         }}>
-          <LoadingSpinner size={16} />
-          <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-h)' }}>Synchronizing...</span>
+          {/* <LoadingSpinner size={16} />
+          <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-h)' }}>Synchronizing...</span> */}
           {showDismiss && (
             <button 
               onClick={() => dispatch(forceResetLoading())}

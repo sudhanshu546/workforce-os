@@ -217,6 +217,7 @@ const WorkOrders: React.FC = () => {
                             <button onClick={() => { setSelectedWO(wo); setIsAssignModalOpen(true); }} className="btn btn-primary" style={{ width: '100%', height: '48px', fontSize: '15px' }}><UserPlus size={18} /> Assign Dispatch</button>
                         )}
                         {wo.status === 'IN_PROGRESS' && (
+
                             <button 
                                 onClick={() => {
                                     const trackingUrl = `${window.location.origin}/track/${wo.id}`;

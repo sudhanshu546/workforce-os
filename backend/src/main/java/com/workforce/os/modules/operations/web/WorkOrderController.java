@@ -13,6 +13,7 @@ import com.workforce.os.modules.operations.service.WorkOrderService;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,7 @@ import com.workforce.os.modules.operations.dto.WorkerRecommendation;
 @RestController
 @RequestMapping("/api/v1/work-orders")
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 public class WorkOrderController {
     private final WorkOrderService workOrderService;
     private final WorkOrderRepository workOrderRepository;
@@ -51,6 +52,14 @@ public class WorkOrderController {
             dispatchService.getSmartRecommendations(id),
             RECOMMENDATIONS_RETRIEVED
         ));
+    }
+
+    @PostMapping("/{id}/auto-dispatch")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<WorkerRecommendation>> autoDispatch(@PathVariable Long id) {
+        log.info("Triggering AI Auto-Dispatch for work order: {}", id);
+        WorkerRecommendation topMatch = dispatchService.autoDispatch(id);
+        return ResponseEntity.ok(ApiResponse.success(topMatch, WORKER_ASSIGNED));
     }
 
     @GetMapping("/live-ops")

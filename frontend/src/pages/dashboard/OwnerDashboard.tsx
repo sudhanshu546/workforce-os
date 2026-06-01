@@ -2,18 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Briefcase, Users, IndianRupee, 
   ChevronRight, Package, Navigation, Calendar, Activity,
-  ArrowUpRight, AlertCircle
+  ArrowUpRight, AlertCircle, Trophy, Star, Target, ShieldCheck, Zap, Heart, AlertTriangle, MessageSquareHeart 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { ExpandableRowTable } from '../../components/ExpandableRowTable';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import './Dashboard.css';
-
+import { useGetLeaderboardQuery } from '../../redux/gamificationApi';
+import { useGetSentimentInsightsQuery } from '../../redux/reviewsApi';
 import { API_ENDPOINTS } from '../../utils/constants';
 
 const OwnerDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { data: leaderboard = [], isLoading: leaderLoading } = useGetLeaderboardQuery();
+  const { data: sentimentData } = useGetSentimentInsightsQuery();
+  const pulse = sentimentData?.data || sentimentData;
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [lowStockMaterials, setLowStockMaterials] = useState<any[]>([]);
@@ -166,6 +170,82 @@ const OwnerDashboard: React.FC = () => {
         <div className="content-card">
           <div className="card-header-flex">
             <div>
+              <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-h)' }}>Top Field Experts</h2>
+              <p className="text-muted">High-performance leaderboard.</p>
+            </div>
+            <Trophy size={24} className="text-warning" />
+          </div>
+
+          <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+             {leaderboard.slice(0, 3).map((entry: any, index: number) => (
+                <div key={entry.id} className="expert-mini-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'white', border: '1px solid var(--border-light)', borderRadius: '14px' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div className={`rank-dot rank-${index + 1}`} style={{ width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 900, color: 'white', background: index === 0 ? '#fbbf24' : (index === 1 ? '#94a3b8' : '#92400e') }}>{index + 1}</div>
+                      <div>
+                        <div style={{ fontWeight: '800', fontSize: '14px' }}>{entry.worker.user.name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{entry.worker.designation}</div>
+                      </div>
+                   </div>
+                   <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: '900', color: 'var(--primary)', fontSize: '14px' }}>{entry.totalPoints} PTS</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#eab308', fontWeight: '700' }}>
+                         <Star size={10} fill="currentColor" /> {entry.averageRating.toFixed(1)}
+                      </div>
+                   </div>
+                </div>
+             ))}
+             <button className="btn btn-secondary" style={{ marginTop: '8px', width: '100%', height: '48px' }} onClick={() => navigate('/leaderboard')}>
+                Full Rankings Center
+             </button>
+          </div>
+        </div>
+
+        <div className="content-card">
+          <div className="card-header-flex">
+            <div>
+              <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-h)' }}>Customer Pulse</h2>
+              <p className="text-muted">AI-driven sentiment insights.</p>
+            </div>
+            <MessageSquareHeart size={24} className="text-primary" />
+          </div>
+
+          <div style={{ marginTop: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '32px' }}>
+                <div className="sentiment-meter" style={{ width: '40px', height: '100px', background: 'var(--surface-muted)', borderRadius: '20px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <div className="meter-value" style={{ width: '100%', background: 'var(--primary)', transition: 'height 0.5s cubic-bezier(0.16, 1, 0.3, 1)', height: `${((pulse?.overallSentimentScore || 0) + 1) * 50}%` }} />
+                    <Heart size={20} className="meter-icon" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', mixBlendMode: 'overlay' }} />
+                </div>
+                <div>
+                    <div style={{ fontSize: '28px', fontWeight: '900' }}>{((pulse?.overallSentimentScore || 0) * 100).toFixed(0)}%</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)' }}>Net Satisfaction Score</div>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {pulse?.issueDistribution && Object.entries(pulse.issueDistribution).map(([issue, count]: any) => (
+                    <div key={issue} className="issue-alert-card" style={{ padding: '12px 16px', background: '#fff7ed', border: '1px solid #ffedd5', borderRadius: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div className="issue-icon-wrapper" style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#ea580c', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertTriangle size={14} /></div>
+                            <div>
+                                <div style={{ fontWeight: '800', fontSize: '13px', textTransform: 'uppercase' }}>{issue}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Flagged in {count} reviews</div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                
+                {(!pulse?.issueDistribution || Object.keys(pulse.issueDistribution).length === 0) && (
+                    <div style={{ textAlign: 'center', padding: '24px', background: 'var(--surface-muted)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                        <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)' }}>No critical service issues detected.</p>
+                    </div>
+                )}
+            </div>
+          </div>
+        </div>
+
+        <div className="content-card">
+          <div className="card-header-flex">
+            <div>
               <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-h)' }}>Inventory Pulse</h2>
               <p className="text-muted">Stock level monitoring.</p>
             </div>
@@ -228,6 +308,11 @@ const OwnerDashboard: React.FC = () => {
         .alert-banner-error { background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; padding: 14px 18px; border-radius: 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; }
         .inventory-list-item { display: flex; justify-content: space-between; align-items: center; padding: 20px; background: white; border: 1.5px solid var(--border-light); border-radius: 16px; transition: all 0.2s; }
         .inventory-list-item:hover { border-color: var(--error); transform: translateX(4px); background: #fffafb; }
+        .sentiment-meter { width: 40px; height: 100px; background: var(--surface-muted); border-radius: 20px; position: relative; overflow: hidden; display: flex; align-items: flex-end; }
+        .meter-value { width: 100%; background: var(--primary); transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .meter-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; mix-blend-mode: overlay; }
+        .issue-alert-card { padding: 12px 16px; background: #fff7ed; border: 1px solid #ffedd5; border-radius: 12px; }
+        .issue-icon-wrapper { width: 28px; height: 28px; border-radius: 8px; background: #ea580c; color: white; display: flex; align-items: center; justify-content: center; }
       `}</style>
     </div>
   );

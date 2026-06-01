@@ -1,5 +1,6 @@
 package com.workforce.os.modules.operations.service;
 
+import com.workforce.os.common.annotation.AuditLog;
 import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.common.exception.BusinessException;
 import com.workforce.os.common.exception.ResourceNotFoundException;
@@ -58,6 +59,7 @@ public class WorkOrderService extends BaseService {
     private final WorkOrderMaterialRepository workOrderMaterialRepository;
     private final CustomerAddressRepository addressRepository;
     private final OrganizationRepository organizationRepository;
+    private final com.workforce.os.modules.workforce.service.GamificationService gamificationService;
 
     @Transactional(readOnly = true)
     public List<LiveOpsMarker> getLiveOpsMarkers() {
@@ -131,11 +133,17 @@ public class WorkOrderService extends BaseService {
     }
 
     @Transactional
+    @AuditLog("Assigning worker to job")
     public WorkOrder assignWorker(Long workOrderId, Long workerId) {
         WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
+
+        // Prevent re-assigning completed orders
+        if (workOrder.getStatus() == WorkOrder.WorkOrderStatus.COMPLETED) {
+            throw new BusinessException("Cannot assign worker to a completed work order");
+        }
+
         WorkerProfile worker = workerProfileRepository.findById(workerId)
             .orElseThrow(() -> new ResourceNotFoundException(WORKER_NOT_FOUND));
-        
         // Ensure worker belongs to the same tenant
         if (!worker.getTenantId().equals(TenantContext.getCurrentTenant())) {
             throw new BusinessException(UNAUTHORIZED);
@@ -155,6 +163,7 @@ public class WorkOrderService extends BaseService {
     }
 
     @Transactional
+    @AuditLog("Starting work order on-site")
     public WorkOrder startWorkOrder(Long workOrderId, Double lat, Double lon) {
         WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
 
@@ -170,6 +179,10 @@ public class WorkOrderService extends BaseService {
 
         messagingTemplate.convertAndSend(WS_TOPIC_ORDER_PREFIX + workOrder.getCustomer().getId(),
             String.format(WS_MSG_JOB_STARTED, (workOrder.getId() + 1000)));
+        
+        // Notify Worker as well
+        messagingTemplate.convertAndSend("/topic/worker/" + workOrder.getAssignedWorker().getId() + "/jobs", 
+            "JOB_STARTED:" + workOrder.getId());
 
         WorkOrder saved = workOrderRepository.save(workOrder);
         createAudit(saved, fromStatus, saved.getStatus().name(), lat, lon, AUDIT_BY_WORKER, "Job started on-site");
@@ -181,6 +194,7 @@ public class WorkOrderService extends BaseService {
 
 
     @Transactional
+    @AuditLog("Submitting job for verification")
     public WorkOrder submitForVerification(Long workOrderId, Double lat, Double lon) {
         WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
 
@@ -210,6 +224,7 @@ public class WorkOrderService extends BaseService {
     }
 
     @Transactional
+    @AuditLog("Verifying work order and queueing invoice")
     public WorkOrder verifyWorkOrder(Long workOrderId) {
         WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
             
@@ -233,6 +248,8 @@ public class WorkOrderService extends BaseService {
         createAudit(saved, fromStatus, saved.getStatus().name(), null, null, AUDIT_BY_CUSTOMER, "Work verified. Invoice generation queued.");
 
         notificationService.notifyJobVerified(saved);
+        notificationService.notifyManagementOfJobCompletion(saved);
+        gamificationService.awardPointsForCompletion(saved);
         return saved;
     }
 
@@ -357,6 +374,7 @@ public class WorkOrderService extends BaseService {
     }
 
     @Transactional
+    @AuditLog("Adding material usage to order")
     public void addMaterialUsage(Long workOrderId, Long materialId, Double quantity) {
         WorkOrder workOrder = getWorkOrderSecurely(workOrderId);
         if (workOrder.getStatus() == WorkOrder.WorkOrderStatus.COMPLETED) {

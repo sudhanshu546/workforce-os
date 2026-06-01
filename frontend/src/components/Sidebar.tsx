@@ -3,7 +3,7 @@ import {
   Users, Briefcase, Clock, LayoutDashboard, 
   UserCircle, FileText, Settings, LogOut, HardHat, CheckSquare,
   MapPin, Tag, X, Receipt, Package, TrendingUp, Calendar as CalendarIcon, Map,
-  IndianRupee, MessageSquare, Wallet
+  IndianRupee, MessageSquare, Wallet, Trophy
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SockJS from 'sockjs-client';
@@ -96,6 +96,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             {unreadCount > 0 && <div className="sidebar-unread-badge">{unreadCount}</div>}
           </div>
           <span>Messages Center</span>
+        </Link>
+
+        <Link to="/leaderboard" className={`nav-item ${isActive('/leaderboard') ? 'active' : ''}`} onClick={onClose}>
+          <Trophy size={18} /> <span>Leaderboard</span>
         </Link>
         
         {(role === ROLES.OWNER || role === ROLES.MANAGER) && (

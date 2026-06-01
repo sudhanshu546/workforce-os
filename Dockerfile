@@ -1,32 +1,29 @@
 # Stage 1: Build Frontend
 FROM node:22-alpine AS frontend-build
 WORKDIR /app/frontend
-ARG VITE_API_BASE_URL=/api/v1
-ARG VITE_RAZORPAY_KEY_ID
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_RAZORPAY_KEY_ID=$VITE_RAZORPAY_KEY_ID
 COPY frontend/package*.json ./
-RUN npm install
+# Cache-friendly install
+RUN npm ci --quiet
 COPY frontend/ ./
 RUN npm run build
 
-# Stage 2: Build Backend & Bundle
+# Stage 2: Build Backend
 FROM maven:3.9-eclipse-temurin-17 AS backend-build
 WORKDIR /app
+# Cache Maven dependencies
 COPY backend/pom.xml .
-# Copy backend source
+RUN mvn dependency:go-offline -B
 COPY backend/src ./src
-# Copy built frontend into the expected static resource location
 COPY --from=frontend-build /app/frontend/dist ./src/main/resources/static
-RUN mvn clean package -Dmaven.test.skip=true
+RUN mvn clean package -Dmaven.test.skip=true -B
 
 # Stage 3: Runtime
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=backend-build /app/target/*.jar app.jar
 
-# Production JVM settings
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
+# Aggressive memory settings for Render Free Tier (512MB)
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=65.0 -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

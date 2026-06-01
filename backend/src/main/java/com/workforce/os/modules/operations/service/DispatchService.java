@@ -29,6 +29,23 @@ public class DispatchService {
     private final WorkerProfileRepository workerProfileRepository;
     private final WorkerLocationRepository workerLocationRepository;
     private final WorkOrderRepository workOrderRepository;
+    private final WorkOrderService workOrderService;
+
+    @Transactional
+    public WorkerRecommendation autoDispatch(Long workOrderId) {
+        List<WorkerRecommendation> recommendations = getSmartRecommendations(workOrderId);
+        if (recommendations.isEmpty()) {
+            throw new com.workforce.os.common.exception.BusinessException("No available workers found for auto-dispatch");
+        }
+
+        // Select the top-ranked worker
+        WorkerRecommendation topMatch = recommendations.get(0);
+        
+        // Perform the assignment using existing service logic (which handles notifications, audits, etc.)
+        workOrderService.assignWorker(workOrderId, topMatch.getWorkerId());
+
+        return topMatch;
+    }
 
     @Transactional(readOnly = true)
     public List<WorkerRecommendation> getSmartRecommendations(Long workOrderId) {

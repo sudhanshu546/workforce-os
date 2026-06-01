@@ -32,6 +32,7 @@ public class GupshupMessagingService implements MessagingService {
     private Instant tokenExpiry;
 
     @Override
+    @io.github.resilience4j.bulkhead.annotation.Bulkhead(name = "gupshupService")
     public void sendMessage(String to, String message) {
         String token = getAccessToken();
         if (token == null) {

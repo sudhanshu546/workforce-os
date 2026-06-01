@@ -23,6 +23,16 @@ export const ordersApi = apiSlice.injectEndpoints({
     getRecommendations: builder.query<any[], number>({
       query: (woId) => `/work-orders/${woId}/recommendations`,
     }),
+    autoDispatch: builder.mutation<any, number>({
+      query: (woId) => ({
+        url: `/work-orders/${woId}/auto-dispatch`,
+        method: 'POST',
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: 'WorkOrder', id },
+        { type: 'WorkOrder', id: 'LIST' }
+      ],
+    }),
   }),
 });
 
@@ -31,4 +41,5 @@ export const {
   useAssignWorkerMutation,
   useGetRecommendationsQuery,
   useLazyGetRecommendationsQuery,
+  useAutoDispatchMutation,
 } = ordersApi;

@@ -10,6 +10,8 @@ import api from '../../services/api';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { useToast } from '../../components/ToastProvider';
 import './Dashboard.css';
+import { useGetWorkerStatsQuery } from '../../redux/gamificationApi';
+import { Trophy, Star, Target, ShieldCheck, Zap } from 'lucide-react';
 
 import { API_ENDPOINTS, STORAGE_KEYS } from '../../utils/constants';
 
@@ -17,6 +19,17 @@ const WorkerDashboard: React.FC = () => {
   const showToast = useToast();
   const navigate = useNavigate();
   const { user, workerId } = useSelector((state: any) => state.auth);
+  const { data: gamificationData } = useGetWorkerStatsQuery(Number(workerId), { skip: !workerId });
+  const gameStats = gamificationData?.data || gamificationData;
+
+  const getBadgeIcon = (key: string) => {
+    switch (key) {
+        case 'MILESTONE_10': return <Target size={20} className="text-primary" />;
+        case 'FIVE_STAR_PRO': return <Star size={20} className="text-warning" />;
+        case 'ELITE_WORKER': return <ShieldCheck size={20} className="text-success" />;
+        default: return <Zap size={20} />;
+    }
+  };
 
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
@@ -110,10 +123,10 @@ const WorkerDashboard: React.FC = () => {
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700' }}>Tracking started at {stats?.clockInTime || '--:--'}</div>
         </div>
         <div className="stat-card-modern">
-          <div className="stat-icon-wrapper" style={{ background: '#f5f3ff', color: '#7c3aed' }}><Wallet size={24} /></div>
-          <div className="stat-label-modern">Monthly Earnings</div>
-          <div className="stat-value-large">₹{stats?.earningsThisMonth?.toLocaleString() || 0}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700' }}>Based on verified work</div>
+          <div className="stat-icon-wrapper" style={{ background: '#fefce8', color: '#eab308' }}><Star size={24} fill="#eab308" /></div>
+          <div className="stat-label-modern">Avg. Rating</div>
+          <div className="stat-value-large">{gameStats?.averageRating?.toFixed(1) || '0.0'} / 5.0</div>
+          <div style={{ fontSize: '12px', color: '#eab308', fontWeight: '700' }}>Based on client reviews</div>
         </div>
       </div>
 
@@ -154,6 +167,35 @@ const WorkerDashboard: React.FC = () => {
         </div>
 
         <div className="content-card" style={{ background: '#f8fafc' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Performance Badges</h2>
+            <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }} onClick={() => navigate('/leaderboard')}>
+              Leaderboard <Trophy size={14} />
+            </button>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
+             {gameStats?.badges?.length > 0 ? gameStats.badges.map((b: string) => (
+                <div key={b} className="badge-showcase-item" style={{ background: 'white', padding: '16px', borderRadius: '16px', display: 'flex', justifyContent: 'center', boxShadow: 'var(--shadow-sm)' }}>
+                    {getBadgeIcon(b)}
+                </div>
+             )) : (
+                <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: '20px', background: 'white', borderRadius: '16px', opacity: 0.5 }}>
+                    <p style={{ fontSize: '12px', fontWeight: '700' }}>Complete jobs to earn badges!</p>
+                </div>
+             )}
+          </div>
+
+          <div className="level-box" style={{ background: 'var(--primary)', color: 'white', padding: '20px', borderRadius: '20px', marginBottom: '32px' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontWeight: '900', fontSize: '13px' }}>LEVEL {gameStats?.level || 1}</span>
+                <span style={{ fontWeight: '800', fontSize: '13px' }}>{gameStats?.totalPoints || 0} PTS</span>
+             </div>
+             <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ width: `${((gameStats?.totalPoints || 0) % 500) / 5}%`, height: '100%', background: 'white' }} />
+             </div>
+          </div>
+
           <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '24px' }}>Quick Toolkit</h2>
           <div className="toolkit-grid">
             <button onClick={() => navigate('/tasks')} className="btn toolkit-btn">

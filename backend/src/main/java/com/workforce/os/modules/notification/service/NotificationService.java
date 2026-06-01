@@ -114,16 +114,14 @@ public class NotificationService {
             
             createNotification(userId, title, body, ROUTE_TASKS, workOrder.getTenantId());
         }
-        
-        // Notify Owners/Managers
-        notifyManagementOfNewJob(workOrder);
+        // Removed notifyManagementOfNewJob(workOrder); to stop redundant assignment alerts
     }
 
-    private void notifyManagementOfNewJob(WorkOrder workOrder) {
-        String title = "New Job Assigned";
-        String body = String.format("Order #%d has been assigned to technician %s for customer %s", 
+    // NEW: Notify owners of job completion
+    public void notifyManagementOfJobCompletion(WorkOrder workOrder) {
+        String title = "Job Completed";
+        String body = String.format("Work Order #%d for customer %s has been completed and verified.", 
             (workOrder.getId() + 1000),
-            workOrder.getAssignedWorker().getUser().getName(),
             workOrder.getCustomer().getName());
 
         List<User> managementUsers = userRepository.findByTenantIdAndRoleNameIn(
@@ -133,6 +131,24 @@ public class NotificationService {
 
         for (User manager : managementUsers) {
             createNotification(manager.getId(), title, body, ROUTE_TASKS, workOrder.getTenantId());
+        }
+    }
+
+    // NEW: Notify owners of new payments
+    public void notifyManagementOfNewPayment(com.workforce.os.modules.finance.domain.Payment payment) {
+        String title = "New Payment Received";
+        String body = String.format("Payment of ₹%.2f received for Invoice #%s from customer %s.", 
+            payment.getAmount(),
+            payment.getInvoice().getInvoiceNumber(),
+            payment.getInvoice().getCustomer().getName());
+
+        List<User> managementUsers = userRepository.findByTenantIdAndRoleNameIn(
+            payment.getTenantId(), 
+            Arrays.asList("OWNER", "MANAGER")
+        );
+
+        for (User manager : managementUsers) {
+            createNotification(manager.getId(), title, body, "/finance/invoices", payment.getTenantId());
         }
     }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-    CheckCircle2, Clock, MapPin, Camera, ClipboardList, 
+import {
+    CheckCircle2, Clock, MapPin, Camera, ClipboardList,
     Loader2, AlertCircle, ShieldCheck, IndianRupee, FileText,
     Star, MessageCircle, ChevronRight, Navigation, Receipt, Package
 } from 'lucide-react';
@@ -42,7 +42,7 @@ const OrderVerification: React.FC = () => {
         try {
             const response: any = await api.get(`${API_ENDPOINTS.OPERATIONS.WORK_ORDERS}/${orderId}`);
             setOrder(response);
-            
+
             // If invoice is embedded in the order response, use it
             if (response.invoice) {
                 setInvoice(response.invoice);
@@ -68,7 +68,7 @@ const OrderVerification: React.FC = () => {
             } else {
                 console.warn('Invoice not found after all retries');
             }
-        } catch (e) { 
+        } catch (e) {
             console.error('Failed to fetch invoice', e);
             if (retries > 0 && (order?.status === 'AWAITING_PAYMENT' || order?.status === 'COMPLETED')) {
                 setTimeout(() => fetchInvoice(retries - 1), 2000);
@@ -171,8 +171,8 @@ const OrderVerification: React.FC = () => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '12px' }}>
                                     {invoice && order.status === 'COMPLETED' && (
-                                        <a 
-                                            href={`${import.meta.env.VITE_API_BASE_URL}/finance/invoices/${invoice.id}/pdf`} 
+                                        <a
+                                            href={`${import.meta.env.VITE_API_BASE_URL}/finance/invoices/${invoice.id}/pdf`}
                                             className="btn btn-primary"
                                             style={{ textDecoration: 'none', padding: '8px 16px', fontSize: '13px', background: 'var(--success)', borderColor: 'var(--success)' }}
                                             target="_blank"
@@ -181,8 +181,8 @@ const OrderVerification: React.FC = () => {
                                             <Receipt size={16} /> Download Official Invoice
                                         </a>
                                     )}
-                                    <a 
-                                        href={`${import.meta.env.VITE_API_BASE_URL}/finance/work-orders/${orderId}/proof-pdf`} 
+                                    <a
+                                        href={`${import.meta.env.VITE_API_BASE_URL}/finance/work-orders/${orderId}/proof-pdf`}
                                         className="btn btn-secondary"
                                         style={{ textDecoration: 'none', padding: '8px 16px', fontSize: '13px' }}
                                         target="_blank"
@@ -238,7 +238,7 @@ const OrderVerification: React.FC = () => {
                                     </span>
                                 )}
                             </div>
-                            
+
                             {/* Service Items */}
                             <div className="breakdown-section">
                                 <h4 className="section-subtitle" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -362,15 +362,15 @@ const OrderVerification: React.FC = () => {
                                 <span className="label">Technician</span>
                                 <span className="value">{order.assignedWorker?.user?.name}</span>
                             </div>
-                            
+
                             {order.status === 'AWAITING_VERIFICATION' && (
                                 <div className="action-area">
                                     <div className="verification-guarantee">
                                         <ShieldCheck size={20} />
                                         <p>By verifying, you confirm that the service was performed to your satisfaction.</p>
                                     </div>
-                                    <button 
-                                        onClick={handleVerify} 
+                                    <button
+                                        onClick={handleVerify}
                                         className="btn btn-primary verify-btn"
                                         disabled={verifying}
                                     >
@@ -384,16 +384,18 @@ const OrderVerification: React.FC = () => {
                                     <div className="invoice-preview">
                                         <div className="price-row total">
                                             <span>Total Payable</span>
-                                            <span><IndianRupee size={16} />{invoice ? invoice.total.toFixed(2) : (order.quotation?.subtotal + (order.materials?.reduce((acc: number, m: any) => acc + (m.unitPriceAtUse * m.quantityUsed), 0) || 0)).toFixed(2)}</span>
-                                        </div>
+                                            <span>
+                                                <IndianRupee size={16} />
+                                                {(invoice?.total || order.totalAmount || 0).toFixed(2)}
+                                            </span>                                        </div>
                                     </div>
-                                    
+
                                     <div style={{ display: 'grid', gap: '12px' }}>
                                         <button onClick={handlePayment} className="btn btn-primary pay-btn" style={{ background: 'var(--primary)' }}>
                                             Pay Online Now
                                         </button>
                                         <div style={{ textAlign: 'center', margin: '8px 0', fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)' }}>— OR —</div>
-                                        <button 
+                                        <button
                                             onClick={async () => {
                                                 try {
                                                     await api.post(`/finance/payments/cash`, {
@@ -406,7 +408,7 @@ const OrderVerification: React.FC = () => {
                                                 } catch (e) {
                                                     showToast('Failed to record cash payment', 'error');
                                                 }
-                                            }} 
+                                            }}
                                             className="btn btn-secondary pay-btn"
                                             style={{ background: 'white', border: '1px solid var(--border)', color: 'var(--text-h)' }}
                                         >

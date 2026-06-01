@@ -28,53 +28,59 @@ import SupportPage from './pages/SupportPage';
 import MessagesPage from './pages/MessagesPage';
 import Settings from './pages/Settings';
 import WorkerEarnings from './pages/WorkerEarnings';
+import Leaderboard from './pages/Leaderboard';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/track/:id" element={<PublicTrackingPage />} />
-        <Route path="/support" element={<PrivateRoute><SupportPage /></PrivateRoute>} />
-        <Route path="/messages" element={<PrivateRoute><MessagesPage /></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Settings /></PrivateRoute>} />
-        
-        {/* Customer Auth Routes */}
-        <Route path="/customer/login" element={<CustomerLoginPage />} />
-        <Route path="/customer/register" element={<CustomerRegisterPage />} />
-        
-        {/* Protected Routes */}
-        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/live-ops" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><LiveOpsMap /></PrivateRoute>} />
-        <Route path="/invoices" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><InvoicesPage /></PrivateRoute>} />
-        <Route path="/finance/expenses" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><ExpensesPage /></PrivateRoute>} />
-        <Route path="/finance/payroll" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><PayrollPage /></PrivateRoute>} />
-        <Route path="/analytics" element={<PrivateRoute roles={['OWNER']}><AnalyticsPage /></PrivateRoute>} />
-        <Route path="/calendar" element={<PrivateRoute roles={['OWNER']}><SchedulingCalendar /></PrivateRoute>} />
-        
-        {/* Customer Protected Routes */}
-        <Route path="/customer/profile" element={<PrivateRoute roles={['CUSTOMER']}><CustomerProfilePage /></PrivateRoute>} />
-        <Route path="/customer/addresses" element={<PrivateRoute roles={['CUSTOMER']}><CustomerAddressPage /></PrivateRoute>} />
-        <Route path="/customer/orders" element={<PrivateRoute roles={['CUSTOMER']}><CustomerOrdersPage /></PrivateRoute>} />
-        <Route path="/customer/orders/:orderId/verify" element={<PrivateRoute roles={['CUSTOMER']}><OrderVerification /></PrivateRoute>} />
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/track/:id" element={<PublicTrackingPage />} />
+          <Route path="/support" element={<PrivateRoute><SupportPage /></PrivateRoute>} />
+          <Route path="/messages" element={<PrivateRoute><MessagesPage /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Settings /></PrivateRoute>} />
+          
+          {/* Customer Auth Routes */}
+          <Route path="/customer/login" element={<CustomerLoginPage />} />
+          <Route path="/customer/register" element={<CustomerRegisterPage />} />
+          
+          {/* Protected Routes */}
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/live-ops" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><LiveOpsMap /></PrivateRoute>} />
+          <Route path="/invoices" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><InvoicesPage /></PrivateRoute>} />
+          <Route path="/finance/expenses" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><ExpensesPage /></PrivateRoute>} />
+          <Route path="/finance/payroll" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><PayrollPage /></PrivateRoute>} />
+          <Route path="/analytics" element={<PrivateRoute roles={['OWNER']}><AnalyticsPage /></PrivateRoute>} />
+          <Route path="/calendar" element={<PrivateRoute roles={['OWNER']}><SchedulingCalendar /></PrivateRoute>} />
+          <Route path="/leaderboard" element={<PrivateRoute><Leaderboard /></PrivateRoute>} />
+          
+          {/* Customer Protected Routes */}
+          <Route path="/customer/profile" element={<PrivateRoute roles={['CUSTOMER']}><CustomerProfilePage /></PrivateRoute>} />
+          <Route path="/customer/addresses" element={<PrivateRoute roles={['CUSTOMER']}><CustomerAddressPage /></PrivateRoute>} />
+          <Route path="/customer/orders" element={<PrivateRoute roles={['CUSTOMER']}><CustomerOrdersPage /></PrivateRoute>} />
+          <Route path="/customer/orders/:orderId/verify" element={<PrivateRoute roles={['CUSTOMER']}><OrderVerification /></PrivateRoute>} />
 
-        {/* Workforce Protected Routes */}
-        <Route path="/leads" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Leads /></PrivateRoute>} />
-        <Route path="/quotations" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Quotations /></PrivateRoute>} />
-        <Route path="/services" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><ServicesPage /></PrivateRoute>} />
-        <Route path="/inventory" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Inventory /></PrivateRoute>} />
-        <Route path="/work-orders" element={<PrivateRoute roles={['OWNER', 'MANAGER', 'WORKER']}><WorkOrders /></PrivateRoute>} />
-        <Route path="/workers" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Workers /></PrivateRoute>} />
-        <Route path="/attendance" element={<PrivateRoute><AttendanceTracker /></PrivateRoute>} />
-        <Route path="/tasks" element={<PrivateRoute><Tasks /></PrivateRoute>} />
-        <Route path="/earnings" element={<PrivateRoute roles={['WORKER']}><WorkerEarnings /></PrivateRoute>} />
-        
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-      <PWAInstallPrompt />
-    </Router>
+          {/* Workforce Protected Routes */}
+          <Route path="/leads" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Leads /></PrivateRoute>} />
+          <Route path="/quotations" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Quotations /></PrivateRoute>} />
+          <Route path="/services" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><ServicesPage /></PrivateRoute>} />
+          <Route path="/inventory" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Inventory /></PrivateRoute>} />
+          <Route path="/work-orders" element={<PrivateRoute roles={['OWNER', 'MANAGER', 'WORKER']}><WorkOrders /></PrivateRoute>} />
+          <Route path="/workers" element={<PrivateRoute roles={['OWNER', 'MANAGER']}><Workers /></PrivateRoute>} />
+          <Route path="/attendance" element={<PrivateRoute><AttendanceTracker /></PrivateRoute>} />
+          <Route path="/tasks" element={<PrivateRoute><Tasks /></PrivateRoute>} />
+          <Route path="/earnings" element={<PrivateRoute roles={['WORKER']}><WorkerEarnings /></PrivateRoute>} />
+          
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+        <PWAInstallPrompt />
+      </Router>
+    </ErrorBoundary>
   );
 }
 

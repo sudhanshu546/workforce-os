@@ -17,6 +17,14 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "worker_profiles")
+@NamedEntityGraph(
+    name = "WorkerProfile.detail",
+    attributeNodes = {
+        @NamedAttributeNode("user"),
+        @NamedAttributeNode("organization"),
+        @NamedAttributeNode("branch")
+    }
+)
 public class WorkerProfile extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -20,6 +20,8 @@ import static com.workforce.os.common.util.MessageConstants.WORK_ORDER_NOT_FOUND
 public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final WorkOrderRepository workOrderRepository;
+    private final com.workforce.os.modules.workforce.service.GamificationService gamificationService;
+    private final SentimentAnalysisService sentimentAnalysisService;
 
     @Transactional
     public Review submitReview(ReviewRequest request) {
@@ -43,7 +45,13 @@ public class ReviewService {
                 .build();
         
         review.setTenantId(workOrder.getTenantId());
-        return reviewRepository.save(review);
+
+        // New AI-driven sentiment analysis
+        sentimentAnalysisService.analyzeReview(review);
+
+        Review saved = reviewRepository.save(review);
+        gamificationService.awardPointsForReview(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -56,5 +64,40 @@ public class ReviewService {
         List<Review> reviews = reviewRepository.findByWorkerId(workerId);
         if (reviews.isEmpty()) return 5.0; // Default high rating for new workers
         return reviews.stream().mapToInt(Review::getRating).average().orElse(5.0);
+    }
+
+    public com.workforce.os.modules.operations.dto.SentimentInsightDTO getSentimentInsights() {
+        String tenantId = com.workforce.os.common.context.TenantContext.getCurrentTenant();
+        List<Review> allReviews = reviewRepository.findAll().stream()
+            .filter(r -> tenantId.equals(r.getTenantId()))
+            .toList();
+
+        if (allReviews.isEmpty()) {
+            return com.workforce.os.modules.operations.dto.SentimentInsightDTO.builder()
+                .overallSentimentScore(0.0)
+                .reviewsAnalyzed(0L)
+                .criticalReviews(0L)
+                .issueDistribution(java.util.Collections.emptyMap())
+                .build();
+        }
+
+        double avgSentiment = allReviews.stream()
+            .mapToDouble(r -> r.getSentimentScore() != null ? r.getSentimentScore() : 0.0)
+            .average().orElse(0.0);
+
+        java.util.Map<String, Long> distribution = allReviews.stream()
+            .flatMap(r -> r.getIdentifiedIssues().stream())
+            .collect(java.util.stream.Collectors.groupingBy(java.util.function.Function.identity(), java.util.stream.Collectors.counting()));
+
+        long criticalCount = allReviews.stream()
+            .filter(r -> !r.getIdentifiedIssues().isEmpty())
+            .count();
+
+        return com.workforce.os.modules.operations.dto.SentimentInsightDTO.builder()
+            .overallSentimentScore(avgSentiment)
+            .reviewsAnalyzed((long) allReviews.size())
+            .criticalReviews(criticalCount)
+            .issueDistribution(distribution)
+            .build();
     }
 }

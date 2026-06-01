@@ -7,7 +7,8 @@ import api from '../services/api';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/Modal';
-import { Briefcase, User, Calendar as CalendarIcon, Clock, ChevronRight, Phone, MapPin } from 'lucide-react';
+import { useLazyOptimizeRouteQuery } from '../redux/routeApi';
+import { Briefcase, User, Calendar as CalendarIcon, Clock, ChevronRight, Phone, MapPin, Zap, Navigation, Route, Loader2 } from 'lucide-react';
 import { toastNotifier } from '../utils/toast-notifier';
 
 const localizer = momentLocalizer(moment);
@@ -18,6 +19,51 @@ const SchedulingCalendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [availableWorkers, setAvailableWorkers] = useState<any[]>([]);
+  const [triggerOptimize, { data: optimizedRoute, isFetching: isOptimizing }] = useLazyOptimizeRouteQuery();
+
+  const handleOptimize = async (workerId: number) => {
+    try {
+        await triggerOptimize({ workerId, date: moment(date).format('YYYY-MM-DD') }).unwrap();
+    } catch (e) {
+        toastNotifier.show('Route optimization failed', 'error');
+    }
+  };
+
+  const renderOptimizationView = () => {
+    if (!optimizedRoute) return null;
+    const route = optimizedRoute.data || optimizedRoute;
+
+    return (
+        <div style={{ marginTop: '24px', background: '#f0f9ff', padding: '20px', borderRadius: '20px', border: '1px solid #bae6fd' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                <Route size={20} className="text-primary" />
+                <h3 style={{ fontWeight: '800', fontSize: '15px' }}>Optimal Route Sequence</h3>
+            </div>
+            
+            <div className="optimized-sequence" style={{ position: 'relative' }}>
+                {route.optimizedSequence?.map((job: any, idx: number) => (
+                    <div key={job.workOrderId} style={{ position: 'relative', paddingLeft: '28px', marginBottom: '16px' }}>
+                        <div className="sequence-node" style={{ position: 'absolute', left: 0, width: '18px', height: '18px', background: 'var(--primary)', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '900', zIndex: 1 }}>{idx + 1}</div>
+                        {idx < route.optimizedSequence.length - 1 && <div className="sequence-line" style={{ position: 'absolute', left: '8px', top: '18px', bottom: '-10px', width: '2px', background: '#bae6fd' }} />}
+                        <div style={{ fontWeight: '800', fontSize: '14px' }}>{job.customerName}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{job.address}</div>
+                    </div>
+                ))}
+            </div>
+
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed #bae6fd', display: 'flex', justifyContent: 'space-between' }}>
+                <div>
+                    <div style={{ fontSize: '10px', fontWeight: '800', opacity: 0.6 }}>TOTAL DISTANCE</div>
+                    <div style={{ fontWeight: '900', fontSize: '14px' }}>{route.totalDistanceKm?.toFixed(1)} KM</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', opacity: 0.6 }}>EST. TRAVEL</div>
+                    <div style={{ fontWeight: '900', fontSize: '14px' }}>{route.totalTimeMinutes?.toFixed(0)} MINS</div>
+                </div>
+            </div>
+        </div>
+    );
+  };
   
   // Controlled Calendar States using strings to avoid import issues
   const [date, setDate] = useState(new Date());
@@ -264,6 +310,10 @@ const SchedulingCalendar: React.FC = () => {
         /* Fix for toolbar visibility and interaction */
         .rbc-toolbar { margin-bottom: 20px; padding: 0 4px; }
         .rbc-btn-group { display: flex; gap: 4px; }
+
+        .optimized-sequence { position: relative; }
+        .sequence-node { position: absolute; left: 0; width: 18px; height: 18px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; z-index: 1; }
+        .sequence-line { position: absolute; left: 8px; top: 18px; bottom: -10px; width: 2px; background: #bae6fd; }
       `}</style>
     </Layout>
   );

@@ -98,8 +98,6 @@ public class MessageConstants {
 
     // Dashboard
     public static final String OWNER_STATS_RETRIEVED = "Owner stats retrieved successfully";
-    public static final String WORKER_STATS_RETRIEVED = "Worker stats retrieved successfully";
-
     // Finance
     public static final String EXPENSE_LOGGED = "Expense logged successfully";
     public static final String EXPENSES_RETRIEVED = "Expenses retrieved successfully";
@@ -181,6 +179,24 @@ public class MessageConstants {
     public static final String COMMENT_ADDED = "Comment added successfully";
     public static final String FEEDBACK_SUBMITTED = "Feedback submitted successfully";
     public static final String TICKET_NOT_FOUND = "Ticket not found";
+
+    // Gamification
+    public static final String LEADERBOARD_RETRIEVED = "Leaderboard retrieved successfully";
+    public static final String WORKER_STATS_RETRIEVED = "Worker stats retrieved successfully";
+    public static final String POINTS_AWARDED = "Performance points awarded";
+    public static final String BADGE_AWARDED = "New performance badge earned";
+
+    // AI Dispatch & Route Optimization
+    public static final String AUTO_DISPATCH_SUCCESS = "AI Auto-Dispatch completed successfully";
+    public static final String ROUTE_OPTIMIZED = "Route optimized successfully";
+    public static final String NO_WORKERS_AVAILABLE = "No available workers found for auto-dispatch";
+
+    // Tax Engine
+    public static final String TAX_CONFIGS_RETRIEVED = "Tax configurations retrieved successfully";
+    public static final String TAX_CONFIG_SAVED = "Tax configuration saved successfully";
+
+    // Sentiment Analysis
+    public static final String SENTIMENT_INSIGHTS_RETRIEVED = "Customer sentiment insights retrieved successfully";
 
     // Notifications
     public static final String NOTIFICATIONS_RETRIEVED = "Notifications retrieved successfully";

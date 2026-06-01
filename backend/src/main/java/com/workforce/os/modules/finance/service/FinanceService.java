@@ -1,5 +1,6 @@
 package com.workforce.os.modules.finance.service;
 
+import com.workforce.os.common.annotation.AuditLog;
 import com.workforce.os.common.context.TenantContext;
 import com.workforce.os.common.exception.BusinessException;
 import com.workforce.os.common.exception.ResourceNotFoundException;
@@ -8,6 +9,7 @@ import com.workforce.os.modules.finance.domain.Invoice;
 import com.workforce.os.modules.finance.domain.InvoiceItem;
 import com.workforce.os.modules.finance.domain.InvoiceItem.ItemType;
 import com.workforce.os.modules.finance.domain.Payment;
+import com.workforce.os.modules.finance.domain.TaxConfig;
 import com.workforce.os.modules.finance.repository.InvoiceRepository;
 import com.workforce.os.modules.finance.repository.PaymentRepository;
 import com.workforce.os.modules.operations.domain.WorkOrder;
@@ -38,6 +40,8 @@ public class FinanceService extends com.workforce.os.common.service.BaseService 
     private final RazorpayService razorpayService;
     private final PdfService pdfService;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final com.workforce.os.modules.notification.service.NotificationService notificationService;
+    private final com.workforce.os.modules.finance.service.TaxService taxService;
 
     public PdfService getPdfService() {
         return pdfService;
@@ -102,6 +106,7 @@ public class FinanceService extends com.workforce.os.common.service.BaseService 
     private Double defaultTaxRate;
 
     @Transactional
+    @AuditLog("Generating invoice")
     public Invoice generateInvoice(WorkOrder workOrder) {
         // Check if invoice already exists
         if (invoiceRepository.findByWorkOrderId(workOrder.getId()).isPresent()) {
@@ -143,29 +148,25 @@ public class FinanceService extends com.workforce.os.common.service.BaseService 
             invoice.getItems().add(item);
         });
 
-        // Calculate Totals based on Quotation
+        // Dynamic Tax Engine
+        String region = workOrder.getServiceAddress() != null ? workOrder.getServiceAddress().getState() : null;
+        TaxConfig taxConfig = taxService.getTaxConfig(region);
+        
         double subtotal = invoice.getItems().stream().mapToDouble(InvoiceItem::getTotalAmount).sum();
-        double quotedTax = quotation.getTax() != null ? quotation.getTax() : 0.0;
         double discount = quotation.getDiscount() != null ? quotation.getDiscount() : 0.0;
-
-        // If extra materials were added on-site, apply the tax rate to them as well
-        double subtotalFromQuotation = quotation.getSubtotal() != null ? quotation.getSubtotal() : 0.0;
-        double extraSubtotal = subtotal - subtotalFromQuotation;
-
-        double finalTax = quotedTax;
-        if (extraSubtotal > 0) {
-            double effectiveTaxRate = (subtotalFromQuotation > 0) ? (quotedTax / subtotalFromQuotation) : (defaultTaxRate / 100.0);     
-            finalTax += extraSubtotal * effectiveTaxRate;
-        }
+        double tax = subtotal * (taxConfig.getRate() / 100.0);
 
         invoice.setSubtotal(subtotal);
-        invoice.setTax(finalTax);
-        invoice.setTotal(subtotal + finalTax - discount);
+        invoice.setTax(tax);
+        invoice.setTotal(subtotal + tax - discount);
         invoice.setStatus(Invoice.InvoiceStatus.ISSUED);
 
         return invoiceRepository.save(invoice);
     }
 
+    @Transactional
+    @io.github.resilience4j.bulkhead.annotation.Bulkhead(name = "razorpayService")
+    @AuditLog("Creating payment order")
     public String createPaymentOrder(Long invoiceId) throws Exception {
         Invoice invoice = getInvoiceSecurely(invoiceId);
         return razorpayService.createOrder(invoice.getTotal(), invoice.getInvoiceNumber());
@@ -181,6 +182,7 @@ public class FinanceService extends com.workforce.os.common.service.BaseService 
     }
 
     @Transactional
+    @AuditLog("Recording payment")
     public Payment recordPayment(Long invoiceId, Double amount, String method, String reference, Long collectorId) {
         Invoice invoice = getInvoiceSecurely(invoiceId);
 
@@ -211,10 +213,13 @@ public class FinanceService extends com.workforce.os.common.service.BaseService 
             invoice.getWorkOrder().setStatus(WorkOrderStatus.COMPLETED);
         }
 
-        return paymentRepository.save(payment);
+        Payment saved = paymentRepository.save(payment);
+        notificationService.notifyManagementOfNewPayment(saved);
+        return saved;
     }
 
     @Transactional
+    @AuditLog("Verifying cash deposit")
     public Payment verifyCashDeposit(Long paymentId, Long ownerId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment record not found"));

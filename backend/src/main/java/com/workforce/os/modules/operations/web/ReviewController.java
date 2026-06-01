@@ -41,4 +41,10 @@ public class ReviewController {
     public ResponseEntity<ApiResponse<Double>> getAverageRating(@PathVariable Long workerId) {
         return ResponseEntity.ok(ApiResponse.success(reviewService.getAverageRating(workerId), "Average rating retrieved"));
     }
+
+    @GetMapping("/insights")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<com.workforce.os.modules.operations.dto.SentimentInsightDTO>> getSentimentInsights() {
+        return ResponseEntity.ok(ApiResponse.success(reviewService.getSentimentInsights(), "Sentiment insights retrieved"));
+    }
 }
