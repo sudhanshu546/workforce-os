@@ -5,7 +5,7 @@ services:
     env: docker
     dockerfilePath: Dockerfile
     plan: free
-    healthCheckPath: /api/v1/actuator/health
+    healthCheckPath: /
     startTimeoutSeconds: 600 # 10 minutes for slow Spring Boot startup
     envVars:
       - key: VITE_API_BASE_URL

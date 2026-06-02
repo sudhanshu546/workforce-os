@@ -23,7 +23,7 @@ WORKDIR /app
 COPY --from=backend-build /app/target/*.jar app.jar
 
 # Aggressive memory settings for Render Free Tier (512MB)
-ENV JAVA_OPTS="-Xmx320m -Xms320m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS="-Xmx320m -Xms320m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "if [ ! -z \"$DATABASE_URL\" ]; then export SPRING_DATASOURCE_URL=$(echo $DATABASE_URL | sed 's/^postgres:/jdbc:postgresql:/'); fi; java $JAVA_OPTS -jar app.jar"]
