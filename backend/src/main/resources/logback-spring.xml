@@ -19,6 +19,6 @@
     </root>
 
     <!-- Specific loggers -->
-    <logger name="com.workforce.os" level="DEBUG" />
-    <logger name="org.springframework.security" level="DEBUG" />
+    <logger name="com.workforce.os" level="INFO" />
+    <logger name="org.springframework.security" level="INFO" />
 </configuration>

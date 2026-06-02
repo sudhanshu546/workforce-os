@@ -62,6 +62,7 @@ public class SecurityConfig {
                                         "/api/v1/finance/work-orders/*/proof-pdf",
                                         "/api/v1/files/download/**",
                                         "/actuator/**",
+                                        "/api/v1/actuator/**",
                                         "/error"
                                 ).permitAll()
                                 .requestMatchers("/api/v1/leads/customer/**").hasAnyRole("CUSTOMER", "OWNER", "MANAGER")

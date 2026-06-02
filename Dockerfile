@@ -23,7 +23,7 @@ WORKDIR /app
 COPY --from=backend-build /app/target/*.jar app.jar
 
 # Aggressive memory settings for Render Free Tier (512MB)
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=65.0 -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS="-Xmx320m -Xms320m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
 
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
